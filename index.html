@@ -5064,22 +5064,35 @@ function startShake() {
     tip.textContent = '签已出...';
     stopShakeSound();
     
-    // 随机抽签（100签全部启用）
+    // 随机抽签（100签全部启用，数据完全从 signFullData 获取）
     setTimeout(() => {
       const signNum = Math.floor(Math.random() * 100) + 1;
-      // 优先从 signFullData 获取完整数据（含正确签位）
-      const fullData = (typeof signFullData !== 'undefined' && signFullData[signNum]) || {};
-      currentSign = guanyinSigns.find(s => s.num === signNum) || { 
-        num: signNum, 
-        level: fullData.level || '中签', 
-        ancient: fullData.ancient || '观音灵签', 
-        poem: fullData.poem || '心诚则灵\n善恶有报\n但行好事\n莫问前程', 
-        summary: fullData.summary || '此签劝人行善积德，自有福报。', 
-        detail: fullData.detail || '心存善念 自有贵人 凡事随缘 不必强求', 
-        items: fullData.items || {marriage:'随缘',career:'平稳',wealth:'平',health:'安',travel:'可',lawsuit:'和'} 
-      };
-      // 确保 level 从 signFullData 获取（最准确）
-      if (fullData.level) currentSign.level = fullData.level;
+      const fullData = (typeof signFullData !== 'undefined' && signFullData[signNum]) || null;
+      
+      if (fullData) {
+        // signFullData 有完整100签数据，直接使用
+        currentSign = {
+          num: signNum,
+          level: fullData.level,
+          ancient: fullData.ancient,
+          poem: fullData.poem,
+          summary: fullData.poyi || '',
+          detail: fullData.detail || '',
+          items: fullData.items || {}
+        };
+      } else {
+        // 极端情况：sign-data.js 加载失败，使用 guanyinSigns 兜底
+        const fallback = guanyinSigns.find(s => s.num === signNum);
+        currentSign = fallback || {
+          num: signNum,
+          level: '中签',
+          ancient: '观音灵签',
+          poem: '心诚则灵\n善恶有报\n但行好事\n莫问前程',
+          summary: '此签劝人行善积德，自有福报。',
+          detail: '心存善念 自有贵人 凡事随缘 不必强求',
+          items: {marriage:'随缘',career:'平稳',wealth:'平',health:'安',travel:'可',lawsuit:'和'}
+        };
+      }
       showSignResult();
       saveSignRecord();
     }, 800);
