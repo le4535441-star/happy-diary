@@ -4738,7 +4738,8 @@ async function saveBubbleToPool(joke, color) {
       joke: joke,
       color: color,
       date: now.toISOString().split('T')[0],
-      time: now.toTimeString().slice(0, 5)
+      time: now.toTimeString().slice(0, 5),
+      _owner: currentUsername
     });
     tx.oncomplete = () => resolve();
     tx.onerror = () => resolve();
@@ -4755,7 +4756,11 @@ async function getBubblePool() {
     const store = tx.objectStore(BUBBLE_POOL_STORE);
     const req = store.getAll();
     req.onsuccess = () => {
-      const records = req.result || [];
+      let records = req.result || [];
+      // 多账号隔离
+      if (currentUsername) {
+        records = records.filter(r => !r._owner || r._owner === currentUsername);
+      }
       records.sort((a, b) => b.id.localeCompare(a.id));
       resolve(records);
     };
@@ -5245,7 +5250,7 @@ async function syncFromCloud() {
           const id = item.localId || item.id;
           if (!localShredIds.has(id)) {
             const tx2 = db.transaction('shredded', 'readwrite');
-            tx2.objectStore('shredded').add({ id, text: item.text, date: item.date, timestamp: item.timestamp });
+            tx2.objectStore('shredded').add({ id, text: item.text, date: item.date, timestamp: item.timestamp, _owner: currentUsername });
           }
         }
       }
@@ -5790,27 +5795,9 @@ function doBackupNow() {
 async function exportData() {
   const entries = getEntries();
   
-  // 同时导出粉碎记录和泡泡池
-  let shredRecords = [];
-  let bubbleRecords = [];
-  try {
-    const tx1 = db.transaction('shredded', 'readonly');
-    const store1 = tx1.objectStore('shredded');
-    shredRecords = await new Promise((resolve, reject) => {
-      const req = store1.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-  } catch(e) {}
-  try {
-    const tx2 = db.transaction('bubblePool', 'readonly');
-    const store2 = tx2.objectStore('bubblePool');
-    bubbleRecords = await new Promise((resolve, reject) => {
-      const req = store2.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-  } catch(e) {}
+  // 使用已有的过滤函数获取当前用户数据
+  const shredRecords = await getShredRecords();
+  const bubbleRecords = await getBubblePool();
   
   const data = {
     exportDate: new Date().toISOString(),
@@ -5903,7 +5890,15 @@ function loadMyProfile() {
 }
 
 // 退出登录
-function doLogout() {
+async function doLogout() {
+  // 清除 CloudBase 认证态
+  try {
+    if (cloudApp) {
+      await cloudApp.auth().signOut();
+    }
+  } catch(e) {}
+  cloudReady = false;
+  cloudDb = null;
   localStorage.removeItem('hd_current_user');
   location.reload();
 }
