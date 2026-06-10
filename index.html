@@ -5916,81 +5916,159 @@ async function shareAsCard() {
   const themeAccentSoft = cs.getPropertyValue('--accent-soft').trim();
   const themeGold = cs.getPropertyValue('--gold').trim();
   
-  // 创建 Canvas 生成卡片图
   const canvas = document.createElement('canvas');
-  const w = 750, h = 1000;
+  const w = 750, h = 1200;
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   
-  // 背景（与日历详情页一致的浅渐变）
-  const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, themeBg);
-  gradient.addColorStop(0.5, themeBg);
-  gradient.addColorStop(0.85, themeAccentSoft);
-  gradient.addColorStop(1, themeAccentSoft);
-  ctx.fillStyle = gradient;
+  // === 外层背景 ===
+  ctx.fillStyle = themeBg;
   ctx.fillRect(0, 0, w, h);
   
-  // 纸张纹理（点状）
-  ctx.fillStyle = 'rgba(128,128,128,0.03)';
-  for (let i = 0; i < 200; i++) {
-    ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
-  }
-  
-  // 卡片区域（跟随主题paper色）
-  const cardX = 50, cardY = 80, cardW = w - 100, cardH = h - 200;
+  // === 卡片主体（圆角白色卡片）===
+  const cardX = 40, cardY = 40, cardW = w - 80, cardH = h - 140;
   ctx.fillStyle = themePaper;
-  ctx.shadowColor = 'rgba(0,0,0,0.12)';
-  ctx.shadowBlur = 30;
-  roundRect(ctx, cardX, cardY, cardW, cardH, 24);
+  ctx.shadowColor = 'rgba(0,0,0,0.1)';
+  ctx.shadowBlur = 20;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 20);
   ctx.fill();
   ctx.shadowBlur = 0;
   
-  // 日期（跟随主题ink-light色）
+  // === 配图背景（如果有图片）===
+  if (entry.image) {
+    try {
+      const img = await loadImage(entry.image);
+      ctx.save();
+      roundRect(ctx, cardX, cardY, cardW, cardH, 20);
+      ctx.clip();
+      // 绘制半透明配图
+      ctx.globalAlpha = 0.25;
+      const imgRatio = img.width / img.height;
+      const cardRatio = cardW / cardH;
+      let sx = 0, sy = 0, sw = img.width, sh = img.height;
+      if (imgRatio > cardRatio) {
+        sw = img.height * cardRatio;
+        sx = (img.width - sw) / 2;
+      } else {
+        sh = img.width / cardRatio;
+        sy = (img.height - sh) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, cardX, cardY, cardW, cardH);
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
+    } catch(e) {}
+  }
+  
+  // === 顶部区域：日期 + 星期 + 天气 + 第N个快乐 ===
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const dateObj = new Date(entry.date);
   const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
-  ctx.font = '28px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeInkLight;
+  const weekday = `星期${weekdays[dateObj.getDay()]}`;
+  
+  let topY = cardY + 60;
+  
+  // 日期
+  ctx.font = 'bold 30px "PingFang SC", sans-serif';
+  ctx.fillStyle = themeInk;
   ctx.textAlign = 'center';
-  ctx.fillText(dateStr, w/2, cardY + 60);
+  ctx.fillText(dateStr, w/2, topY);
+  topY += 36;
   
+  // 星期
+  ctx.font = '20px "PingFang SC", sans-serif';
+  ctx.fillStyle = themeInkLight;
+  ctx.fillText(weekday, w/2, topY);
+  topY += 32;
+  
+  // 天气（用缓存）
+  try {
+    const weatherCache = localStorage.getItem('happy_diary_weather');
+    if (weatherCache) {
+      const { data } = JSON.parse(weatherCache);
+      ctx.font = '20px "PingFang SC", sans-serif';
+      ctx.fillStyle = themeAccent;
+      ctx.fillText(`${data.icon} ${data.condition} ${data.temp}`, w/2, topY);
+      topY += 32;
+    }
+  } catch(e) {}
+  
+  // 第N个快乐
+  ctx.font = 'bold 18px "PingFang SC", sans-serif';
+  ctx.fillStyle = themeAccent;
+  ctx.fillText(`这是你第 ${currentIndex + 1} 个快乐 ✨`, w/2, topY);
+  topY += 50;
+  
+  // === 分隔线 ===
+  ctx.strokeStyle = themeAccentSoft;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 60, topY - 20);
+  ctx.lineTo(cardX + cardW - 60, topY - 20);
+  ctx.stroke();
+  
+  // === 中部：emoji + 正文 ===
   // emoji
-  ctx.font = '56px serif';
-  ctx.fillText(entry.emoji || '✨', w/2, cardY + 140);
+  ctx.font = '52px serif';
+  ctx.fillStyle = themeInk;
+  ctx.fillText(entry.emoji || '✨', w/2, topY + 30);
+  topY += 70;
   
-  // 正文（跟随主题ink色）
+  // 正文
   ctx.font = 'bold 32px "PingFang SC", sans-serif';
   ctx.fillStyle = themeInk;
-  const lines = wrapText(ctx, entry.text, cardW - 80);
-  let textY = cardY + 200;
+  const lines = wrapText(ctx, entry.text, cardW - 100);
   lines.forEach(line => {
-    ctx.fillText(line, w/2, textY);
-    textY += 48;
+    ctx.fillText(line, w/2, topY);
+    topY += 46;
   });
+  topY += 20;
   
-  // 配文（跟随主题色）
+  // === 标签（如果有）===
+  if (entry.tag) {
+    // 绘制标签胶囊
+    ctx.font = 'bold 20px "PingFang SC", sans-serif';
+    const tagWidth = ctx.measureText(entry.tag).width + 32;
+    const tagX = (w - tagWidth) / 2;
+    const tagY = topY - 6;
+    ctx.fillStyle = themeAccentSoft;
+    roundRect(ctx, tagX, tagY, tagWidth, 36, 18);
+    ctx.fill();
+    ctx.fillStyle = themeAccent;
+    ctx.fillText(entry.tag, w/2, topY + 20);
+    topY += 56;
+  }
+  
+  // === 底部分隔线 ===
+  ctx.strokeStyle = themeAccentSoft;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 60, topY);
+  ctx.lineTo(cardX + cardW - 60, topY);
+  ctx.stroke();
+  topY += 30;
+  
+  // === 配文 ===
   if (entry.quote && entry.quote.text) {
     ctx.font = 'italic 22px "PingFang SC", sans-serif';
     ctx.fillStyle = themeInkLight;
-    ctx.fillText(`「${entry.quote.text}」`, w/2, textY + 40);
+    const quoteLines = wrapText(ctx, `「${entry.quote.text}」`, cardW - 100);
+    quoteLines.forEach(line => {
+      ctx.fillText(line, w/2, topY);
+      topY += 32;
+    });
     ctx.font = '18px "PingFang SC", sans-serif';
     ctx.fillStyle = themeAccent;
-    ctx.fillText(`—— ${entry.quote.author || ''}`, w/2, textY + 72);
+    ctx.fillText(`—— ${entry.quote.author || ''}`, w/2, topY + 8);
   }
   
-  // 底部水印（跟随主题gold色）
-  ctx.font = '20px "PingFang SC", sans-serif';
+  // === 底部水印 ===
+  ctx.font = '18px "PingFang SC", sans-serif';
   ctx.fillStyle = themeGold;
   ctx.fillText('✨ 快乐小事 · 每天都有好事花生', w/2, h - 60);
-  ctx.font = '12px "PingFang SC", sans-serif';
-  ctx.fillStyle = 'rgba(128,128,128,0.3)';
-  ctx.fillText('v6', w - 60, h - 20);
   
   // 导出图片
   canvas.toBlob(async (blob) => {
     if (navigator.share && navigator.canShare) {
-      // 移动端原生分享
       try {
         const file = new File([blob], 'happy-card.png', { type: 'image/png' });
         await navigator.share({ files: [file], title: '快乐小事' });
@@ -6001,6 +6079,16 @@ async function shareAsCard() {
       downloadCard(blob);
     }
   }, 'image/png');
+}
+
+// 加载图片的Promise封装
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 function downloadCard(blob) {
