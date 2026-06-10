@@ -2039,7 +2039,68 @@ body {
     <p class="login-toggle" style="margin-top:12px;font-size:13px;color:#7a6b5d;cursor:pointer;" onclick="toggleRegister()">
       没有账号？<span style="color:#d4956a;font-weight:600;">点此注册</span>
     </p>
+    <p style="margin-top:8px;font-size:12px;color:#7a6b5d;cursor:pointer;" onclick="showForgotPassword()">
+      忘记密码？<span style="color:#d4956a;">通过密保找回</span>
+    </p>
     <p class="login-error" id="login-err"></p>
+  </div>
+</div>
+
+<!-- 忘记密码弹窗 -->
+<div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fffef9;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(61,48,40,0.2);">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#3d3028;margin-bottom:16px;text-align:center;">🔑 找回密码</h3>
+    <input type="email" id="forgot-email" placeholder="输入你的注册邮箱" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <div id="forgot-question-area" style="display:none;">
+      <p id="forgot-question-text" style="font-size:14px;color:#3d3028;margin-bottom:8px;font-weight:600;"></p>
+      <input type="text" id="forgot-answer" placeholder="输入密保答案" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+      <input type="password" id="forgot-new-pwd" placeholder="设置新密码（至少4位）" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    </div>
+    <p id="forgot-err" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;text-align:center;"></p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeForgotModal()" style="flex:1;padding:12px;background:#f0d9c4;color:#3d3028;border:none;border-radius:10px;font-size:15px;cursor:pointer;">取消</button>
+      <button onclick="handleForgotPassword()" style="flex:1;padding:12px;background:#d4956a;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 密保设置弹窗 -->
+<div id="security-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fffef9;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(61,48,40,0.2);">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#3d3028;margin-bottom:6px;text-align:center;">🛡️ 设置密保问题</h3>
+    <p style="font-size:12px;color:#7a6b5d;text-align:center;margin-bottom:16px;">忘记密码时可通过密保找回</p>
+    <select id="security-question-select" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:14px;margin-bottom:12px;outline:none;background:#fffef9;color:#3d3028;box-sizing:border-box;">
+      <option value="">-- 选择密保问题 --</option>
+      <option value="你的生日是几月几日？">你的生日是几月几日？</option>
+      <option value="你最喜欢的食物是什么？">你最喜欢的食物是什么？</option>
+      <option value="你养的宠物叫什么名字？">你养的宠物叫什么名字？</option>
+      <option value="你最好的朋友叫什么？">你最好的朋友叫什么？</option>
+      <option value="你的幸运数字是什么？">你的幸运数字是什么？</option>
+      <option value="custom">✏️ 自定义问题...</option>
+    </select>
+    <input type="text" id="security-custom-question" placeholder="输入自定义密保问题" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:14px;margin-bottom:12px;outline:none;display:none;box-sizing:border-box;">
+    <input type="text" id="security-answer-input" placeholder="密保答案" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <p id="security-err" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;text-align:center;"></p>
+    <p id="security-success" style="color:#27ae60;font-size:13px;margin-bottom:8px;display:none;text-align:center;"></p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeSecurityModal()" style="flex:1;padding:12px;background:#f0d9c4;color:#3d3028;border:none;border-radius:10px;font-size:15px;cursor:pointer;">取消</button>
+      <button onclick="saveSecurityQuestion()" style="flex:1;padding:12px;background:#d4956a;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改密码弹窗 -->
+<div id="changepwd-modal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fffef9;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(61,48,40,0.2);">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#3d3028;margin-bottom:16px;text-align:center;">🔒 修改密码</h3>
+    <input type="password" id="changepwd-old" placeholder="当前密码" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <input type="password" id="changepwd-new" placeholder="新密码（至少4位）" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <input type="password" id="changepwd-confirm" placeholder="确认新密码" style="width:100%;padding:12px 16px;border:2px solid #f0d9c4;border-radius:10px;font-size:15px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <p id="changepwd-err" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;text-align:center;"></p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeChangePwdModal()" style="flex:1;padding:12px;background:#f0d9c4;color:#3d3028;border:none;border-radius:10px;font-size:15px;cursor:pointer;">取消</button>
+      <button onclick="doChangePassword()" style="flex:1;padding:12px;background:#d4956a;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">确认修改</button>
+    </div>
   </div>
 </div>
 
@@ -2236,6 +2297,14 @@ body {
         <div class="my-name" id="my-username"></div>
       </div>
       <div class="my-menu">
+        <div class="my-menu-item" onclick="showChangePwdModal()">
+          <span class="my-menu-icon">🔒</span>
+          <span class="my-menu-text">修改密码</span>
+        </div>
+        <div class="my-menu-item" onclick="showSecurityModal()">
+          <span class="my-menu-icon">🛡️</span>
+          <span class="my-menu-text">密保设置</span>
+        </div>
         <div class="my-menu-item" onclick="exportData()">
           <span class="my-menu-icon">📥</span>
           <span class="my-menu-text">导出数据</span>
@@ -2875,6 +2944,223 @@ if (currentUsername) {
 document.getElementById('pwd-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+
+// ========== 密保问题 & 修改密码 ==========
+const SECURITY_KEY = 'hd_security_questions'; // { email: { question, answer } }
+
+function getSecurityData() {
+  return JSON.parse(localStorage.getItem(SECURITY_KEY) || '{}');
+}
+
+function saveSecurityData(data) {
+  localStorage.setItem(SECURITY_KEY, JSON.stringify(data));
+}
+
+// 密保设置弹窗
+function showSecurityModal() {
+  const modal = document.getElementById('security-modal');
+  modal.style.display = 'flex';
+  // 如果已有密保，显示当前问题
+  const data = getSecurityData();
+  const current = data[currentUsername];
+  if (current) {
+    document.getElementById('security-question-select').value = current.question;
+    if (!['你的生日是几月几日？','你最喜欢的食物是什么？','你养的宠物叫什么名字？','你最好的朋友叫什么？','你的幸运数字是什么？'].includes(current.question)) {
+      document.getElementById('security-question-select').value = 'custom';
+      document.getElementById('security-custom-question').style.display = 'block';
+      document.getElementById('security-custom-question').value = current.question;
+    }
+    document.getElementById('security-answer-input').value = '';
+    document.getElementById('security-answer-input').placeholder = '重新输入密保答案';
+  }
+  document.getElementById('security-err').style.display = 'none';
+  document.getElementById('security-success').style.display = 'none';
+}
+
+function closeSecurityModal() {
+  document.getElementById('security-modal').style.display = 'none';
+  document.getElementById('security-question-select').value = '';
+  document.getElementById('security-custom-question').style.display = 'none';
+  document.getElementById('security-custom-question').value = '';
+  document.getElementById('security-answer-input').value = '';
+}
+
+// 监听下拉框变化，显示/隐藏自定义问题输入
+document.getElementById('security-question-select').addEventListener('change', function() {
+  const custom = document.getElementById('security-custom-question');
+  if (this.value === 'custom') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+  }
+});
+
+function saveSecurityQuestion() {
+  const select = document.getElementById('security-question-select');
+  const customInput = document.getElementById('security-custom-question');
+  const answerInput = document.getElementById('security-answer-input');
+  const errEl = document.getElementById('security-err');
+  const successEl = document.getElementById('security-success');
+  
+  let question = select.value;
+  if (question === 'custom') {
+    question = customInput.value.trim();
+    if (!question) {
+      errEl.textContent = '请输入自定义问题';
+      errEl.style.display = 'block';
+      return;
+    }
+  }
+  if (!question) {
+    errEl.textContent = '请选择密保问题';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  const answer = answerInput.value.trim();
+  if (!answer) {
+    errEl.textContent = '请输入密保答案';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  const data = getSecurityData();
+  data[currentUsername] = { question, answer: answer.toLowerCase() };
+  saveSecurityData(data);
+  
+  errEl.style.display = 'none';
+  successEl.textContent = '✅ 密保设置成功！';
+  successEl.style.display = 'block';
+  setTimeout(() => closeSecurityModal(), 1500);
+}
+
+// 忘记密码
+function showForgotPassword() {
+  const modal = document.getElementById('forgot-modal');
+  modal.style.display = 'flex';
+  document.getElementById('forgot-email').value = '';
+  document.getElementById('forgot-answer').value = '';
+  document.getElementById('forgot-new-pwd').value = '';
+  document.getElementById('forgot-question-area').style.display = 'none';
+  document.getElementById('forgot-err').style.display = 'none';
+}
+
+function closeForgotModal() {
+  document.getElementById('forgot-modal').style.display = 'none';
+}
+
+let forgotStep = 1; // 1=输入邮箱, 2=回答问题
+
+function handleForgotPassword() {
+  const emailInput = document.getElementById('forgot-email');
+  const errEl = document.getElementById('forgot-err');
+  const questionArea = document.getElementById('forgot-question-area');
+  
+  if (questionArea.style.display === 'none') {
+    // Step 1: 验证邮箱，显示密保问题
+    const email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      errEl.textContent = '请输入有效邮箱';
+      errEl.style.display = 'block';
+      return;
+    }
+    
+    const users = JSON.parse(localStorage.getItem('hd_users') || '{}');
+    if (!users[email]) {
+      errEl.textContent = '该邮箱未注册';
+      errEl.style.display = 'block';
+      return;
+    }
+    
+    const secData = getSecurityData();
+    if (!secData[email]) {
+      errEl.textContent = '该账号未设置密保问题，无法找回';
+      errEl.style.display = 'block';
+      return;
+    }
+    
+    // 显示密保问题
+    document.getElementById('forgot-question-text').textContent = '密保问题：' + secData[email].question;
+    questionArea.style.display = 'block';
+    emailInput.disabled = true;
+    errEl.style.display = 'none';
+  } else {
+    // Step 2: 验证答案，重置密码
+    const email = emailInput.value.trim();
+    const answer = document.getElementById('forgot-answer').value.trim();
+    const newPwd = document.getElementById('forgot-new-pwd').value;
+    
+    if (!answer) {
+      errEl.textContent = '请输入密保答案';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!newPwd || newPwd.length < 4) {
+      errEl.textContent = '新密码至少4位';
+      errEl.style.display = 'block';
+      return;
+    }
+    
+    const secData = getSecurityData();
+    if (answer.toLowerCase() !== secData[email].answer) {
+      errEl.textContent = '密保答案错误';
+      errEl.style.display = 'block';
+      return;
+    }
+    
+    // 重置密码
+    const users = JSON.parse(localStorage.getItem('hd_users') || '{}');
+    users[email] = btoa(email + ':' + newPwd);
+    localStorage.setItem('hd_users', JSON.stringify(users));
+    
+    errEl.style.display = 'none';
+    alert('密码重置成功！请用新密码登录');
+    closeForgotModal();
+    emailInput.disabled = false;
+  }
+}
+
+// 修改密码弹窗
+function showChangePwdModal() {
+  document.getElementById('changepwd-modal').style.display = 'flex';
+  document.getElementById('changepwd-old').value = '';
+  document.getElementById('changepwd-new').value = '';
+  document.getElementById('changepwd-confirm').value = '';
+  document.getElementById('changepwd-err').style.display = 'none';
+}
+
+function closeChangePwdModal() {
+  document.getElementById('changepwd-modal').style.display = 'none';
+}
+
+function doChangePassword() {
+  const oldPwd = document.getElementById('changepwd-old').value;
+  const newPwd = document.getElementById('changepwd-new').value;
+  const confirmPwd = document.getElementById('changepwd-confirm').value;
+  const errEl = document.getElementById('changepwd-err');
+  
+  if (!oldPwd) { errEl.textContent = '请输入当前密码'; errEl.style.display = 'block'; return; }
+  if (!newPwd || newPwd.length < 4) { errEl.textContent = '新密码至少4位'; errEl.style.display = 'block'; return; }
+  if (newPwd !== confirmPwd) { errEl.textContent = '两次输入的新密码不一致'; errEl.style.display = 'block'; return; }
+  
+  const users = JSON.parse(localStorage.getItem('hd_users') || '{}');
+  const oldKey = btoa(currentUsername + ':' + oldPwd);
+  
+  if (users[currentUsername] !== oldKey) {
+    errEl.textContent = '当前密码错误';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  // 更新密码
+  users[currentUsername] = btoa(currentUsername + ':' + newPwd);
+  localStorage.setItem('hd_users', JSON.stringify(users));
+  
+  errEl.style.display = 'none';
+  alert('密码修改成功！');
+  closeChangePwdModal();
+}
 
 async function initDiary() {
   await openDB();
