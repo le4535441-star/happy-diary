@@ -6042,10 +6042,11 @@ async function shareAsCard() {
   // 用 html2canvas 直接截图（100%还原页面渲染效果）
   try {
     const canvas = await html2canvas(diaryPage, {
-      scale: 3, // 3倍清晰度（Retina级别）
+      scale: window.devicePixelRatio || 3, // 匹配设备实际像素密度，无损输出
       useCORS: true,
       backgroundColor: null,
       logging: false,
+      allowTaint: true,
     });
     
     // 在截图下方添加水印
