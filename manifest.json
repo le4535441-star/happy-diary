@@ -1,0 +1,17 @@
+{
+  "name": "快乐小事",
+  "short_name": "快乐小事",
+  "description": "记录每一天的小确幸",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#fdf6e3",
+  "theme_color": "#d4956a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
