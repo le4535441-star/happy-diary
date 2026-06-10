@@ -4704,31 +4704,21 @@ async function initCloudSync() {
     cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
     const auth = cloudApp.auth();
     
-    // SDK 3.x 匿名登录
-    let loginSuccess = false;
-    
+    // 强制匿名登录（SDK 3.x）
     try {
-      // 方式1: signInAnonymously (SDK 3.x 标准方式)
       await auth.signInAnonymously();
-      loginSuccess = true;
       console.log('Auth: signInAnonymously success');
-    } catch(e1) {
-      console.log('Auth signInAnonymously failed:', e1.message);
-      // 方式2: 检查已有登录态
+    } catch(e) {
+      console.log('Auth signInAnonymously error:', e.message || e);
+      // 如果失败，尝试先登出再重新登录
       try {
-        const loginState = await auth.getLoginState();
-        if (loginState) {
-          loginSuccess = true;
-          console.log('Auth: already logged in');
-        }
+        await auth.signOut();
+        await auth.signInAnonymously();
+        console.log('Auth: re-signIn success after signOut');
       } catch(e2) {
-        console.log('Auth getLoginState failed:', e2.message);
+        console.log('Auth final attempt failed:', e2.message || e2);
+        return;
       }
-    }
-    
-    if (!loginSuccess) {
-      console.log('All auth methods failed, using local only');
-      return;
     }
     
     cloudDb = cloudApp.database();
