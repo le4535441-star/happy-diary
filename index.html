@@ -4720,10 +4720,86 @@ async function initCloudSync() {
     cloudReady = true;
     console.log('Cloud sync ready');
     
-    // 同步本地数据到云端
-    syncLocalToCloud();
+    // 双向同步
+    await syncFromCloud(); // 先从云端拉取
+    await syncLocalToCloud(); // 再把本地新数据推上去
   } catch(e) {
     console.log('Cloud init failed, using local only:', e.message);
+  }
+}
+
+// 从云端拉取数据到本地（新设备登录时关键）
+async function syncFromCloud() {
+  if (!cloudReady || !cloudDb) return;
+  try {
+    const col = cloudDb.collection('entries');
+    // CloudBase 单次最多获取 1000 条，分页拉取
+    let allCloudEntries = [];
+    let offset = 0;
+    const limit = 100;
+    while (true) {
+      const result = await col.where({ _username: currentUsername }).skip(offset).limit(limit).get();
+      if (!result.data || result.data.length === 0) break;
+      allCloudEntries = allCloudEntries.concat(result.data);
+      if (result.data.length < limit) break;
+      offset += limit;
+    }
+    
+    if (allCloudEntries.length === 0) return;
+    
+    // 获取本地所有条目
+    const localEntries = getEntries();
+    const localIds = new Set(localEntries.map(e => e.id));
+    
+    // 把云端有而本地没有的数据写入本地 IndexedDB
+    let newCount = 0;
+    for (const cloudEntry of allCloudEntries) {
+      const localId = cloudEntry.localId || cloudEntry.id;
+      if (!localIds.has(localId)) {
+        // 构建本地格式的 entry
+        const entry = {
+          id: localId,
+          date: cloudEntry.date,
+          text: cloudEntry.text,
+          emoji: cloudEntry.emoji,
+          quote: cloudEntry.quote,
+          tag: cloudEntry.tag,
+          weather: cloudEntry.weather,
+          timestamp: cloudEntry.timestamp
+        };
+        await dbAdd(entry);
+        newCount++;
+      }
+    }
+    
+    if (newCount > 0) {
+      // 重新加载本地数据
+      entriesCache = await dbGetAll();
+      console.log(`Synced ${newCount} entries from cloud`);
+    }
+    
+    // 同步粉碎记录
+    try {
+      const shredCol = cloudDb.collection('shredded');
+      const shredResult = await shredCol.where({ _username: currentUsername }).limit(1000).get();
+      if (shredResult.data && shredResult.data.length > 0) {
+        const tx = db.transaction('shredded', 'readwrite');
+        const store = tx.objectStore('shredded');
+        const localShreds = await new Promise(r => { const req = store.getAll(); req.onsuccess = () => r(req.result || []); req.onerror = () => r([]); });
+        const localShredIds = new Set(localShreds.map(s => s.id));
+        
+        for (const item of shredResult.data) {
+          const id = item.localId || item.id;
+          if (!localShredIds.has(id)) {
+            const tx2 = db.transaction('shredded', 'readwrite');
+            tx2.objectStore('shredded').add({ id, text: item.text, date: item.date, timestamp: item.timestamp });
+          }
+        }
+      }
+    } catch(e) {}
+    
+  } catch(e) {
+    console.log('Sync from cloud failed:', e.message);
   }
 }
 
@@ -4734,8 +4810,15 @@ async function syncLocalToCloud() {
     const col = cloudDb.collection('entries');
     
     // 获取云端已有数据
-    const cloudData = await col.where({ _username: currentUsername }).limit(1000).get();
-    const cloudIds = new Set((cloudData.data || []).map(d => d.localId));
+    let cloudIds = new Set();
+    let offset = 0;
+    while (true) {
+      const result = await col.where({ _username: currentUsername }).skip(offset).limit(100).field({ localId: true }).get();
+      if (!result.data || result.data.length === 0) break;
+      result.data.forEach(d => cloudIds.add(d.localId));
+      if (result.data.length < 100) break;
+      offset += 100;
+    }
     
     // 把本地有而云端没有的数据同步上去
     for (const entry of entries) {
@@ -4744,8 +4827,26 @@ async function syncLocalToCloud() {
         await col.add({ ...entry, localId, _username: currentUsername });
       }
     }
+    
+    // 同步粉碎记录到云端
+    try {
+      const tx = db.transaction('shredded', 'readonly');
+      const store = tx.objectStore('shredded');
+      const localShreds = await new Promise(r => { const req = store.getAll(); req.onsuccess = () => r(req.result || []); req.onerror = () => r([]); });
+      if (localShreds.length > 0) {
+        const shredCol = cloudDb.collection('shredded');
+        const cloudShreds = await shredCol.where({ _username: currentUsername }).limit(1000).field({ localId: true }).get();
+        const cloudShredIds = new Set((cloudShreds.data || []).map(d => d.localId));
+        for (const s of localShreds) {
+          if (!cloudShredIds.has(s.id)) {
+            await shredCol.add({ ...s, localId: s.id, _username: currentUsername });
+          }
+        }
+      }
+    } catch(e) {}
+    
   } catch(e) {
-    console.log('Sync failed:', e.message);
+    console.log('Sync to cloud failed:', e.message);
   }
 }
 
