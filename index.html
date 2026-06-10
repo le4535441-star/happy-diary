@@ -6705,6 +6705,7 @@ async function loadProfileFromCloud() {
     const result = await col.where({ _username: currentUsername, _type: 'profile' }).get();
     if (result.data && result.data.length > 0) {
       const profile = result.data[0];
+      // 云端有头像但本地没有时才覆写（不覆盖用户已有的本地设置）
       if (profile.avatar && !localStorage.getItem('hd_avatar_' + currentUsername)) {
         localStorage.setItem('hd_avatar_' + currentUsername, profile.avatar);
       }
@@ -6715,11 +6716,12 @@ async function loadProfileFromCloud() {
         localStorage.setItem('hd_theme_' + currentUsername, profile.theme);
         loadTheme();
       }
-      // 刷新显示
-      displayAvatar();
-      const sn = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
-      document.getElementById('my-space-name').textContent = sn;
     }
+    // 无论云端是否有数据，都刷新显示（使用本地数据）
+    displayAvatar();
+    const sn = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
+    const snEl = document.getElementById('my-space-name');
+    if (snEl) snEl.textContent = sn;
   } catch(e) {
     console.log('Load profile from cloud failed:', e.message);
   }
@@ -6767,6 +6769,11 @@ async function confirmClearData() {
   // 显示进度提示
   const btn = document.querySelector('.my-menu-item[onclick="showClearDataModal()"] .my-menu-text');
   if (btn) btn.textContent = '清除中...';
+  
+  // ★ 清除前先保留头像、空间名、主题——这些是个人设置，永远不删
+  const savedAvatar    = localStorage.getItem('hd_avatar_' + currentUsername);
+  const savedSpaceName = localStorage.getItem('hd_space_name_' + currentUsername);
+  const savedTheme     = localStorage.getItem('hd_theme_' + currentUsername);
   
   try {
     // 1. 清除本地 IndexedDB 中当前用户数据（entries）
@@ -6847,6 +6854,11 @@ async function confirmClearData() {
     
     // 6. 无论是否清云端，都写 justCleared 标记，防止下次打开时 loading 屏自动把数据拉回来
     localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
+    
+    // ★ 清除完成后立刻还原头像、空间名、主题（这些是个人设置，不属于历史数据）
+    if (savedAvatar)    localStorage.setItem('hd_avatar_' + currentUsername, savedAvatar);
+    if (savedSpaceName) localStorage.setItem('hd_space_name_' + currentUsername, savedSpaceName);
+    if (savedTheme)     localStorage.setItem('hd_theme_' + currentUsername, savedTheme);
     
     // 7. 刷新 UI
     await loadEntries();
