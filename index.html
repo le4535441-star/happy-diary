@@ -1030,7 +1030,7 @@ body {
 }
 .tab-page.active { display: block; }
 
-/* 求好运留白页 */
+/* 问观音留白页 */
 .luck-page {
   display: flex;
   flex-direction: column;
@@ -2109,11 +2109,11 @@ body {
 
 <!-- 登录后闪屏：显示最近一条快乐记录 -->
 <div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
-  <div style="font-size:48px;margin-bottom:20px;" id="splash-emoji">🌸</div>
-  <div style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;color:#3d3028;line-height:1.8;max-width:320px;" id="splash-content">
-    <p style="font-size:13px;color:#7a6b5d;margin-bottom:12px;" id="splash-date"></p>
-    <p id="splash-text" style="font-size:17px;"></p>
-    <p style="font-size:13px;color:#7a6b5d;margin-top:16px;font-style:italic;" id="splash-quote"></p>
+  <div style="font-size:56px;margin-bottom:24px;" id="splash-emoji">🌸</div>
+  <div style="font-family:'ZCOOL XiaoWei',serif;color:#3d3028;line-height:1.8;max-width:320px;" id="splash-content">
+    <p style="font-size:15px;color:#5a4a3a;margin-bottom:14px;letter-spacing:1px;" id="splash-date"></p>
+    <p id="splash-text" style="font-size:22px;color:#2c2016;font-weight:600;line-height:1.6;"></p>
+    <p style="font-size:14px;color:#6b5744;margin-top:20px;font-style:italic;line-height:1.6;" id="splash-quote"></p>
   </div>
   <p style="font-size:12px;color:#c8a45c;margin-top:32px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
 </div>
@@ -2245,7 +2245,7 @@ body {
     </div>
   </div>
 
-  <!-- Tab4: 求好运（观音灵签） -->
+  <!-- Tab4: 问观音（观音灵签） -->
   <div id="tab-luck" class="tab-page">
     <!-- 摇签界面 -->
     <div class="luck-temple" id="luck-temple">
@@ -2375,7 +2375,7 @@ body {
     </div>
     <div class="tab-item" onclick="switchTab('luck')">
       <span class="tab-icon">🍀</span>
-      <span class="tab-label">求好运</span>
+      <span class="tab-label">问观音</span>
     </div>
     <div class="tab-item" onclick="switchTab('me')">
       <span class="tab-icon">👤</span>
@@ -4289,17 +4289,51 @@ function playClawSound(type) {
     const now = ctx.currentTime;
     
     if (type === 'lever') {
-      // 脚步声
-      const osc = ctx.createOscillator();
+      // 小碎步声——用白噪音+低通滤波模拟轻快的脚步拍地声
+      const bufferSize = ctx.sampleRate * 0.06;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800 + Math.random() * 400;
+      filter.Q.value = 0.8;
+      
       const gain = ctx.createGain();
-      osc.connect(gain);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      
+      noise.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.value = 200 + Math.random() * 100;
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.1);
+      noise.start(now);
+      noise.stop(now + 0.07);
+      
+      // 第二下（双脚交替的感觉）
+      setTimeout(() => {
+        const buf2 = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const d2 = buf2.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) d2[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        const n2 = ctx.createBufferSource();
+        n2.buffer = buf2;
+        const f2 = ctx.createBiquadFilter();
+        f2.type = 'lowpass';
+        f2.frequency.value = 600 + Math.random() * 300;
+        f2.Q.value = 0.7;
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.18, ctx.currentTime);
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        n2.connect(f2);
+        f2.connect(g2);
+        g2.connect(ctx.destination);
+        n2.start(ctx.currentTime);
+        n2.stop(ctx.currentTime + 0.06);
+      }, 80 + Math.random() * 40);
     }
     
     else if (type === 'grab') {
@@ -4883,7 +4917,7 @@ async function syncFromCloud() {
           weather: cloudEntry.weather,
           timestamp: cloudEntry.timestamp
         };
-        await dbAdd(entry);
+        await dbPut(entry);
         newCount++;
       }
     }
