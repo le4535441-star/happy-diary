@@ -3783,29 +3783,35 @@ function renderHappyIndex() {
   
   const weekEntries = entries.filter(e => new Date(e.date) >= monday);
   const count = weekEntries.length;
-  const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
   
-  // 数值不外显，只更新太阳图标
+  // 保留数据以供弹窗使用，元素已隐藏
   const numEl = document.getElementById('happy-index-num');
-  if (numEl) numEl.textContent = count; // 保留数据以供弹窗使用，元素已隐藏
+  if (numEl) numEl.textContent = count;
   
   const svg = document.getElementById('happy-sun-svg');
   const cx = 22, cy = 22;
+  // viewBox 44×44，圆心22，最大安全半径约20（留2px边距）
   
-  // 精致配色方案
-  const themes = [
-    { core: '#d0d0d0', mid: '#e8e8e8', glow: '#f5f5f5', ray: '#ccc' },
-    { core: '#ffd54f', mid: '#ffe082', glow: '#fff8e1', ray: '#ffca28' },
-    { core: '#ffc107', mid: '#ffd54f', glow: '#fff9c4', ray: '#ffb300' },
-    { core: '#ffb300', mid: '#ffc107', glow: '#fff3e0', ray: '#ffa000' },
-    { core: '#f9a825', mid: '#fbc02d', glow: '#fff59d', ray: '#f57f17' },
-  ];
-  const t = themes[level];
-  const coreR = 7 + level * 1.2;
+  // === 连续线性缩放，上限21条 ===
+  // count=0 → 极小灰色圆；count=1~21 线性扩大到最大
+  const maxCount = 21;
+  const clampedCount = Math.min(count, maxCount);
+  
+  // 核心半径：0条=4.5（最小圆），21条=11.5（最大安全）
+  const minCore = 4.5, maxCore = 11.5;
+  const coreR = count === 0 ? minCore : minCore + (maxCore - minCore) * (clampedCount / maxCount);
+  
+  // 颜色：0条灰，1~4淡黄，5~9暖黄，10~15橙金，16~21炽金
+  let t;
+  if (count === 0)       t = { core: '#d0d0d0', mid: '#e8e8e8', glow: '#f5f5f5', ray: '#ccc' };
+  else if (count <= 4)   t = { core: '#ffd54f', mid: '#ffe082', glow: '#fff8e1', ray: '#ffca28' };
+  else if (count <= 9)   t = { core: '#ffc107', mid: '#ffd54f', glow: '#fff9c4', ray: '#ffb300' };
+  else if (count <= 15)  t = { core: '#ffb300', mid: '#ffc107', glow: '#fff3e0', ray: '#ffa000' };
+  else                   t = { core: '#f9a825', mid: '#fbc02d', glow: '#fff59d', ray: '#f57f17' };
   
   let s = '';
   
-  // 定义渐变
+  // 渐变定义
   s += `<defs>
     <radialGradient id="sunGrad">
       <stop offset="0%" stop-color="${t.core}"/>
@@ -3814,45 +3820,54 @@ function renderHappyIndex() {
     </radialGradient>
   </defs>`;
   
-  // 最外层柔和光晕（大圆虚化）
-  if (level > 0) {
-    s += `<circle cx="${cx}" cy="${cy}" r="${coreR + 10 + level * 2}" fill="${t.glow}" opacity="${0.2 + level * 0.08}"/>`;
-    s += `<circle cx="${cx}" cy="${cy}" r="${coreR + 5 + level}" fill="${t.mid}" opacity="0.25"/>`;
+  // 光晕（count>=1 才显示，随 count 扩大，最大不超过 svg 边界）
+  if (count > 0) {
+    const glowR1 = Math.min(coreR + 4 + clampedCount * 0.3, 19);
+    const glowR2 = Math.min(coreR + 2 + clampedCount * 0.15, 17);
+    const glowOpacity = 0.12 + (clampedCount / maxCount) * 0.18;
+    s += `<circle cx="${cx}" cy="${cy}" r="${glowR1.toFixed(1)}" fill="${t.glow}" opacity="${glowOpacity.toFixed(2)}"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${glowR2.toFixed(1)}" fill="${t.mid}" opacity="${(glowOpacity * 0.8).toFixed(2)}"/>`;
   }
   
-  // 光线（交替长短，圆头，透明度渐变）
-  if (level > 0) {
-    const rayCount = 8 + level * 3;
+  // 光线：count>=1 才出现，数量和长度随 count 线性增长
+  if (count > 0) {
+    // 光线数量：1条=4根，21条=16根
+    const rayCount = Math.round(4 + (clampedCount - 1) / (maxCount - 1) * 12);
+    // 长线长度：1条=2，21条=8（控制不超出 svg）
+    const longLen = 2 + (clampedCount - 1) / (maxCount - 1) * 6;
+    const shortLen = longLen * 0.6;
+    
     for (let i = 0; i < rayCount; i++) {
-      const angle = (i / rayCount) * Math.PI * 2;
+      const angle = (i / rayCount) * Math.PI * 2 - Math.PI / 2; // 从顶部开始
       const isLong = i % 2 === 0;
-      const rStart = coreR + 2;
-      const rEnd = rStart + (isLong ? 4 + level * 2.5 : 2 + level * 1.5);
+      const rStart = coreR + 1.5;
+      const rEnd = rStart + (isLong ? longLen : shortLen);
       const x1 = cx + Math.cos(angle) * rStart;
       const y1 = cy + Math.sin(angle) * rStart;
       const x2 = cx + Math.cos(angle) * rEnd;
       const y2 = cy + Math.sin(angle) * rEnd;
-      const width = isLong ? 1.8 : 1.2;
-      const opacity = isLong ? 0.7 : 0.4;
+      const width = isLong ? 1.6 : 1.0;
+      const opacity = isLong ? 0.75 : 0.45;
       s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${t.ray}" stroke-width="${width}" stroke-linecap="round" opacity="${opacity}"/>`;
     }
   }
   
-  // 核心圆（渐变填充）
-  s += `<circle cx="${cx}" cy="${cy}" r="${coreR}" fill="url(#sunGrad)"/>`;
+  // 核心圆
+  s += `<circle cx="${cx}" cy="${cy}" r="${coreR.toFixed(1)}" fill="url(#sunGrad)"/>`;
   
-  // 高光点（玻璃感）
-  if (level > 0) {
-    s += `<circle cx="${cx - coreR * 0.3}" cy="${cy - coreR * 0.3}" r="${coreR * 0.25}" fill="white" opacity="0.5"/>`;
+  // 高光点
+  if (count > 0) {
+    s += `<circle cx="${(cx - coreR * 0.3).toFixed(1)}" cy="${(cy - coreR * 0.3).toFixed(1)}" r="${(coreR * 0.22).toFixed(1)}" fill="white" opacity="0.5"/>`;
   }
   
-  // 表情（level>=2才显示）
-  if (level >= 2) {
-    const eyeR = level >= 4 ? 1.3 : 1.1;
-    s += `<circle cx="${cx - 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.7)"/>`;
-    s += `<circle cx="${cx + 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.7)"/>`;
-    const smileW = 2 + level * 0.5;
-    s += `<path d="M${cx - smileW},${cy + 2} Q${cx},${cy + 3 + level * 0.5},${cx + smileW},${cy + 2}" fill="none" stroke="rgba(120,60,0,0.6)" stroke-width="1" stroke-linecap="round"/>`;
+  // 表情（count>=5 才出现，count越多笑得越开心）
+  if (count >= 5) {
+    const eyeR = count >= 16 ? 1.3 : 1.0;
+    s += `<circle cx="${cx - 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.65)"/>`;
+    s += `<circle cx="${cx + 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.65)"/>`;
+    const smileW = 2 + Math.min(clampedCount, 21) / 21 * 1.5;
+    const smileD = 2 + Math.min(clampedCount, 21) / 21 * 1.0;
+    s += `<path d="M${(cx - smileW).toFixed(1)},${(cy + 2).toFixed(1)} Q${cx},${(cy + smileD + 1).toFixed(1)},${(cx + smileW).toFixed(1)},${(cy + 2).toFixed(1)}" fill="none" stroke="rgba(120,60,0,0.6)" stroke-width="1" stroke-linecap="round"/>`;
   }
   
   svg.innerHTML = s;
