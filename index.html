@@ -16,7 +16,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
+:root, [data-theme="warm"] {
   --warm-bg: #fdf6e3;
   --paper: #fffef9;
   --ink: #3d3028;
@@ -26,6 +26,39 @@
   --gold: #c8a45c;
   --shadow: 0 4px 24px rgba(61,48,40,0.12);
   --radius: 16px;
+}
+
+[data-theme="ocean"] {
+  --warm-bg: #1a2332;
+  --paper: #243447;
+  --ink: #e8edf3;
+  --ink-light: #8fa4bd;
+  --accent: #4a9eff;
+  --accent-soft: #2d4a6b;
+  --gold: #ffd700;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+[data-theme="forest"] {
+  --warm-bg: #f0f5e8;
+  --paper: #fafdf5;
+  --ink: #2d3a25;
+  --ink-light: #5e7a4c;
+  --accent: #6b9e4f;
+  --accent-soft: #d4e8c4;
+  --gold: #a0883a;
+  --shadow: 0 4px 24px rgba(45,58,37,0.12);
+}
+
+[data-theme="dusk"] {
+  --warm-bg: #2a1f33;
+  --paper: #3d2f4a;
+  --ink: #ede4f5;
+  --ink-light: #b09ac8;
+  --accent: #9b6dcc;
+  --accent-soft: #4a3660;
+  --gold: #e8c547;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
 
 body {
@@ -2278,6 +2311,43 @@ body {
   </div>
 </div>
 
+<!-- 主题选择弹窗 -->
+<div id="theme-picker-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
+  <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:var(--ink);margin-bottom:20px;">🎨 选择主题</h3>
+    <div id="theme-options" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="theme-option" onclick="applyTheme('warm')" style="padding:16px 12px;border-radius:14px;background:linear-gradient(135deg,#fdf6e3,#f0d9c4);cursor:pointer;border:3px solid transparent;" data-theme-val="warm">
+        <div style="font-size:24px;margin-bottom:6px;">☀️</div>
+        <div style="font-size:12px;color:#3d3028;font-weight:600;">暖棕</div>
+      </div>
+      <div class="theme-option" onclick="applyTheme('ocean')" style="padding:16px 12px;border-radius:14px;background:linear-gradient(135deg,#1a2332,#243447);cursor:pointer;border:3px solid transparent;" data-theme-val="ocean">
+        <div style="font-size:24px;margin-bottom:6px;">🌊</div>
+        <div style="font-size:12px;color:#e8edf3;font-weight:600;">深邃蓝</div>
+      </div>
+      <div class="theme-option" onclick="applyTheme('forest')" style="padding:16px 12px;border-radius:14px;background:linear-gradient(135deg,#f0f5e8,#d4e8c4);cursor:pointer;border:3px solid transparent;" data-theme-val="forest">
+        <div style="font-size:24px;margin-bottom:6px;">🌿</div>
+        <div style="font-size:12px;color:#2d3a25;font-weight:600;">森林绿</div>
+      </div>
+      <div class="theme-option" onclick="applyTheme('dusk')" style="padding:16px 12px;border-radius:14px;background:linear-gradient(135deg,#2a1f33,#3d2f4a);cursor:pointer;border:3px solid transparent;" data-theme-val="dusk">
+        <div style="font-size:24px;margin-bottom:6px;">🌌</div>
+        <div style="font-size:12px;color:#ede4f5;font-weight:600;">暮霞紫</div>
+      </div>
+    </div>
+    <button onclick="closeThemePicker()" style="padding:12px 32px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">确定</button>
+  </div>
+</div>
+
+<!-- 月度快乐报告弹窗 -->
+<div id="monthly-report-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);">
+  <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;max-height:80vh;overflow-y:auto;">
+    <div style="font-size:48px;margin-bottom:12px;">📊</div>
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:var(--ink);margin-bottom:6px;">月度快乐报告</h3>
+    <p style="font-size:12px;color:var(--ink-light);margin-bottom:20px;" id="report-month-label"></p>
+    <div id="monthly-report-content" style="text-align:left;"></div>
+    <button onclick="closeMonthlyReport()" style="margin-top:20px;padding:12px 32px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">知道了 ✨</button>
+  </div>
+</div>
+
 <!-- 登录后闪屏：显示最近一条快乐记录 -->
 <div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
   <div style="font-size:56px;margin-bottom:24px;" id="splash-emoji">🌸</div>
@@ -2515,6 +2585,10 @@ body {
         <div class="my-name" id="my-username"></div>
       </div>
       <div class="my-menu">
+        <div class="my-menu-item" onclick="showThemePicker()">
+          <span class="my-menu-icon">🎨</span>
+          <span class="my-menu-text">主题切换</span>
+        </div>
         <div class="my-menu-item" onclick="showChangePwdModal()">
           <span class="my-menu-icon">🔒</span>
           <span class="my-menu-text">修改密码</span>
@@ -2548,6 +2622,7 @@ body {
       <button class="fab secondary" onclick="backToPlaza()" title="返回广场">🏠</button>
       <button class="fab secondary" onclick="openDatePicker()" title="跳转日期">📅</button>
       <button class="fab" onclick="openModal()" title="记录快乐">✍️</button>
+      <button class="fab secondary" onclick="shareAsCard()" title="分享卡片">📤</button>
       <button class="fab secondary" onclick="deleteCurrentEntry()" title="删除">🗑️</button>
     </div>
     
@@ -3256,7 +3331,9 @@ async function showSplashThenApp() {
       startFallingBubbles();
       ensureBubblePoolStore().then(() => updatePoolCount());
       initCloudSync();
+      loadTheme();
       checkMonthlyBackupReminder();
+      checkMonthlyReport();
     }, 3000);
   } else {
     // 没有记录，直接进主界面
@@ -3267,7 +3344,9 @@ async function showSplashThenApp() {
     startFallingBubbles();
     ensureBubblePoolStore().then(() => updatePoolCount());
     initCloudSync();
+    loadTheme();
     checkMonthlyBackupReminder();
+    checkMonthlyReport();
   }
 }
 
@@ -5819,6 +5898,261 @@ async function exportData() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   alert(`导出成功！\n快乐记录 ${entries.length} 条\n粉碎记录 ${shredRecords.length} 条\n泡泡 ${bubbleRecords.length} 个`);
+}
+
+// ========== 分享快乐卡片 ==========
+async function shareAsCard() {
+  const entries = getEntries();
+  if (entries.length === 0) return;
+  const entry = entries[currentIndex];
+  
+  // 创建 Canvas 生成卡片图
+  const canvas = document.createElement('canvas');
+  const w = 750, h = 1000;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  
+  // 背景
+  const gradient = ctx.createLinearGradient(0, 0, 0, h);
+  gradient.addColorStop(0, '#fdf6e3');
+  gradient.addColorStop(0.5, '#f7e8d4');
+  gradient.addColorStop(1, '#f0d9c4');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, w, h);
+  
+  // 纸张纹理（点状）
+  ctx.fillStyle = 'rgba(61,48,40,0.02)';
+  for (let i = 0; i < 200; i++) {
+    ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+  }
+  
+  // 卡片区域
+  const cardX = 50, cardY = 80, cardW = w - 100, cardH = h - 200;
+  ctx.fillStyle = '#fffef9';
+  ctx.shadowColor = 'rgba(61,48,40,0.12)';
+  ctx.shadowBlur = 30;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 24);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // 日期
+  const dateObj = new Date(entry.date);
+  const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+  ctx.font = '28px "PingFang SC", sans-serif';
+  ctx.fillStyle = '#7a6b5d';
+  ctx.textAlign = 'center';
+  ctx.fillText(dateStr, w/2, cardY + 60);
+  
+  // emoji
+  ctx.font = '56px serif';
+  ctx.fillText(entry.emoji || '✨', w/2, cardY + 140);
+  
+  // 正文
+  ctx.font = 'bold 32px "PingFang SC", sans-serif';
+  ctx.fillStyle = '#3d3028';
+  const lines = wrapText(ctx, entry.text, cardW - 80);
+  let textY = cardY + 200;
+  lines.forEach(line => {
+    ctx.fillText(line, w/2, textY);
+    textY += 48;
+  });
+  
+  // 配文
+  if (entry.quote && entry.quote.text) {
+    ctx.font = 'italic 22px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#7a6b5d';
+    ctx.fillText(`「${entry.quote.text}」`, w/2, textY + 40);
+    ctx.font = '18px "PingFang SC", sans-serif';
+    ctx.fillStyle = '#c0392b';
+    ctx.fillText(`—— ${entry.quote.author || ''}`, w/2, textY + 72);
+  }
+  
+  // 底部水印
+  ctx.font = '20px "PingFang SC", sans-serif';
+  ctx.fillStyle = '#c8a45c';
+  ctx.fillText('✨ 快乐小事 · 每天都有好事花生', w/2, h - 60);
+  
+  // 导出图片
+  canvas.toBlob(async (blob) => {
+    if (navigator.share && navigator.canShare) {
+      // 移动端原生分享
+      try {
+        const file = new File([blob], 'happy-card.png', { type: 'image/png' });
+        await navigator.share({ files: [file], title: '快乐小事' });
+      } catch(e) {
+        downloadCard(blob);
+      }
+    } else {
+      downloadCard(blob);
+    }
+  }, 'image/png');
+}
+
+function downloadCard(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'happy-card-' + new Date().toISOString().split('T')[0] + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const lines = [];
+  let line = '';
+  for (const char of text) {
+    const test = line + char;
+    if (ctx.measureText(test).width > maxWidth) {
+      lines.push(line);
+      line = char;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 6); // 最多6行
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ========== 主题切换 ==========
+function showThemePicker() {
+  document.getElementById('theme-picker-overlay').style.display = 'flex';
+  // 高亮当前主题
+  const current = localStorage.getItem('hd_theme_' + currentUsername) || 'warm';
+  document.querySelectorAll('.theme-option').forEach(el => {
+    el.style.borderColor = el.getAttribute('data-theme-val') === current ? 'var(--accent)' : 'transparent';
+  });
+}
+
+function closeThemePicker() {
+  document.getElementById('theme-picker-overlay').style.display = 'none';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('hd_theme_' + currentUsername, theme);
+  // 更新选中状态
+  document.querySelectorAll('.theme-option').forEach(el => {
+    el.style.borderColor = el.getAttribute('data-theme-val') === theme ? '#d4956a' : 'transparent';
+  });
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('hd_theme_' + currentUsername) || 'warm';
+  document.documentElement.setAttribute('data-theme', saved);
+}
+
+// ========== 月度快乐报告 ==========
+function checkMonthlyReport() {
+  const today = new Date();
+  const day = today.getDate();
+  const hour = today.getHours();
+  
+  // 每月1-3号 且 晚上8点之后 才触发
+  if (day > 3) return;
+  if (day === 1 && hour < 20) return; // 1号要到20点后
+  
+  const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const lastReport = localStorage.getItem('hd_report_' + currentUsername);
+  if (lastReport === yearMonth) return;
+  
+  // 延迟3秒显示（在备份提醒之后）
+  setTimeout(() => {
+    generateMonthlyReport(yearMonth);
+  }, 5000);
+}
+
+function generateMonthlyReport(yearMonth) {
+  const entries = getEntries();
+  
+  // 统计上个月的数据
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthName = `${lastMonth.getFullYear()}年${lastMonth.getMonth() + 1}月`;
+  
+  const monthEntries = entries.filter(e => e.date && e.date.startsWith(lastMonthStr));
+  
+  if (monthEntries.length === 0) {
+    // 上个月没有记录，不显示报告
+    localStorage.setItem('hd_report_' + currentUsername, yearMonth);
+    return;
+  }
+  
+  // 统计数据
+  const totalDays = new Set(monthEntries.map(e => e.date)).size;
+  const totalEntries = monthEntries.length;
+  const tags = {};
+  monthEntries.forEach(e => {
+    if (e.tag) tags[e.tag] = (tags[e.tag] || 0) + 1;
+  });
+  const topTags = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  
+  // 找到最长的一条记录
+  const longest = monthEntries.reduce((a, b) => (a.text || '').length > (b.text || '').length ? a : b);
+  
+  // 生成报告内容
+  let html = `
+    <div style="background:var(--accent-soft);border-radius:14px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:32px;text-align:center;margin-bottom:8px;">🎉</div>
+      <div style="font-size:16px;color:var(--ink);font-weight:700;text-align:center;">上月快乐指数</div>
+      <div style="display:flex;justify-content:space-around;margin-top:12px;">
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--accent);">${totalEntries}</div>
+          <div style="font-size:11px;color:var(--ink-light);">条快乐</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--accent);">${totalDays}</div>
+          <div style="font-size:11px;color:var(--ink-light);">天记录</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--accent);">${(totalEntries / totalDays).toFixed(1)}</div>
+          <div style="font-size:11px;color:var(--ink-light);">条/天</div>
+        </div>
+      </div>
+    </div>`;
+  
+  if (topTags.length > 0) {
+    html += `<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">🏷️ 快乐来源 TOP3</div>`;
+    topTags.forEach(([tag, count], i) => {
+      html += `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px;">${i+1}. ${tag}（${count}次）</div>`;
+    });
+    html += `</div>`;
+  }
+  
+  html += `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">📝 最走心的一条</div>
+      <div style="font-size:12px;color:var(--ink-light);line-height:1.6;background:var(--warm-bg);padding:12px;border-radius:10px;">
+        "${longest.text.substring(0, 60)}${longest.text.length > 60 ? '...' : ''}"
+        <div style="font-size:11px;color:var(--accent);margin-top:4px;">${longest.date}</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-light);text-align:center;line-height:1.6;">
+      ✨ 新的一个月，继续收集快乐吧！
+    </div>`;
+  
+  document.getElementById('report-month-label').textContent = lastMonthName + ' 快乐小结';
+  document.getElementById('monthly-report-content').innerHTML = html;
+  document.getElementById('monthly-report-overlay').style.display = 'flex';
+  
+  localStorage.setItem('hd_report_' + currentUsername, yearMonth);
+}
+
+function closeMonthlyReport() {
+  document.getElementById('monthly-report-overlay').style.display = 'none';
 }
 
 // ========== 头像 & 空间名称 ==========
