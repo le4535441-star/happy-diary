@@ -1,5 +1,5 @@
-const CACHE_NAME = 'happy-diary-cloud-v1';
-const ASSETS = ['/index.html', '/manifest.json'];
+const CACHE_NAME = 'happy-diary-cloud-v2';
+const ASSETS = ['./index.html', './manifest.json', './sign-data.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
@@ -21,6 +21,6 @@ self.addEventListener('fetch', e => {
       const clone = resp.clone();
       caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
       return resp;
-    }).catch(() => caches.match(e.request).then(c => c || caches.match('/index.html')))
+    }).catch(() => caches.match(e.request))
   );
 });
