@@ -1148,8 +1148,61 @@ body {
 /* 我的页面 */
 .my-page { padding: 40px 24px; min-height: 100%; }
 .my-header { text-align: center; margin-bottom: 32px; }
-.my-avatar { font-size: 48px; margin-bottom: 12px; }
-.my-name { font-size: 16px; color: var(--ink); font-weight: 600; }
+
+.my-avatar-wrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 14px;
+  cursor: pointer;
+}
+
+.my-avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent-soft);
+  box-shadow: 0 4px 16px rgba(61,48,40,0.12);
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  overflow: hidden;
+}
+
+.my-avatar-wrap .avatar-edit-hint {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.my-space-name {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 4px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  display: inline-block;
+}
+
+.my-space-name:active { background: var(--accent-soft); }
+
+.my-name { font-size: 14px; color: var(--ink-light); font-weight: 500; }
 .my-menu { display: flex; flex-direction: column; gap: 12px; }
 .my-menu-item {
   display: flex; align-items: center; gap: 12px;
@@ -2453,7 +2506,12 @@ body {
   <div id="tab-me" class="tab-page">
     <div class="my-page">
       <div class="my-header">
-        <div class="my-avatar">😊</div>
+        <div class="my-avatar-wrap" onclick="pickAvatar()">
+          <div class="my-avatar-img" id="my-avatar-display">😊</div>
+          <div class="avatar-edit-hint">📷</div>
+          <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+        </div>
+        <div class="my-space-name" id="my-space-name" onclick="editSpaceName()">我的快乐空间</div>
         <div class="my-name" id="my-username"></div>
       </div>
       <div class="my-menu">
@@ -5558,7 +5616,7 @@ function switchTab(tab) {
   }
   if (tab === 'shred') { updateShredCountTab(); }
   if (tab === 'luck') { updateSignCount(); backToTemple(); }
-  if (tab === 'me') { document.getElementById('my-username').textContent = currentUsername; }
+  if (tab === 'me') { loadMyProfile(); }
 }
 
 // ========== 粉碎机Tab版 ==========
@@ -5774,6 +5832,74 @@ async function exportData() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   alert(`导出成功！\n快乐记录 ${entries.length} 条\n粉碎记录 ${shredRecords.length} 条\n泡泡 ${bubbleRecords.length} 个`);
+}
+
+// ========== 头像 & 空间名称 ==========
+function pickAvatar() {
+  document.getElementById('avatar-input').click();
+}
+
+function handleAvatarUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      // 裁剪为正方形并压缩
+      const canvas = document.createElement('canvas');
+      const size = 200;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // 居中裁剪
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2;
+      const sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      
+      // 保存到 localStorage
+      localStorage.setItem('hd_avatar_' + currentUsername, dataUrl);
+      
+      // 更新显示
+      displayAvatar();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function displayAvatar() {
+  const avatarEl = document.getElementById('my-avatar-display');
+  const saved = localStorage.getItem('hd_avatar_' + currentUsername);
+  if (saved) {
+    avatarEl.innerHTML = `<img src="${saved}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    avatarEl.textContent = '😊';
+  }
+}
+
+function editSpaceName() {
+  const current = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
+  const newName = prompt('给你的快乐空间取个名字吧：', current);
+  if (newName !== null && newName.trim()) {
+    localStorage.setItem('hd_space_name_' + currentUsername, newName.trim());
+    document.getElementById('my-space-name').textContent = newName.trim();
+  }
+}
+
+function loadMyProfile() {
+  // 加载头像
+  displayAvatar();
+  // 加载空间名称
+  const spaceName = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
+  document.getElementById('my-space-name').textContent = spaceName;
+  // 加载用户名
+  document.getElementById('my-username').textContent = currentUsername;
 }
 
 // 退出登录
