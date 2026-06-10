@@ -5829,6 +5829,7 @@ function startShake() {
     stopShakeSound();
     
     // 随机抽签（100签全部启用，数据完全从 signFullData 获取）
+    // 先预加载图片，加载完成后再展示结果页（解决签图没及时显示的问题）
     setTimeout(() => {
       const signNum = Math.floor(Math.random() * 100) + 1;
       const fullData = (typeof signFullData !== 'undefined' && signFullData[signNum]) || null;
@@ -5845,19 +5846,22 @@ function startShake() {
           items: fullData.items || {}
         };
       } else {
-        // 极端情况：sign-data.js 加载失败，使用 guanyinSigns 兜底
         const fallback = guanyinSigns.find(s => s.num === signNum);
         currentSign = fallback || {
-          num: signNum,
-          level: '中签',
-          ancient: '观音灵签',
+          num: signNum, level: '中签', ancient: '观音灵签',
           poem: '心诚则灵\n善恶有报\n但行好事\n莫问前程',
           summary: '此签劝人行善积德，自有福报。',
           detail: '心存善念 自有贵人 凡事随缘 不必强求',
           items: {marriage:'随缘',career:'平稳',wealth:'平',health:'安',travel:'可',lawsuit:'和'}
         };
       }
-      showSignResult();
+      
+      // 预加载签图，图片就绪后再显示结果页（避免先显示空白区域）
+      const img = new Image();
+      img.onload = () => showSignResult();
+      img.onerror = () => showSignResult(); // 加载失败也正常跳转
+      img.src = 'signs/' + currentSign.num + '.gif';
+      
       saveSignRecord();
     }, 800);
   }
@@ -5868,7 +5872,7 @@ function showSignResult() {
   const page = document.getElementById('sign-result-page');
   page.style.display = 'flex';
   
-  // 显示对应签号的图片
+  // 图片已由预加载的 Image 对象加载完毕，直接 set src 浏览器会命中缓存，立即显示
   document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif';
   
   // 立即填充签文基本信息（第一版面就能看到）
