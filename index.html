@@ -3265,12 +3265,14 @@ function openDetail(index) {
   currentIndex = index;
   document.getElementById('plaza-view').style.display = 'none';
   document.getElementById('detail-view').style.display = 'block';
+  document.getElementById('tab-bar').style.display = 'none';
   renderPage();
 }
 
 function backToPlaza() {
   document.getElementById('detail-view').style.display = 'none';
   document.getElementById('plaza-view').style.display = 'block';
+  document.getElementById('tab-bar').style.display = 'flex';
   renderPlaza();
 }
 
@@ -3635,6 +3637,7 @@ async function saveEntry() {
   // 如果在广场视图，切到详情页展示新记录
   document.getElementById('plaza-view').style.display = 'none';
   document.getElementById('detail-view').style.display = 'block';
+  document.getElementById('tab-bar').style.display = 'none';
   renderPage();
 }
 
