@@ -4700,31 +4700,63 @@ let cloudReady = false;
 
 async function initCloudSync() {
   try {
-    if (typeof cloudbase === 'undefined') return;
+    if (typeof cloudbase === 'undefined') { console.log('cloudbase SDK not loaded'); return; }
     cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
     const auth = cloudApp.auth();
     
-    // 尝试匿名登录（兼容两种API）
+    // 尝试多种匿名登录方式（兼容不同 SDK 版本）
+    let loginSuccess = false;
+    
+    // 方式1: 直接 signInAnonymously
     try {
-      if (auth.anonymousAuthProvider) {
-        await auth.anonymousAuthProvider().signIn();
-      } else if (auth.signInAnonymously) {
-        await auth.signInAnonymously();
+      await auth.signInAnonymously();
+      loginSuccess = true;
+      console.log('Auth: signInAnonymously success');
+    } catch(e1) {
+      console.log('Auth method 1 failed:', e1.message);
+    }
+    
+    // 方式2: anonymousAuthProvider().signIn()
+    if (!loginSuccess) {
+      try {
+        if (auth.anonymousAuthProvider) {
+          await auth.anonymousAuthProvider().signIn();
+          loginSuccess = true;
+          console.log('Auth: anonymousAuthProvider success');
+        }
+      } catch(e2) {
+        console.log('Auth method 2 failed:', e2.message);
       }
-    } catch(e) {
-      console.log('Cloud auth failed, using local only');
+    }
+    
+    // 方式3: 检查是否已有登录态
+    if (!loginSuccess) {
+      try {
+        const loginState = await auth.getLoginState();
+        if (loginState) {
+          loginSuccess = true;
+          console.log('Auth: already logged in');
+        }
+      } catch(e3) {
+        console.log('Auth method 3 failed:', e3.message);
+      }
+    }
+    
+    if (!loginSuccess) {
+      console.log('All auth methods failed, using local only');
       return;
     }
     
     cloudDb = cloudApp.database();
     cloudReady = true;
-    console.log('Cloud sync ready');
+    console.log('Cloud sync ready, starting sync...');
     
     // 双向同步
-    await syncFromCloud(); // 先从云端拉取
-    await syncLocalToCloud(); // 再把本地新数据推上去
+    await syncFromCloud();
+    await syncLocalToCloud();
+    console.log('Cloud sync completed');
   } catch(e) {
-    console.log('Cloud init failed, using local only:', e.message);
+    console.log('Cloud init failed:', e.message, e);
   }
 }
 
