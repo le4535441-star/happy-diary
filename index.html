@@ -2105,6 +2105,17 @@ body {
   </div>
 </div>
 
+<!-- 登录后闪屏：显示最近一条快乐记录 -->
+<div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
+  <div style="font-size:48px;margin-bottom:20px;" id="splash-emoji">🌸</div>
+  <div style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;color:#3d3028;line-height:1.8;max-width:320px;" id="splash-content">
+    <p style="font-size:13px;color:#7a6b5d;margin-bottom:12px;" id="splash-date"></p>
+    <p id="splash-text" style="font-size:17px;"></p>
+    <p style="font-size:13px;color:#7a6b5d;margin-top:16px;font-style:italic;" id="splash-quote"></p>
+  </div>
+  <p style="font-size:12px;color:#c8a45c;margin-top:32px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
+</div>
+
 <!-- 主应用 -->
 <div id="app">
   <!-- Tab1: 笑一声（哈哈机） -->
@@ -2200,11 +2211,18 @@ body {
 
   <!-- Tab3: 随Ta去（粉碎糟心事） -->
   <div id="tab-shred" class="tab-page">
-    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
       <h2 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#37474f;text-align:center;margin-bottom:20px;">💥 随Ta去</h2>
       <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
         <div class="paper-note" id="paper-note-tab" style="width:100%;">
           <textarea id="shred-text-tab" placeholder="把让你不爽的事写在这里...&#10;写完就随Ta去。" maxlength="500" style="min-height:220px;"></textarea>
+        </div>
+        <!-- 粉碎机图形 -->
+        <div class="shredder-machine" id="shredder-machine-tab" style="margin-top:16px;">
+          <div class="machine-slot"></div>
+          <div class="machine-body">
+            <div class="machine-label">粉碎机</div>
+          </div>
         </div>
         <button class="shred-btn" id="shred-btn-tab" onclick="doShredTab()" style="margin-top:24px;">🗑️ 随Ta去！</button>
         <div class="shred-result" id="shred-result-tab" style="display:none;text-align:center;margin-top:24px;">
@@ -2220,6 +2238,8 @@ body {
       <div id="shred-history-tab" style="display:none;width:100%;max-width:340px;margin-top:12px;">
         <div class="history-list" id="history-list-tab"></div>
       </div>
+      <!-- 碎片容器 -->
+      <div class="shred-pieces" id="shred-pieces-tab"></div>
     </div>
   </div>
 
@@ -2921,24 +2941,53 @@ function showError(msg) {
 
 function enterApp() {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  initDiary();
-  switchTab('laugh');
-  startFallingBubbles();
-  ensureBubblePoolStore().then(() => updatePoolCount());
-  initCloudSync();
+  showSplashThenApp();
+}
+
+async function showSplashThenApp() {
+  // 先初始化数据库
+  await openDB();
+  await loadEntries();
+  
+  const entries = getEntries();
+  if (entries && entries.length > 0) {
+    // 有记录，显示最近一条
+    const latest = entries[entries.length - 1];
+    const splash = document.getElementById('splash-screen');
+    document.getElementById('splash-emoji').textContent = latest.emoji || '🌸';
+    document.getElementById('splash-text').textContent = latest.text || '';
+    document.getElementById('splash-date').textContent = latest.date || '';
+    document.getElementById('splash-quote').textContent = latest.quote ? `「${latest.quote}」` : '';
+    splash.style.display = 'flex';
+    
+    // 3 秒后进入主界面
+    setTimeout(() => {
+      splash.style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      currentIndex = entries.length - 1;
+      renderPlaza();
+      switchTab('laugh');
+      startFallingBubbles();
+      ensureBubblePoolStore().then(() => updatePoolCount());
+      initCloudSync();
+    }, 3000);
+  } else {
+    // 没有记录，直接进主界面
+    document.getElementById('app').style.display = 'block';
+    currentIndex = 0;
+    renderPlaza();
+    switchTab('laugh');
+    startFallingBubbles();
+    ensureBubblePoolStore().then(() => updatePoolCount());
+    initCloudSync();
+  }
 }
 
 // 检查是否已登录（自动登录，不需要重新输入）
 if (currentUsername) {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
   document.addEventListener('DOMContentLoaded', () => {
-    initDiary();
-    switchTab('laugh');
-    startFallingBubbles();
-    ensureBubblePoolStore().then(() => updatePoolCount());
-    initCloudSync();
+    showSplashThenApp();
   });
 }
 
@@ -3374,8 +3423,8 @@ function unlockAudio() {
 }
 
 // 在所有用户交互中尝试解锁音频
-document.addEventListener('touchstart', unlockAudio, { once: true });
-document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: false });
+document.addEventListener('click', unlockAudio, { once: false });
 
 // 快乐音效：清脆的叮咚上升音
 function playHappySound() {
@@ -4933,23 +4982,73 @@ async function renderShredHistoryTab() {
 async function doShredTab() {
   const text = document.getElementById('shred-text-tab').value.trim();
   if (!text) { document.getElementById('shred-text-tab').placeholder = '写点什么再粉碎吧…'; return; }
+  
+  // 保存记录
   await saveShredRecord(text);
-  document.getElementById('paper-note-tab').style.display = 'none';
-  document.getElementById('shred-btn-tab').style.display = 'none';
-  playShredSound();
+  
+  const btn = document.getElementById('shred-btn-tab');
+  btn.disabled = true;
+  btn.textContent = '粉碎中...';
+  
+  // 1. 纸条被吸入动画
+  const note = document.getElementById('paper-note-tab');
+  note.classList.add('shredding');
+  
+  // 2. 触发震动
   if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 100]);
+  
+  // 3. 播放粉碎音效
+  playShredSound();
+  
+  // 4. 生成碎片飞散
+  setTimeout(() => {
+    createShredPiecesTab();
+    note.style.display = 'none';
+    btn.style.display = 'none';
+    document.getElementById('shredder-machine-tab').style.display = 'none';
+  }, 500);
+  
+  // 5. 显示结果
   setTimeout(() => {
     document.getElementById('shred-result-tab').style.display = 'block';
     document.getElementById('result-text-tab').textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
     updateShredCountTab();
-  }, 1500);
+  }, 2200);
+}
+
+function createShredPiecesTab() {
+  const container = document.getElementById('shred-pieces-tab');
+  container.innerHTML = '';
+  const colors = ['#fffef9', '#f5f5f5', '#e0e0e0', '#fafafa', '#fff8e1'];
+  
+  for (let i = 0; i < 24; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'shred-piece';
+    piece.style.left = (15 + Math.random() * 70) + '%';
+    piece.style.top = (25 + Math.random() * 20) + '%';
+    piece.style.width = (6 + Math.random() * 14) + 'px';
+    piece.style.height = (25 + Math.random() * 55) + 'px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = (Math.random() * 0.6) + 's';
+    piece.style.animationDuration = (1.2 + Math.random() * 1.2) + 's';
+    piece.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
+    container.appendChild(piece);
+  }
+  
+  setTimeout(() => { container.innerHTML = ''; }, 2500);
 }
 
 function resetShredTab() {
   document.getElementById('shred-text-tab').value = '';
-  document.getElementById('paper-note-tab').style.display = 'block';
+  const note = document.getElementById('paper-note-tab');
+  note.classList.remove('shredding');
+  note.style.display = 'block';
   document.getElementById('shred-btn-tab').style.display = 'block';
+  document.getElementById('shred-btn-tab').disabled = false;
+  document.getElementById('shred-btn-tab').textContent = '🗑️ 随Ta去！';
   document.getElementById('shred-result-tab').style.display = 'none';
+  document.getElementById('shredder-machine-tab').style.display = 'block';
+  document.getElementById('shred-pieces-tab').innerHTML = '';
 }
 
 // showClawGame 改为切换到笑一声tab
