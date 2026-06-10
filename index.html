@@ -3667,68 +3667,84 @@ function renderPlaza() {
 function renderHappyIndex() {
   const entries = getEntries();
   const now = new Date();
-  // 计算本周一的日期
-  const dayOfWeek = now.getDay() || 7; // 周日=7
+  const dayOfWeek = now.getDay() || 7;
   const monday = new Date(now);
   monday.setDate(now.getDate() - dayOfWeek + 1);
   monday.setHours(0, 0, 0, 0);
   
-  // 统计本周记录数
-  const weekEntries = entries.filter(e => {
-    const d = new Date(e.date);
-    return d >= monday;
-  });
+  const weekEntries = entries.filter(e => new Date(e.date) >= monday);
   const count = weekEntries.length;
-  
-  // 指数等级：0=无光 1-2=微光 3-4=温暖 5-7=明亮 8+=炽热
   const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
   
-  // 更新数字
   document.getElementById('happy-index-num').textContent = count;
   
-  // 绘制太阳SVG（光芒强弱跟随level）
   const svg = document.getElementById('happy-sun-svg');
-  const colors = [
-    ['#ccc', '#eee'],         // level 0: 灰色无光
-    ['#ffd54f', '#fff8e1'],   // level 1: 淡黄微光
-    ['#ffb300', '#fff3e0'],   // level 2: 暖黄
-    ['#ff8f00', '#ffe0b2'],   // level 3: 明亮橙
-    ['#e65100', '#ffcc80'],   // level 4: 炽热橙红
+  const cx = 22, cy = 22;
+  
+  // 精致配色方案
+  const themes = [
+    { core: '#d0d0d0', mid: '#e8e8e8', glow: '#f5f5f5', ray: '#ccc' },
+    { core: '#ffd54f', mid: '#ffe082', glow: '#fff8e1', ray: '#ffca28' },
+    { core: '#ffb300', mid: '#ffc107', glow: '#fff3e0', ray: '#ffa000' },
+    { core: '#ff9800', mid: '#ffb74d', glow: '#ffe0b2', ray: '#f57c00' },
+    { core: '#ff6d00', mid: '#ff9100', glow: '#ffccbc', ray: '#e65100' },
   ];
-  const [coreColor, glowColor] = colors[level];
-  const rays = level === 0 ? 0 : 4 + level * 2; // 光线数量
-  const rayLen = level * 3; // 光线长度
-  const coreR = 8 + level * 1.5; // 核心圆大小
-  const pulse = level >= 3 ? 'class="sun-pulse"' : '';
+  const t = themes[level];
+  const coreR = 7 + level * 1.2;
   
-  let svgContent = '';
+  let s = '';
   
-  // 外发光
+  // 定义渐变
+  s += `<defs>
+    <radialGradient id="sunGrad">
+      <stop offset="0%" stop-color="${t.core}"/>
+      <stop offset="60%" stop-color="${t.mid}"/>
+      <stop offset="100%" stop-color="${t.glow}" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>`;
+  
+  // 最外层柔和光晕（大圆虚化）
   if (level > 0) {
-    svgContent += `<circle cx="22" cy="22" r="${coreR + 6}" fill="${glowColor}" opacity="0.4"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${coreR + 10 + level * 2}" fill="${t.glow}" opacity="${0.2 + level * 0.08}"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${coreR + 5 + level}" fill="${t.mid}" opacity="0.25"/>`;
   }
   
-  // 光线
-  for (let i = 0; i < rays; i++) {
-    const angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
-    const x1 = 22 + Math.cos(angle) * (coreR + 2);
-    const y1 = 22 + Math.sin(angle) * (coreR + 2);
-    const x2 = 22 + Math.cos(angle) * (coreR + 2 + rayLen);
-    const y2 = 22 + Math.sin(angle) * (coreR + 2 + rayLen);
-    svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${coreColor}" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>`;
+  // 光线（交替长短，圆头，透明度渐变）
+  if (level > 0) {
+    const rayCount = 8 + level * 3;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (i / rayCount) * Math.PI * 2;
+      const isLong = i % 2 === 0;
+      const rStart = coreR + 2;
+      const rEnd = rStart + (isLong ? 4 + level * 2.5 : 2 + level * 1.5);
+      const x1 = cx + Math.cos(angle) * rStart;
+      const y1 = cy + Math.sin(angle) * rStart;
+      const x2 = cx + Math.cos(angle) * rEnd;
+      const y2 = cy + Math.sin(angle) * rEnd;
+      const width = isLong ? 1.8 : 1.2;
+      const opacity = isLong ? 0.7 : 0.4;
+      s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${t.ray}" stroke-width="${width}" stroke-linecap="round" opacity="${opacity}"/>`;
+    }
   }
   
-  // 核心圆
-  svgContent += `<circle cx="22" cy="22" r="${coreR}" fill="${coreColor}" ${pulse}/>`;
+  // 核心圆（渐变填充）
+  s += `<circle cx="${cx}" cy="${cy}" r="${coreR}" fill="url(#sunGrad)"/>`;
   
-  // 笑脸（level>=2时显示）
+  // 高光点（玻璃感）
+  if (level > 0) {
+    s += `<circle cx="${cx - coreR * 0.3}" cy="${cy - coreR * 0.3}" r="${coreR * 0.25}" fill="white" opacity="0.5"/>`;
+  }
+  
+  // 表情（level>=2才显示）
   if (level >= 2) {
-    svgContent += `<circle cx="19" cy="20" r="1.5" fill="#fff"/>`;
-    svgContent += `<circle cx="25" cy="20" r="1.5" fill="#fff"/>`;
-    svgContent += `<path d="M18,24 Q22,${26 + level},26,24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>`;
+    const eyeR = level >= 4 ? 1.3 : 1.1;
+    s += `<circle cx="${cx - 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.7)"/>`;
+    s += `<circle cx="${cx + 2.5}" cy="${cy - 1}" r="${eyeR}" fill="rgba(120,60,0,0.7)"/>`;
+    const smileW = 2 + level * 0.5;
+    s += `<path d="M${cx - smileW},${cy + 2} Q${cx},${cy + 3 + level * 0.5},${cx + smileW},${cy + 2}" fill="none" stroke="rgba(120,60,0,0.6)" stroke-width="1" stroke-linecap="round"/>`;
   }
   
-  svg.innerHTML = svgContent;
+  svg.innerHTML = s;
 }
 
 function showHappyIndexTip() {
