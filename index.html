@@ -2594,11 +2594,6 @@ body {
       <div class="sign-image-wrap">
         <img class="sign-image" id="sign-image" src="" alt="签文">
       </div>
-      <!-- 签文基本信息（第一版面直接显示，不用等点解签） -->
-      <div id="sign-brief" style="text-align:center;padding:12px 20px 0;">
-        <div id="sign-brief-title" style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;color:var(--ink);margin-bottom:8px;"></div>
-        <div id="sign-brief-poem" style="font-size:13px;color:var(--ink-light);line-height:2;white-space:pre-line;"></div>
-      </div>
       <button class="interpret-btn" onclick="showInterpret()">📖 详细解签</button>
       <button class="reshake-btn" onclick="backToTemple()">🔄 重新摇签</button>
     </div>
@@ -5540,7 +5535,14 @@ async function initCloudSync() {
     console.log('Cloud sync ready, starting sync...');
     
     // 双向同步
-    await syncFromCloud();
+    // 如果用户刚刚主动清除了云端数据，本次跳过 syncFromCloud，避免把"已删除"的数据再拉回来
+    const justCleared = localStorage.getItem('hd_just_cleared_' + currentUsername);
+    if (justCleared) {
+      localStorage.removeItem('hd_just_cleared_' + currentUsername); // 只跳过一次
+      console.log('[CloudSync] 跳过本次 syncFromCloud（用户刚清除过云端数据）');
+    } else {
+      await syncFromCloud();
+    }
     await syncLocalToCloud();
     await loadProfileFromCloud();
     console.log('Cloud sync completed');
@@ -5874,11 +5876,6 @@ function showSignResult() {
   
   // 图片已由预加载的 Image 对象加载完毕，直接 set src 浏览器会命中缓存，立即显示
   document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif';
-  
-  // 立即填充签文基本信息（第一版面就能看到）
-  const data = (typeof signFullData !== 'undefined' && signFullData[currentSign.num]) || currentSign;
-  document.getElementById('sign-brief-title').textContent = `第${currentSign.num}签 · ${data.level} · ${data.ancient}`;
-  document.getElementById('sign-brief-poem').textContent = data.poem || '';
   
   playClawSound('grab');
 }
@@ -6823,11 +6820,16 @@ async function confirmClearData() {
     // 5. 清除签文历史（localStorage，按用户隔离）
     localStorage.removeItem('hd_signs_' + currentUsername);
     
-    // 6. 刷新 UI
+    // 6. 若同时清了云端，标记本次已主动清除，下次启动跳过自动云端恢复
+    if (clearCloudAlso) {
+      localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
+    }
+    
+    // 7. 刷新 UI
     await loadEntries();
     renderPlaza();
     updatePoolCount();
-    updateSignCount(); // 重置太阳指数
+    updateSignCount();
     
     // 恢复按钮文字
     if (btn) btn.textContent = '一键清除历史数据';
