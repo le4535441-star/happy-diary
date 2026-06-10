@@ -5185,11 +5185,38 @@ function showClawGame() {
 // 导出数据
 async function exportData() {
   const entries = getEntries();
+  
+  // 同时导出粉碎记录和泡泡池
+  let shredRecords = [];
+  let bubbleRecords = [];
+  try {
+    const tx1 = db.transaction('shredded', 'readonly');
+    const store1 = tx1.objectStore('shredded');
+    shredRecords = await new Promise((resolve, reject) => {
+      const req = store1.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch(e) {}
+  try {
+    const tx2 = db.transaction('bubblePool', 'readonly');
+    const store2 = tx2.objectStore('bubblePool');
+    bubbleRecords = await new Promise((resolve, reject) => {
+      const req = store2.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch(e) {}
+  
   const data = {
     exportDate: new Date().toISOString(),
     user: currentUsername,
     totalEntries: entries.length,
-    entries: entries
+    totalShredded: shredRecords.length,
+    totalBubbles: bubbleRecords.length,
+    entries: entries,
+    shredded: shredRecords,
+    bubblePool: bubbleRecords
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -5200,6 +5227,7 @@ async function exportData() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  alert(`导出成功！\n快乐记录 ${entries.length} 条\n粉碎记录 ${shredRecords.length} 条\n泡泡 ${bubbleRecords.length} 个`);
 }
 
 // 退出登录
