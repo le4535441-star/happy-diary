@@ -2959,7 +2959,16 @@ async function showSplashThenApp() {
     document.getElementById('splash-emoji').textContent = latest.emoji || '🌸';
     document.getElementById('splash-text').textContent = latest.text || '';
     document.getElementById('splash-date').textContent = latest.date || '';
-    document.getElementById('splash-quote').textContent = latest.quote ? `「${latest.quote}」` : '';
+    // quote 可能是对象 {text, author} 或字符串
+    let quoteStr = '';
+    if (latest.quote) {
+      if (typeof latest.quote === 'object' && latest.quote.text) {
+        quoteStr = `「${latest.quote.text}」—— ${latest.quote.author || ''}`;
+      } else if (typeof latest.quote === 'string') {
+        quoteStr = `「${latest.quote}」`;
+      }
+    }
+    document.getElementById('splash-quote').textContent = quoteStr;
     splash.style.display = 'flex';
     
     // 3 秒后进入主界面
