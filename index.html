@@ -5021,7 +5021,11 @@ function switchTab(tab) {
   
   // 特定tab的初始化
   if (tab === 'laugh') { startFallingBubbles(); }
-  if (tab === 'happy') { renderPlaza(); }
+  if (tab === 'happy') { 
+    document.getElementById('plaza-view').style.display = 'block';
+    document.getElementById('detail-view').style.display = 'none';
+    renderPlaza(); 
+  }
   if (tab === 'shred') { updateShredCountTab(); }
   if (tab === 'luck') { updateSignCount(); backToTemple(); }
   if (tab === 'me') { document.getElementById('my-username').textContent = currentUsername; }
