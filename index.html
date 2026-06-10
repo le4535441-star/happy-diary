@@ -2361,6 +2361,29 @@ body {
   </div>
 </div>
 
+<!-- 一键清除历史数据确认弹窗 -->
+<div id="clear-data-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);">
+  <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#c0392b;margin-bottom:10px;">清除历史数据</h3>
+    <p style="font-size:14px;color:var(--ink-light);line-height:1.8;margin-bottom:8px;">此操作将删除你在<strong>本设备</strong>上的所有历史记录，包括：</p>
+    <div style="background:rgba(192,57,43,0.06);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:left;font-size:13px;color:var(--ink);line-height:2;">
+      <div>📖 所有快乐记录</div>
+      <div>💥 所有粉碎记录</div>
+      <div>🫧 所有泡泡池笑话</div>
+    </div>
+    <div id="clear-cloud-row" style="display:flex;align-items:center;gap:10px;background:rgba(192,57,43,0.04);border-radius:10px;padding:12px 14px;margin-bottom:20px;cursor:pointer;" onclick="toggleClearCloud()">
+      <div id="clear-cloud-checkbox" style="width:22px;height:22px;border-radius:6px;border:2px solid #c0392b;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-size:14px;"></div>
+      <span style="font-size:13px;color:var(--ink);line-height:1.5;">同时清除<strong>云端</strong>备份数据（不可恢复）</span>
+    </div>
+    <p style="font-size:12px;color:#c0392b;margin-bottom:20px;">⚠️ 本地数据删除后无法恢复，建议先导出备份</p>
+    <div style="display:flex;gap:12px;">
+      <button onclick="closeClearDataModal()" style="flex:1;padding:13px;background:var(--accent-soft);color:var(--ink);border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">取消</button>
+      <button onclick="confirmClearData()" style="flex:1;padding:13px;background:#c0392b;color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">确认清除</button>
+    </div>
+  </div>
+</div>
+
 <!-- 月度快乐报告弹窗 -->
 <div id="monthly-report-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);">
   <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;max-height:80vh;overflow-y:auto;">
@@ -2640,6 +2663,10 @@ body {
         <div class="my-menu-item" onclick="exportData()">
           <span class="my-menu-icon">📥</span>
           <span class="my-menu-text">导出数据</span>
+        </div>
+        <div class="my-menu-item" onclick="showClearDataModal()" style="border: 1.5px solid rgba(192,57,43,0.2);">
+          <span class="my-menu-icon">🗑️</span>
+          <span class="my-menu-text" style="color:#c0392b;">一键清除历史数据</span>
         </div>
         <div class="my-menu-item" onclick="doLogout()">
           <span class="my-menu-icon">👋</span>
@@ -6578,6 +6605,136 @@ function loadMyProfile() {
   document.getElementById('my-space-name').textContent = spaceName;
   // 加载用户名
   document.getElementById('my-username').textContent = currentUsername;
+}
+
+// ========== 一键清除历史数据 ==========
+let clearCloudAlso = false;
+
+function showClearDataModal() {
+  clearCloudAlso = false;
+  const cb = document.getElementById('clear-cloud-checkbox');
+  cb.textContent = '';
+  cb.style.background = '';
+  document.getElementById('clear-data-overlay').style.display = 'flex';
+}
+
+function closeClearDataModal() {
+  document.getElementById('clear-data-overlay').style.display = 'none';
+}
+
+function toggleClearCloud() {
+  clearCloudAlso = !clearCloudAlso;
+  const cb = document.getElementById('clear-cloud-checkbox');
+  if (clearCloudAlso) {
+    cb.textContent = '✓';
+    cb.style.background = '#c0392b';
+    cb.style.color = 'white';
+  } else {
+    cb.textContent = '';
+    cb.style.background = '';
+  }
+}
+
+async function confirmClearData() {
+  closeClearDataModal();
+  
+  // 显示进度提示
+  const btn = document.querySelector('.my-menu-item[onclick="showClearDataModal()"] .my-menu-text');
+  if (btn) btn.textContent = '清除中...';
+  
+  try {
+    // 1. 清除本地 IndexedDB 中当前用户数据（entries）
+    const localEntries = getEntries();
+    for (const e of localEntries) {
+      await dbDelete(e.id);
+    }
+    entriesCache = [];
+    
+    // 2. 清除本地 IndexedDB shredded
+    if (db && db.objectStoreNames.contains(SHRED_STORE)) {
+      const localShreds = await getShredRecords();
+      await new Promise((resolve) => {
+        const tx = db.transaction(SHRED_STORE, 'readwrite');
+        const store = tx.objectStore(SHRED_STORE);
+        localShreds.forEach(s => store.delete(s.id));
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      });
+    }
+    
+    // 3. 清除本地 IndexedDB bubblePool
+    if (db && db.objectStoreNames.contains(BUBBLE_POOL_STORE)) {
+      const localBubbles = await getBubblePool();
+      await new Promise((resolve) => {
+        const tx = db.transaction(BUBBLE_POOL_STORE, 'readwrite');
+        const store = tx.objectStore(BUBBLE_POOL_STORE);
+        localBubbles.forEach(b => store.delete(b.id));
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      });
+    }
+    
+    // 4. 同时清除云端（如果勾选）
+    if (clearCloudAlso && cloudReady && cloudDb) {
+      try {
+        // 清除云端 entries
+        const col = cloudDb.collection('entries');
+        let offset = 0;
+        while (true) {
+          const res = await col.where({ _username: currentUsername }).skip(offset).limit(100).get();
+          if (!res.data || res.data.length === 0) break;
+          for (const doc of res.data) {
+            await col.doc(doc._id).remove().catch(() => {});
+          }
+          if (res.data.length < 100) break;
+        }
+        // 清除云端 shredded
+        const shredCol = cloudDb.collection('shredded');
+        let shredOffset = 0;
+        while (true) {
+          const res = await shredCol.where({ _username: currentUsername }).skip(shredOffset).limit(100).get();
+          if (!res.data || res.data.length === 0) break;
+          for (const doc of res.data) {
+            await shredCol.doc(doc._id).remove().catch(() => {});
+          }
+          if (res.data.length < 100) break;
+        }
+        // 清除云端 bubblePool
+        const bubbleCol = cloudDb.collection('bubblePool');
+        let bubbleOffset = 0;
+        while (true) {
+          const res = await bubbleCol.where({ _username: currentUsername }).skip(bubbleOffset).limit(100).get();
+          if (!res.data || res.data.length === 0) break;
+          for (const doc of res.data) {
+            await bubbleCol.doc(doc._id).remove().catch(() => {});
+          }
+          if (res.data.length < 100) break;
+        }
+        console.log('Cloud data cleared');
+      } catch(e) {
+        console.log('Clear cloud data failed:', e.message);
+      }
+    }
+    
+    // 5. 刷新 UI
+    await loadEntries();
+    renderPlaza();
+    updatePoolCount();
+    
+    // 恢复按钮文字
+    if (btn) btn.textContent = '一键清除历史数据';
+    
+    // 轻提示
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:white;padding:14px 28px;border-radius:20px;font-size:15px;z-index:99999;pointer-events:none;';
+    flash.textContent = clearCloudAlso ? '✅ 本地和云端数据已清除' : '✅ 本地数据已清除';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 2200);
+    
+  } catch(e) {
+    if (btn) btn.textContent = '一键清除历史数据';
+    alert('清除失败，请重试：' + e.message);
+  }
 }
 
 // 退出登录
