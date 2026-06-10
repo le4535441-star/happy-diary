@@ -6042,7 +6042,7 @@ async function shareAsCard() {
   // 用 html2canvas 直接截图（100%还原页面渲染效果）
   try {
     const canvas = await html2canvas(diaryPage, {
-      scale: 2, // 2倍清晰度
+      scale: 3, // 3倍清晰度（Retina级别）
       useCORS: true,
       backgroundColor: null,
       logging: false,
