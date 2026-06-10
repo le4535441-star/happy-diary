@@ -693,8 +693,11 @@ body {
 #plaza-view {
   display: flex;
   flex-direction: column;
+  /* 兼容 iOS Safari：100vh 包含地址栏，用 -webkit-fill-available 修正 */
   height: 100vh;
-  padding-bottom: 70px;
+  height: -webkit-fill-available;
+  /* padding-bottom 自动跟 tab-bar 高度对齐，含全面屏安全区 */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
 .plaza-top-fixed {
@@ -1158,7 +1161,8 @@ body {
   display: none;
   position: fixed;
   top: 0; left: 0; right: 0;
-  bottom: 58px;
+  /* bottom 自动适配 tab-bar 高度 + 全面屏安全区，防止内容被遮 */
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--warm-bg);
