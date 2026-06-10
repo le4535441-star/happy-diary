@@ -1,0 +1,4707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="快乐小事">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<script src="https://imgcache.qq.com/qcloud/cloudbase-js-sdk/1.7.1/cloudbase.full.js"></script>
+<script src="sign-data.js"></script>
+<title>快乐小事</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+XiaoWei&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --warm-bg: #fdf6e3;
+  --paper: #fffef9;
+  --ink: #3d3028;
+  --ink-light: #7a6b5d;
+  --accent: #d4956a;
+  --accent-soft: #f0d9c4;
+  --gold: #c8a45c;
+  --shadow: 0 4px 24px rgba(61,48,40,0.12);
+  --radius: 16px;
+}
+
+body {
+  font-family: 'Noto Serif SC', 'PingFang SC', serif;
+  background: var(--warm-bg);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== 密码页 ========== */
+#login-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f7e8d4 0%, #f0d9c4 50%, #e8c9a8 100%);
+  z-index: 9999;
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--paper);
+  border-radius: 24px;
+  padding: 48px 32px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 20px 60px rgba(61,48,40,0.15);
+  text-align: center;
+}
+
+.login-card .logo { font-size: 48px; margin-bottom: 12px; }
+
+.login-card h1 {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 26px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.login-card .sub {
+  color: var(--ink-light);
+  font-size: 13px;
+  margin-bottom: 32px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid var(--accent-soft);
+  border-radius: 12px;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 3px;
+  outline: none;
+  background: var(--paper);
+  transition: border-color 0.2s;
+}
+
+.login-card input:focus { border-color: var(--accent); }
+
+.login-card button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.login-card button:active { transform: scale(0.97); }
+
+.login-error {
+  color: #c0392b;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ========== 主应用 ========== */
+#app {
+  display: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* 日记页面容器 */
+.diary-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+
+/* 单页卡片 */
+.diary-page {
+  position: absolute;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  height: calc(100% - 160px);
+  max-height: 620px;
+  background: var(--paper);
+  border-radius: 20px;
+  box-shadow: var(--shadow), 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s;
+  will-change: transform, opacity;
+}
+
+.diary-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: 20px;
+}
+
+.diary-page.has-bg::before {
+  display: none;
+}
+
+.diary-page .bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  border-radius: 20px;
+  opacity: 0.25;
+}
+
+.diary-page .page-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 28px 24px 20px;
+}
+
+/* 顶部: 日期+天气 */
+.page-header {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(61,48,40,0.08);
+  margin-bottom: 16px;
+}
+
+.page-date {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.page-weekday {
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-bottom: 6px;
+}
+
+.page-weather {
+  font-size: 14px;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.page-count {
+  font-size: 14px;
+  color: #c0392b;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* 中间: 内容 */
+.page-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+  gap: 12px;
+}
+
+.page-emoji {
+  font-size: 36px;
+}
+
+.page-text {
+  font-size: 20px;
+  line-height: 1.9;
+  color: var(--ink);
+  text-align: center;
+  word-break: break-word;
+  font-weight: 600;
+}
+
+/* 底部: 名言 */
+.page-tag {
+  text-align: center;
+  padding: 8px 0;
+  margin: 4px 0;
+}
+
+.page-tag {
+  display: inline-block;
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  color: #e65100;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin: 8px auto;
+  display: block;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 2px 8px rgba(230,81,0,0.1);
+}
+
+.page-footer {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(61,48,40,0.08);
+  margin-bottom: 20px;
+}
+
+.page-quote {
+  font-size: 14px;
+  color: var(--ink-light);
+  font-style: italic;
+  line-height: 1.7;
+  font-weight: 600;
+}
+
+.page-quote .author {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 页码指示 */
+.page-indicator {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: var(--ink-light);
+  background: rgba(255,254,249,0.9);
+  padding: 6px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  z-index: 100;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.empty-state .emoji { font-size: 64px; margin-bottom: 16px; }
+.empty-state h2 { font-family: 'ZCOOL XiaoWei', serif; font-size: 20px; margin-bottom: 8px; }
+.empty-state p { font-size: 15px; color: var(--ink-light); }
+
+/* 底部操作栏 */
+.bottom-bar {
+  position: fixed;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 200;
+}
+
+.fab {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 4px 16px rgba(212,149,106,0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.fab:active { transform: scale(0.9); }
+
+.fab.secondary {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 18px;
+}
+
+/* ========== 新增记录弹窗 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 500;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--paper);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 24px 24px 0 0;
+  padding: 28px 24px 40px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal h2 {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.modal textarea {
+  width: 100%;
+  height: 120px;
+  border: 2px solid var(--accent-soft);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 16px;
+  font-family: 'Noto Serif SC', serif;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  background: var(--paper);
+}
+
+.modal textarea:focus { border-color: var(--accent); }
+
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-light);
+  margin-top: 6px;
+}
+
+.image-upload {
+  margin-top: 16px;
+}
+
+.image-upload label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px dashed var(--accent-soft);
+  border-radius: 12px;
+  color: var(--ink-light);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.image-upload label:active { border-color: var(--accent); }
+
+.image-upload input { display: none; }
+
+.image-preview {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+
+.image-preview img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+}
+
+.image-preview .remove-img {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--ink-light);
+  cursor: pointer;
+}
+
+/* 诗词选择器 */
+/* 快速标签 */
+.quick-tags {
+  margin-top: 16px;
+}
+
+.quick-tags-label {
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-bottom: 10px;
+}
+
+.quick-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-tag {
+  padding: 6px 12px;
+  border: 1.5px solid var(--accent-soft);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.quick-tag.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.quick-tag:active {
+  transform: scale(0.95);
+}
+
+/* 诗词选择器 */
+.quote-picker {
+  margin-top: 16px;
+  border: 2px solid var(--accent-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(253,246,227,0.5);
+}
+
+.quote-picker-label {
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.quote-picker-scroll {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+  font-weight: 600;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.quote-picker-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.quote-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.quote-nav-btn:active {
+  background: var(--accent);
+  color: white;
+}
+
+.quote-nav-idx {
+  font-size: 12px;
+  color: var(--ink-light);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s;
+}
+
+.modal-actions button:active { transform: scale(0.97); }
+
+.btn-cancel {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.btn-save {
+  background: var(--accent);
+  color: white;
+}
+
+/* ========== 日期选择器 ========== */
+.date-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.date-picker-overlay.active { display: flex; }
+
+.date-picker {
+  background: var(--paper);
+  border-radius: 20px;
+  padding: 24px;
+  width: calc(100% - 48px);
+  max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.date-picker h3 {
+  text-align: center;
+  font-family: 'ZCOOL XiaoWei', serif;
+  margin-bottom: 16px;
+}
+
+.date-picker input[type="date"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--accent-soft);
+  border-radius: 10px;
+  font-size: 16px;
+  outline: none;
+}
+
+.date-picker input:focus { border-color: var(--accent); }
+
+.date-picker .dp-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.date-picker .dp-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* 翻页指引 */
+.swipe-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.swipe-hint.show { opacity: 1; }
+
+/* ========== 快乐广场 ========== */
+#plaza-view {
+  padding: 20px 16px;
+  padding-bottom: 40px;
+  overflow-y: auto;
+  height: 100vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 两个入口按钮 */
+.plaza-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 16px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+
+.action-btn:active { transform: scale(0.95); }
+
+.action-icon { font-size: 22px; }
+
+.action-happy {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe4c4 100%);
+  color: #8b5a2b;
+}
+
+.action-crush {
+  background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+  color: #37474f;
+}
+
+/* ========== 哈哈机（天空泡泡+小女孩） ========== */
+.claw-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #2c1810 0%, #3d2519 40%, #4a2c1a 100%);
+  z-index: 450;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.claw-overlay.active { display: flex; }
+
+.claw-machine {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.claw-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 24px;
+  color: #ffd700;
+  margin-bottom: 16px;
+  text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+
+.sky-box {
+  width: 100%;
+  height: 420px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #1f2937 60%, #374151 100%);
+  border: 2px solid rgba(255,215,0,0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 飘落泡泡 */
+.falling-bubbles { position: absolute; inset: 0; }
+
+.fall-bubble {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.85;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1), inset 3px 3px 6px rgba(255,255,255,0.4), 0 0 8px rgba(255,255,255,0.2);
+}
+
+/* SVG 小女孩 */
+.runner {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 80px;
+  z-index: 10;
+  transition: left 0.06s linear;
+  will-change: left;
+}
+
+.runner-body-wrap {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.15s;
+}
+
+.runner-body-wrap svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.runner.face-left .runner-body-wrap { transform: scaleX(-1); }
+.runner.face-right .runner-body-wrap { transform: scaleX(1); }
+
+/* 跑动动画 */
+.runner.running .leg-left { animation: svgLegL 0.3s ease infinite; }
+.runner.running .leg-right { animation: svgLegR 0.3s ease infinite; }
+
+@keyframes svgLegL {
+  0%, 100% { transform: rotate(-8deg); transform-origin: 28px 72px; }
+  50% { transform: rotate(8deg); transform-origin: 28px 72px; }
+}
+
+@keyframes svgLegR {
+  0%, 100% { transform: rotate(8deg); transform-origin: 38px 72px; }
+  50% { transform: rotate(-8deg); transform-origin: 38px 72px; }
+}
+
+/* 接到提示 */
+.catch-flash {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(0,0,0,0.7);
+  padding: 12px 24px;
+  border-radius: 30px;
+  opacity: 0;
+  z-index: 20;
+  transition: all 0.3s;
+}
+
+.catch-flash.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* 按钮 */
+.claw-btn {
+  margin-top: 20px;
+  padding: 16px 48px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
+  color: #2c1810;
+  border: none;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+  transition: transform 0.1s;
+}
+
+.claw-btn:active { transform: scale(0.93); }
+.claw-btn:disabled { background: #555; color: #999; box-shadow: none; }
+
+/* 笑话结果 */
+.joke-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+  background: linear-gradient(180deg, #2c1810 0%, #3d2519 100%);
+  animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0% { transform: translate(-50%, -50%) scale(0); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.joke-bubble-pop { font-size: 56px; margin-bottom: 24px; }
+
+.joke-text {
+  font-size: 18px;
+  line-height: 1.8;
+  color: #fff;
+  font-weight: 600;
+  max-width: 300px;
+  margin-bottom: 32px;
+}
+
+.joke-close-btn {
+  padding: 14px 32px;
+  background: rgba(255,255,255,0.1);
+  color: #ffd700;
+  border: 2px solid rgba(255,215,0,0.3);
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.joke-close-btn:active { background: rgba(255,255,255,0.2); }
+
+.joke-pool-btn {
+  padding: 10px 24px;
+  background: transparent;
+  color: #90caf9;
+  border: 1px solid rgba(144,202,249,0.3);
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.joke-pool-btn:active { background: rgba(255,255,255,0.1); }
+
+/* 泡泡池入口 */
+.bubble-pool-entry {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 20px;
+  color: #ddd;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bubble-pool-entry:active { background: rgba(255,255,255,0.15); }
+
+.pool-count {
+  background: #ffd700;
+  color: #2c1810;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 泡泡池视图 */
+.bubble-pool-view {
+  position: absolute;
+  inset: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(180deg, #2c1810 0%, #3d2519 100%);
+}
+
+.pool-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pool-header .back-btn {
+  background: rgba(255,255,255,0.1);
+  color: #ffd700;
+  border: 1px solid rgba(255,215,0,0.3);
+}
+
+.pool-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 18px;
+  color: #ffd700;
+}
+
+.pool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 30px;
+}
+
+.pool-item {
+  background: rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.pool-item .pool-bubble {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1), inset 3px 3px 6px rgba(255,255,255,0.3);
+}
+
+.pool-item .pool-info { flex: 1; }
+.pool-item .pool-date { font-size: 11px; color: #90a4ae; margin-bottom: 4px; }
+.pool-item .pool-joke { font-size: 14px; color: #e0e0e0; line-height: 1.6; }
+
+.pool-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #78909c;
+  font-size: 15px;
+}
+
+/* ========== 底部Tab导航 ========== */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: var(--paper);
+  border-top: 1px solid rgba(61,48,40,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 999;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 6px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-item.active .tab-icon { transform: scale(1.15); }
+.tab-item.active .tab-label { color: var(--accent); font-weight: 700; }
+
+.tab-icon { font-size: 22px; transition: transform 0.15s; }
+.tab-label { font-size: 10px; color: var(--ink-light); }
+
+/* Tab内容页 */
+.tab-page {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  bottom: 58px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--warm-bg);
+}
+.tab-page.active { display: block; }
+
+/* 求好运留白页 */
+.luck-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+}
+.luck-page .luck-emoji { font-size: 64px; margin-bottom: 20px; }
+.luck-page .luck-title { font-family: 'ZCOOL XiaoWei', serif; font-size: 22px; color: var(--ink); margin-bottom: 8px; }
+.luck-page .luck-sub { font-size: 14px; color: var(--ink-light); }
+
+/* 我的页面 */
+.my-page { padding: 40px 24px; min-height: 100%; }
+.my-header { text-align: center; margin-bottom: 32px; }
+.my-avatar { font-size: 48px; margin-bottom: 12px; }
+.my-name { font-size: 16px; color: var(--ink); font-weight: 600; }
+.my-menu { display: flex; flex-direction: column; gap: 12px; }
+.my-menu-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; background: var(--paper);
+  border-radius: 14px; box-shadow: 0 2px 8px rgba(61,48,40,0.06);
+  cursor: pointer; transition: transform 0.1s;
+}
+.my-menu-item:active { transform: scale(0.97); }
+.my-menu-icon { font-size: 20px; }
+.my-menu-text { font-size: 15px; color: var(--ink); font-weight: 500; }
+
+/* ========== 观音灵签 ========== */
+.luck-temple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 30px 20px;
+  background: linear-gradient(180deg, #1a0a00 0%, #2d1810 40%, #3e2415 100%);
+  position: relative;
+}
+
+.luck-temple::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('signs/guanyin-bg.png') center center / contain no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.temple-header {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 24px;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255,215,0,0.3);
+  margin-bottom: 24px;
+}
+
+.temple-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.incense-holder { font-size: 32px; }
+
+.sign-bucket {
+  width: 80px;
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bucket-body {
+  width: 60px;
+  height: 90px;
+  background: linear-gradient(180deg, #8d6e63, #5d4037);
+  border-radius: 8px 8px 12px 12px;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.bucket-sticks {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 60px;
+}
+
+.stick {
+  width: 3px;
+  height: 45px;
+  background: linear-gradient(180deg, #ffcc80, #d4956a);
+  border-radius: 1px;
+  transform-origin: bottom;
+}
+
+.sign-bucket.shaking .bucket-sticks {
+  animation: shakeSticks 0.3s ease infinite;
+}
+
+.sign-bucket.shaking .stick {
+  animation: stickWiggle 0.35s ease infinite;
+}
+
+.sign-bucket.shaking .stick:nth-child(odd) {
+  animation-delay: 0.1s;
+}
+
+@keyframes shakeSticks {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+@keyframes stickWiggle {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+.temple-tip {
+  font-size: 13px;
+  color: #bcaaa4;
+  text-align: center;
+}
+
+.shake-btn {
+  padding: 16px 48px;
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #2d1810;
+  border: none;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,215,0,0.3);
+  transition: transform 0.1s;
+  margin-bottom: 16px;
+}
+
+.shake-btn:active { transform: scale(0.93); }
+.shake-btn:disabled { background: #666; color: #999; box-shadow: none; }
+
+.sign-history-entry {
+  padding: 10px 20px;
+  color: #bcaaa4;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* 签文图片展示 */
+.sign-result-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 20px 16px;
+  background: linear-gradient(180deg, #1a0a00, #2d1810);
+}
+
+.sign-image-wrap {
+  width: 90%;
+  max-width: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.sign-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.interpret-btn {
+  margin-top: 20px;
+  padding: 14px 36px;
+  background: #c62828;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reshake-btn {
+  margin-top: 12px;
+  padding: 10px 24px;
+  background: transparent;
+  color: #bcaaa4;
+  border: 1px solid #bcaaa4;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* 解签页 */
+.interpret-page {
+  min-height: 100%;
+  padding: 24px 20px;
+  background: var(--warm-bg);
+}
+
+.interpret-card {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: var(--shadow);
+}
+
+.interpret-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 18px;
+  text-align: center;
+  color: #c62828;
+  margin-bottom: 20px;
+}
+
+.interpret-section { margin-bottom: 16px; }
+.interpret-label { font-size: 14px; font-weight: 700; color: #c62828; margin-bottom: 6px; }
+.interpret-text { font-size: 15px; line-height: 1.8; color: var(--ink); }
+
+.interpret-items {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* 签文历史 */
+.sign-history-item {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sign-history-item .sh-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.sign-history-item .sh-num { font-weight: 700; color: #c62828; font-size: 14px; }
+.sign-history-item .sh-date { font-size: 11px; color: var(--ink-light); }
+.sign-history-item .sh-poem { font-size: 13px; color: var(--ink); line-height: 1.6; }
+
+/* ========== 坏情绪粉碎机 ========== */
+.shredder-overlay {
+  display: flex;
+  gap: 0;
+  position: relative;
+  width: 40px;
+  height: 28px;
+  justify-content: center;
+}
+
+.claw-finger {
+  width: 4px;
+  height: 22px;
+  background: #bbb;
+  border-radius: 0 0 3px 3px;
+  transform-origin: top center;
+  transition: transform 0.3s ease;
+}
+
+.claw-finger:nth-child(1) { transform: rotate(-20deg); }
+.claw-finger:nth-child(2) { transform: rotate(0deg); height: 24px; }
+.claw-finger:nth-child(3) { transform: rotate(20deg); }
+
+/* 爪子张开 */
+.claw-arm.open .claw-finger:nth-child(1) { transform: rotate(-35deg); }
+.claw-arm.open .claw-finger:nth-child(3) { transform: rotate(35deg); }
+
+/* 爪子合拢（抓住） */
+.claw-arm.closed .claw-finger:nth-child(1) { transform: rotate(-5deg); }
+.claw-arm.closed .claw-finger:nth-child(2) { height: 24px; }
+.claw-arm.closed .claw-finger:nth-child(3) { transform: rotate(5deg); }
+
+/* 爪子晃动 */
+.claw-arm.idle .claw-finger {
+  animation: swingClaw 2s ease-in-out infinite;
+}
+
+@keyframes swingClaw {
+  0%, 100% { transform: rotate(var(--base-rot, 0deg)) translateX(-1px); }
+  50% { transform: rotate(var(--base-rot, 0deg)) translateX(1px); }
+}
+
+.claw-arm.grabbing .arm-rope { height: 240px; }
+.claw-arm.grabbing { top: 20px; }
+.claw-arm.rising { top: 0; }
+.claw-arm.rising .arm-rope { height: 30px; }
+
+/* 被抓住的泡泡跟着爪子 */
+.caught-bubble {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: inset -4px -4px 8px rgba(0,0,0,0.1), inset 4px 4px 8px rgba(255,255,255,0.4);
+  opacity: 0.9;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.caught-bubble.popping {
+  animation: bubblePopBig 0.4s ease forwards;
+}
+
+@keyframes bubblePopBig {
+  0% { transform: translateX(-50%) scale(1); opacity: 0.9; }
+  50% { transform: translateX(-50%) scale(1.8); opacity: 0.5; }
+  100% { transform: translateX(-50%) scale(0); opacity: 0; }
+}
+
+/* 彩色泡泡 */
+.bubbles-container {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  height: 280px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+}
+
+.bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: floatBubble 3s ease-in-out infinite;
+  box-shadow: inset -4px -4px 8px rgba(0,0,0,0.1), inset 4px 4px 8px rgba(255,255,255,0.4);
+}
+
+@keyframes floatBubble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.bubble.caught {
+  animation: bubblePop 0.4s ease forwards;
+}
+
+@keyframes bubblePop {
+  0% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* 抓按钮 */
+.claw-btn {
+  margin-top: 20px;
+  padding: 16px 48px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+  transition: transform 0.1s;
+}
+
+.claw-btn:active { transform: scale(0.93); }
+.claw-btn:disabled { background: #555; color: #999; box-shadow: none; }
+
+/* 笑话结果 */
+.joke-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+  animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.joke-bubble-pop {
+  font-size: 56px;
+  margin-bottom: 24px;
+}
+
+.joke-text {
+  font-size: 18px;
+  line-height: 1.8;
+  color: #fff;
+  font-weight: 600;
+  max-width: 300px;
+  margin-bottom: 32px;
+}
+
+.joke-close-btn {
+  padding: 14px 32px;
+  background: rgba(255,255,255,0.15);
+  color: #ffd700;
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.joke-close-btn:active { background: rgba(255,255,255,0.25); }
+
+.joke-pool-btn {
+  padding: 10px 24px;
+  background: transparent;
+  color: #90caf9;
+  border: 1px solid rgba(144,202,249,0.3);
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.joke-pool-btn:active { background: rgba(255,255,255,0.1); }
+
+/* 泡泡池入口 */
+.bubble-pool-entry {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 20px;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bubble-pool-entry:active { background: rgba(255,255,255,0.2); }
+
+.pool-count {
+  background: #ffd700;
+  color: #1a1a2e;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 泡泡池视图 */
+.bubble-pool-view {
+  position: absolute;
+  inset: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pool-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pool-header .back-btn {
+  background: rgba(255,255,255,0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255,215,0,0.3);
+}
+
+.pool-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 18px;
+  color: #ffd700;
+}
+
+.pool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 30px;
+}
+
+.pool-item {
+  background: rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.pool-item .pool-bubble {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1), inset 3px 3px 6px rgba(255,255,255,0.3);
+}
+
+.pool-item .pool-info {
+  flex: 1;
+}
+
+.pool-item .pool-date {
+  font-size: 11px;
+  color: #90a4ae;
+  margin-bottom: 4px;
+}
+
+.pool-item .pool-joke {
+  font-size: 14px;
+  color: #e0e0e0;
+  line-height: 1.6;
+}
+
+.pool-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #78909c;
+  font-size: 15px;
+}
+
+/* ========== 坏情绪粉碎机 ========== */
+.shredder-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #eceff1 0%, #cfd8dc 50%, #b0bec5 100%);
+  z-index: 400;
+  display: none;
+  flex-direction: column;
+}
+
+.shredder-overlay.active {
+  display: flex;
+}
+
+.shredder-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 24px;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.shredder-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.shredder-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 20px;
+  color: #37474f;
+}
+
+.shredder-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 24px;
+}
+
+/* 纸条 */
+.paper-note {
+  width: 100%;
+  max-width: 320px;
+  background: #fffef9;
+  border-radius: 4px;
+  box-shadow: 2px 3px 12px rgba(0,0,0,0.12);
+  transform: rotate(-1deg);
+  transition: transform 0.4s, opacity 0.4s;
+  position: relative;
+}
+
+.paper-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, transparent, transparent 2px, #e0e0e0 2px, #e0e0e0 4px);
+}
+
+.paper-note textarea {
+  width: 100%;
+  min-height: 160px;
+  border: none;
+  padding: 20px 18px;
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 17px;
+  line-height: 1.8;
+  color: #37474f;
+  background: transparent;
+  resize: none;
+  outline: none;
+}
+
+.paper-note.shredding {
+  transform: translateY(60px) scale(0.8);
+  opacity: 0;
+}
+
+/* 粉碎机 */
+.shredder-machine {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.machine-slot {
+  width: 160px;
+  height: 8px;
+  background: #263238;
+  border-radius: 4px 4px 0 0;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.machine-body {
+  width: 180px;
+  height: 60px;
+  background: linear-gradient(180deg, #455a64 0%, #37474f 100%);
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.machine-label {
+  color: #90a4ae;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 4px;
+}
+
+/* 粉碎按钮 */
+.shred-btn {
+  margin-top: 24px;
+  padding: 16px 40px;
+  background: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(211,47,47,0.3);
+  transition: transform 0.12s;
+}
+
+.shred-btn:active { transform: scale(0.93); }
+
+.shred-btn:disabled {
+  background: #bdbdbd;
+  box-shadow: none;
+}
+
+/* 碎片动画 */
+.shred-pieces {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.shred-piece {
+  position: absolute;
+  width: 20px;
+  background: #fffef9;
+  border-radius: 2px;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+  animation: fallPiece 1.5s ease-in forwards;
+}
+
+@keyframes fallPiece {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  60% { opacity: 0.8; }
+  100% { transform: translateY(120vh) rotate(720deg); opacity: 0; }
+}
+
+/* 粉碎结果 */
+.shred-result {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.result-emoji {
+  font-size: 56px;
+  margin-bottom: 16px;
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+.result-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #37474f;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.shred-again-btn {
+  padding: 12px 28px;
+  background: #455a64;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shred-again-btn:active { transform: scale(0.95); }
+
+/* 粉碎统计 */
+.shred-stats {
+  width: 100%;
+  background: rgba(255,255,255,0.6);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #37474f;
+}
+
+.shred-stats strong {
+  color: #d32f2f;
+  font-size: 18px;
+}
+
+.stats-arrow {
+  font-size: 13px;
+  color: #78909c;
+}
+
+/* 粉碎历史 */
+.shred-history {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 20px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  background: rgba(255,255,255,0.7);
+  border-radius: 10px;
+  padding: 14px 16px;
+  position: relative;
+}
+
+.history-item .h-date {
+  font-size: 12px;
+  color: #90a4ae;
+  margin-bottom: 6px;
+}
+
+.history-item .h-text {
+  font-size: 14px;
+  color: #455a64;
+  line-height: 1.6;
+  text-decoration: line-through;
+  text-decoration-color: #ef5350;
+  opacity: 0.7;
+}
+
+.history-item .h-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: #ef5350;
+  font-weight: 600;
+}
+
+.shredder-input-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.plaza-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.plaza-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 24px;
+  color: var(--ink);
+}
+
+.plaza-grid {
+  columns: 2;
+  column-gap: 12px;
+}
+
+.plaza-card {
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 16px 14px;
+  box-shadow: 0 2px 10px rgba(61,48,40,0.08);
+  cursor: pointer;
+  transition: transform 0.15s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  break-inside: avoid;
+  margin-bottom: 12px;
+}
+
+.plaza-card:active {
+  transform: scale(0.96);
+}
+
+.plaza-card .card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.2;
+  border-radius: 14px;
+}
+
+.plaza-card .card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.plaza-card .card-date {
+  font-size: 12px;
+  color: var(--ink-light);
+  margin-bottom: 6px;
+}
+
+.plaza-card .card-num {
+  font-size: 11px;
+  color: #c0392b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.plaza-card .card-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.plaza-card .card-quote {
+  font-size: 11px;
+  color: var(--ink-light);
+  margin-top: 8px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plaza-empty {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.plaza-empty .emoji { font-size: 64px; margin-bottom: 16px; }
+.plaza-empty h2 { font-family: 'ZCOOL XiaoWei', serif; font-size: 20px; margin-bottom: 8px; }
+.plaza-empty p { font-size: 15px; color: var(--ink-light); }
+
+#detail-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.detail-top-bar {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 300;
+}
+
+.back-btn {
+  background: var(--paper);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: 0 2px 10px rgba(61,48,40,0.12);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.back-btn:active {
+  transform: scale(0.95);
+}
+
+/* 删除确认 */
+.delete-confirm {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 600;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-confirm.active { display: flex; }
+
+.delete-confirm .dialog {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 28px 24px;
+  width: calc(100% - 48px);
+  max-width: 300px;
+  text-align: center;
+}
+
+.delete-confirm h3 { margin-bottom: 12px; }
+.delete-confirm p { font-size: 14px; color: var(--ink-light); margin-bottom: 20px; }
+
+.delete-confirm .actions {
+  display: flex;
+  gap: 12px;
+}
+
+.delete-confirm .actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-del { background: #e74c3c; color: white; }
+</style>
+</head>
+<body>
+
+<!-- 密码页 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo" id="login-flower">🌸</div>
+    <h1>快乐小事</h1>
+    <p class="sub">每天都有好事花生</p>
+    <input type="email" id="username-input" placeholder="邮箱" maxlength="50" style="margin-bottom:10px;">
+    <input type="password" id="pwd-input" placeholder="密码（至少4位）" maxlength="20">
+    <button id="login-btn" onclick="doLogin()">登录</button>
+    <p class="login-toggle" style="margin-top:12px;font-size:13px;color:#7a6b5d;cursor:pointer;" onclick="toggleRegister()">
+      没有账号？<span style="color:#d4956a;font-weight:600;">点此注册</span>
+    </p>
+    <p class="login-error" id="login-err"></p>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div id="app">
+  <!-- Tab1: 笑一声（哈哈机） -->
+  <div id="tab-laugh" class="tab-page active">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:linear-gradient(180deg,#2c1810 0%,#3d2519 40%,#4a2c1a 100%);padding:16px;">
+      <div class="claw-title">🫧 哈哈机</div>
+      <div class="sky-box" id="sky-box" style="width:92%;height:70vh;max-height:500px;">
+        <div class="falling-bubbles" id="falling-bubbles"></div>
+        <!-- SVG小女孩角色 -->
+        <div class="runner" id="runner">
+          <div class="runner-body-wrap">
+            <svg viewBox="0 0 120 95" xmlns="http://www.w3.org/2000/svg">
+              <line x1="42" y1="48" x2="72" y2="22" stroke="#8d6e63" stroke-width="2.5" stroke-linecap="round"/>
+              <ellipse cx="78" cy="16" rx="22" ry="16" fill="none" stroke="#e64a19" stroke-width="2.2"/>
+              <path d="M56,16 Q62,42 78,44 Q94,42 100,16" fill="none" stroke="#555" stroke-width="0.7"/>
+              <path d="M58,18 Q64,38 78,40 Q92,38 98,18" fill="none" stroke="#555" stroke-width="0.7"/>
+              <path d="M60,16 Q78,46 96,16" fill="none" stroke="#555" stroke-width="0.7"/>
+              <path d="M63,22 Q78,42 93,22" fill="none" stroke="#555" stroke-width="0.7"/>
+              <path d="M57,20 L99,20" fill="none" stroke="#555" stroke-width="0.5"/>
+              <path d="M58,25 L98,25" fill="none" stroke="#555" stroke-width="0.5"/>
+              <path d="M60,30 L96,30" fill="none" stroke="#555" stroke-width="0.5"/>
+              <path d="M63,35 L93,35" fill="none" stroke="#555" stroke-width="0.5"/>
+              <path d="M67,40 L89,40" fill="none" stroke="#555" stroke-width="0.5"/>
+              <ellipse cx="33" cy="32" rx="11" ry="10" fill="#2c2c2c"/>
+              <ellipse cx="33" cy="25" rx="14" ry="10" fill="#e64a19"/>
+              <ellipse cx="33" cy="30" rx="15" ry="4" fill="#bf360c"/>
+              <circle cx="33" cy="16" r="3" fill="#ffd54f"/>
+              <rect x="25" y="42" width="16" height="8" rx="2" fill="#fff"/>
+              <polygon points="23,48 43,48 45,72 21,72" fill="#e64a19"/>
+              <line x1="28" y1="42" x2="27" y2="50" stroke="#bf360c" stroke-width="1.5"/>
+              <line x1="38" y1="42" x2="39" y2="50" stroke="#bf360c" stroke-width="1.5"/>
+              <polygon points="29,42 33,45 37,42" fill="#fff"/>
+              <polygon points="25,44 22,44 20,56 23,56" fill="#ffccbc"/>
+              <polygon points="41,44 44,44 44,48 41,48" fill="#ffccbc"/>
+              <polygon points="42,44 45,42 46,46 43,48" fill="#ffccbc"/>
+              <rect x="40" y="46" width="5" height="4" rx="2" fill="#ffccbc"/>
+              <g class="leg-left">
+                <polygon points="26,72 30,72 29,86 25,86" fill="#ffccbc"/>
+                <rect x="24" y="85" width="6" height="4" rx="1" fill="#2c2c2c"/>
+              </g>
+              <g class="leg-right">
+                <polygon points="36,72 40,72 41,86 37,86" fill="#ffccbc"/>
+                <rect x="36" y="85" width="6" height="4" rx="1" fill="#2c2c2c"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="catch-flash" id="catch-flash">🎉 接到了！</div>
+      </div>
+      <button class="claw-btn" id="claw-btn" onclick="startCatch()">🫧 开始接泡泡！</button>
+      <div class="bubble-pool-entry" id="bubble-pool-entry" onclick="toggleBubblePool()">
+        <span>🫧 我的泡泡池</span>
+        <span class="pool-count" id="pool-count">0</span>
+      </div>
+    </div>
+    <!-- 笑话展示 -->
+    <div class="joke-result" id="joke-result" style="display:none;position:absolute;inset:0;background:linear-gradient(180deg,#2c1810 0%,#3d2519 100%);z-index:50;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;">
+      <div class="joke-bubble-pop">🫧💥</div>
+      <div class="joke-text" id="joke-text"></div>
+      <button class="joke-pool-btn" onclick="toggleBubblePool()">🫧 查看我的泡泡池</button>
+      <button class="joke-close-btn" onclick="replayClawGame()">🔄 再玩一次</button>
+    </div>
+    <!-- 泡泡池 -->
+    <div class="bubble-pool-view" id="bubble-pool-view" style="display:none;">
+      <div class="pool-header">
+        <button class="back-btn" onclick="closeBubblePool()">‹ 返回哈哈机</button>
+        <h3 class="pool-title">🫧 我的泡泡池</h3>
+      </div>
+      <div class="pool-list" id="pool-list"></div>
+    </div>
+  </div>
+
+  <!-- Tab2: 记好事（快乐广场） -->
+  <div id="tab-happy" class="tab-page">
+    <div id="plaza-view">
+      <div class="plaza-header">
+        <h1 class="plaza-title">快乐广场</h1>
+      </div>
+      <div class="plaza-actions">
+        <button class="action-btn action-happy" onclick="openModal()">
+          <span class="action-icon">✍️</span>
+          <span class="action-label">记录好事</span>
+        </button>
+      </div>
+      <div class="plaza-grid" id="plaza-grid"></div>
+      <div class="plaza-empty" id="plaza-empty" style="display:none;">
+        <div class="emoji" id="plaza-flower">🌸</div>
+        <h2>还没有记录</h2>
+        <p>点击上方「记录好事」写下第一件快乐小事</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab3: 随Ta去（粉碎糟心事） -->
+  <div id="tab-shred" class="tab-page">
+    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <h2 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#37474f;text-align:center;margin-bottom:20px;">💥 随Ta去</h2>
+      <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
+        <div class="paper-note" id="paper-note-tab" style="width:100%;">
+          <textarea id="shred-text-tab" placeholder="把让你不爽的事写在这里...&#10;写完就随Ta去。" maxlength="500" style="min-height:220px;"></textarea>
+        </div>
+        <button class="shred-btn" id="shred-btn-tab" onclick="doShredTab()" style="margin-top:24px;">🗑️ 随Ta去！</button>
+        <div class="shred-result" id="shred-result-tab" style="display:none;text-align:center;margin-top:24px;">
+          <div class="result-emoji">🎉</div>
+          <div class="result-text" id="result-text-tab"></div>
+          <button class="shred-again-btn" onclick="resetShredTab()">再来一次</button>
+        </div>
+      </div>
+      <div class="shred-stats" id="shred-stats-tab" onclick="toggleShredHistory()" style="width:100%;max-width:340px;margin-top:20px;">
+        <span>已粉碎 <strong id="shred-count-tab">0</strong> 条烦恼</span>
+        <span class="stats-arrow" id="stats-arrow-tab">查看记录 ›</span>
+      </div>
+      <div id="shred-history-tab" style="display:none;width:100%;max-width:340px;margin-top:12px;">
+        <div class="history-list" id="history-list-tab"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab4: 求好运（观音灵签） -->
+  <div id="tab-luck" class="tab-page">
+    <!-- 摇签界面 -->
+    <div class="luck-temple" id="luck-temple">
+      <div class="temple-header">🙏 观音灵签</div>
+      <div class="temple-scene">
+        <div class="incense-holder">🪔</div>
+        <div class="sign-bucket" id="sign-bucket">
+          <div class="bucket-body">
+            <div class="bucket-sticks" id="bucket-sticks">
+              <div class="stick"></div><div class="stick"></div><div class="stick"></div>
+              <div class="stick"></div><div class="stick"></div><div class="stick"></div>
+              <div class="stick"></div><div class="stick"></div><div class="stick"></div>
+            </div>
+          </div>
+        </div>
+        <div class="temple-tip" id="temple-tip">心中默念所求之事，然后摇签</div>
+      </div>
+      <button class="shake-btn" id="shake-btn" onclick="startShake()">🎋 开始摇签</button>
+      <div class="sign-history-entry" onclick="showSignHistory()">
+        📜 我的签文记录 <span id="sign-count">0</span>
+      </div>
+    </div>
+    <!-- 签文展示界面 -->
+    <div class="sign-result-page" id="sign-result-page" style="display:none;">
+      <div class="sign-image-wrap">
+        <img class="sign-image" id="sign-image" src="" alt="签文">
+      </div>
+      <button class="interpret-btn" onclick="showInterpret()">📖 详细解签</button>
+      <button class="reshake-btn" onclick="backToTemple()">🔄 重新摇签</button>
+    </div>
+    <!-- 解签界面 -->
+    <div class="interpret-page" id="interpret-page" style="display:none;">
+      <div class="interpret-card">
+        <h3 class="interpret-title" id="interpret-title"></h3>
+        <div class="interpret-section">
+          <div class="interpret-label">【签语】</div>
+          <div class="interpret-text" id="interpret-summary"></div>
+        </div>
+        <div class="interpret-section">
+          <div class="interpret-label">【解曰】</div>
+          <div class="interpret-text" id="interpret-detail"></div>
+        </div>
+        <div class="interpret-section">
+          <div class="interpret-label">【诸事】</div>
+          <div class="interpret-items" id="interpret-items"></div>
+        </div>
+        <div class="interpret-section">
+          <div class="interpret-label">【典故】</div>
+          <div class="interpret-text" id="interpret-story" style="font-size:13px;color:var(--ink-light);"></div>
+        </div>
+        <div class="interpret-section">
+          <div class="interpret-text" id="interpret-full-detail" style="font-size:14px;line-height:1.9;"></div>
+        </div>
+      </div>
+      <button class="reshake-btn" onclick="backToTemple()">🙏 再求一签</button>
+    </div>
+    <!-- 签文历史 -->
+    <div class="sign-history-page" id="sign-history-page" style="display:none;">
+      <div style="padding:20px;">
+        <button class="back-btn" onclick="backToTemple()">‹ 返回</button>
+        <h3 style="font-family:'ZCOOL XiaoWei',serif;text-align:center;margin:16px 0;">📜 签文记录</h3>
+        <div id="sign-history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab5: 我的 -->
+  <div id="tab-me" class="tab-page">
+    <div class="my-page">
+      <div class="my-header">
+        <div class="my-avatar">😊</div>
+        <div class="my-name" id="my-username"></div>
+      </div>
+      <div class="my-menu">
+        <div class="my-menu-item" onclick="exportData()">
+          <span class="my-menu-icon">📥</span>
+          <span class="my-menu-text">导出数据</span>
+        </div>
+        <div class="my-menu-item" onclick="doLogout()">
+          <span class="my-menu-icon">👋</span>
+          <span class="my-menu-text">退出登录</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情页（单条记录） -->
+  <div id="detail-view" style="display:none;">
+    <div class="detail-top-bar">
+      <button class="back-btn" onclick="backToPlaza()">‹ 快乐广场</button>
+    </div>
+    <div class="diary-container" id="diary-container"></div>
+    
+    <div class="page-indicator" id="page-indicator"></div>
+    
+    <div class="bottom-bar">
+      <button class="fab secondary" onclick="backToPlaza()" title="返回广场">🏠</button>
+      <button class="fab secondary" onclick="openDatePicker()" title="跳转日期">📅</button>
+      <button class="fab" onclick="openModal()" title="记录快乐">✍️</button>
+      <button class="fab secondary" onclick="deleteCurrentEntry()" title="删除">🗑️</button>
+    </div>
+    
+    <div class="swipe-hint" id="swipe-hint">← 左右滑动翻页 →</div>
+  </div>
+
+  <!-- 底部Tab栏 -->
+  <div class="tab-bar" id="tab-bar">
+    <div class="tab-item active" onclick="switchTab('laugh')">
+      <span class="tab-icon">😆</span>
+      <span class="tab-label">笑一声</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('happy')">
+      <span class="tab-icon">📖</span>
+      <span class="tab-label">记好事</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('shred')">
+      <span class="tab-icon">💨</span>
+      <span class="tab-label">随Ta去</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('luck')">
+      <span class="tab-icon">🍀</span>
+      <span class="tab-label">求好运</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('me')">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">我的</span>
+    </div>
+  </div>
+</div>
+
+<!-- 新增记录弹窗 -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>✨ 今天有什么快乐的事？</h2>
+    <textarea id="entry-text" placeholder="写下让你开心的小事..." maxlength="200"></textarea>
+    <div class="char-count"><span id="char-num">0</span>/200</div>
+    <div class="image-upload">
+      <label>
+        <span>📷 添加配图（可选）</span>
+        <input type="file" id="image-input" accept="image/*">
+      </label>
+      <div class="image-preview" id="image-preview">
+        <img id="preview-img" src="">
+        <span class="remove-img" onclick="removeImage()">✕ 移除图片</span>
+      </div>
+    </div>
+    <div class="quick-tags">
+      <div class="quick-tags-label">💛 点一下快速标记：</div>
+      <div class="quick-tags-list" id="quick-tags-list">
+        <span class="quick-tag" data-tag="☕ 好喝的咖啡" onclick="toggleTag(this)">☕ 好喝的咖啡</span>
+        <span class="quick-tag" data-tag="🌤️ 天气超好" onclick="toggleTag(this)">🌤️ 天气超好</span>
+        <span class="quick-tag" data-tag="🐱 遇到猫咪" onclick="toggleTag(this)">🐱 遇到猫咪</span>
+        <span class="quick-tag" data-tag="🍜 美食时刻" onclick="toggleTag(this)">🍜 美食时刻</span>
+        <span class="quick-tag" data-tag="💕 朋友关心" onclick="toggleTag(this)">💕 朋友关心</span>
+        <span class="quick-tag" data-tag="🎵 好听的歌" onclick="toggleTag(this)">🎵 好听的歌</span>
+        <span class="quick-tag" data-tag="✅ 完成任务" onclick="toggleTag(this)">✅ 完成任务</span>
+        <span class="quick-tag" data-tag="💪 运动流汗" onclick="toggleTag(this)">💪 运动流汗</span>
+        <span class="quick-tag" data-tag="🎬 好电影" onclick="toggleTag(this)">🎬 好电影</span>
+        <span class="quick-tag" data-tag="🎁 意外惊喜" onclick="toggleTag(this)">🎁 意外惊喜</span>
+        <span class="quick-tag" data-tag="🧸 茸言茸语" onclick="toggleTag(this)">🧸 茸言茸语</span>
+      </div>
+    </div>
+    <div class="quote-picker">
+      <div class="quote-picker-label">📜 选择配文（左右滑动）</div>
+      <div class="quote-picker-scroll" id="quote-picker-scroll"></div>
+      <div class="quote-picker-nav">
+        <span class="quote-nav-btn" onclick="prevQuote()">‹</span>
+        <span class="quote-nav-idx" id="quote-nav-idx">1/30</span>
+        <span class="quote-nav-btn" onclick="nextQuote()">›</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-save" onclick="saveEntry()">保存 ♡</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日期选择器 -->
+<div class="date-picker-overlay" id="dp-overlay">
+  <div class="date-picker">
+    <h3>跳转到某一天</h3>
+    <input type="date" id="dp-date">
+    <div class="dp-actions">
+      <button class="btn-cancel" onclick="closeDatePicker()">取消</button>
+      <button class="btn-save" onclick="jumpToDate()">前往</button>
+    </div>
+  </div>
+</div>
+
+<!-- 哈哈机 -->
+<div class="claw-overlay" id="claw-overlay">
+  <div class="claw-machine" id="claw-machine-main">
+    <div class="claw-title">🫧 哈哈机</div>
+    <div class="sky-box" id="sky-box">
+      <!-- 掉落的泡泡（JS动态生成） -->
+      <div class="falling-bubbles" id="falling-bubbles"></div>
+      <!-- SVG小女孩角色 -->
+      <div class="runner" id="runner">
+        <div class="runner-body-wrap">
+          <svg viewBox="0 0 120 95" xmlns="http://www.w3.org/2000/svg">
+            <!-- 网兜把柄（35度斜向右上） -->
+            <line x1="42" y1="48" x2="72" y2="22" stroke="#8d6e63" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- 网圈（橙红色，大尺寸） -->
+            <ellipse cx="78" cy="16" rx="22" ry="16" fill="none" stroke="#e64a19" stroke-width="2.2"/>
+            <!-- 网兜网格 -->
+            <path d="M56,16 Q62,42 78,44 Q94,42 100,16" fill="none" stroke="#555" stroke-width="0.7"/>
+            <path d="M58,18 Q64,38 78,40 Q92,38 98,18" fill="none" stroke="#555" stroke-width="0.7"/>
+            <path d="M60,16 Q78,46 96,16" fill="none" stroke="#555" stroke-width="0.7"/>
+            <path d="M63,22 Q78,42 93,22" fill="none" stroke="#555" stroke-width="0.7"/>
+            <!-- 横线 -->
+            <path d="M57,20 L99,20" fill="none" stroke="#555" stroke-width="0.5"/>
+            <path d="M58,25 L98,25" fill="none" stroke="#555" stroke-width="0.5"/>
+            <path d="M60,30 L96,30" fill="none" stroke="#555" stroke-width="0.5"/>
+            <path d="M63,35 L93,35" fill="none" stroke="#555" stroke-width="0.5"/>
+            <path d="M67,40 L89,40" fill="none" stroke="#555" stroke-width="0.5"/>
+            
+            <!-- 头部（后脑勺） -->
+            <ellipse cx="33" cy="32" rx="11" ry="10" fill="#2c2c2c"/>
+            <!-- 大帽子（盖住头部大半） -->
+            <ellipse cx="33" cy="25" rx="14" ry="10" fill="#e64a19"/>
+            <ellipse cx="33" cy="30" rx="15" ry="4" fill="#bf360c"/>
+            <!-- 帽顶小绒球 -->
+            <circle cx="33" cy="16" r="3" fill="#ffd54f"/>
+            
+            <!-- 身体-白色短袖 -->
+            <rect x="25" y="42" width="16" height="8" rx="2" fill="#fff"/>
+            <!-- 身体-橙红色背带裙 -->
+            <polygon points="23,48 43,48 45,72 21,72" fill="#e64a19"/>
+            <!-- 背带 -->
+            <line x1="28" y1="42" x2="27" y2="50" stroke="#bf360c" stroke-width="1.5"/>
+            <line x1="38" y1="42" x2="39" y2="50" stroke="#bf360c" stroke-width="1.5"/>
+            <!-- 领口 -->
+            <polygon points="29,42 33,45 37,42" fill="#fff"/>
+            
+            <!-- 左手臂（自然放在身侧） -->
+            <polygon points="25,44 22,44 20,56 23,56" fill="#ffccbc"/>
+            
+            <!-- 右手臂（举高握把柄底端） -->
+            <polygon points="41,44 44,44 44,48 41,48" fill="#ffccbc"/>
+            <polygon points="42,44 45,42 46,46 43,48" fill="#ffccbc"/>
+            
+            <!-- 右手掌（握住把柄底端位置） -->
+            <rect x="40" y="46" width="5" height="4" rx="2" fill="#ffccbc"/>
+            
+            <!-- 腿 -->
+            <g class="leg-left">
+              <polygon points="26,72 30,72 29,86 25,86" fill="#ffccbc"/>
+              <rect x="24" y="85" width="6" height="4" rx="1" fill="#2c2c2c"/>
+            </g>
+            <g class="leg-right">
+              <polygon points="36,72 40,72 41,86 37,86" fill="#ffccbc"/>
+              <rect x="36" y="85" width="6" height="4" rx="1" fill="#2c2c2c"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <!-- 接到提示 -->
+      <div class="catch-flash" id="catch-flash">🎉 接到了！</div>
+    </div>
+    <button class="claw-btn" id="claw-btn" onclick="startCatch()">🫧 开始接泡泡！</button>
+    <div class="bubble-pool-entry" id="bubble-pool-entry" onclick="toggleBubblePool()">
+      <span>🫧 我的泡泡池</span>
+      <span class="pool-count" id="pool-count">0</span>
+    </div>
+  </div>
+  <!-- 笑话展示 -->
+  <div class="joke-result" id="joke-result" style="display:none;">
+    <div class="joke-bubble-pop">🫧💥</div>
+    <div class="joke-text" id="joke-text"></div>
+    <button class="joke-pool-btn" onclick="toggleBubblePool()">🫧 查看我的泡泡池</button>
+    <button class="joke-close-btn" onclick="closeClawGame()">✨ 进入快乐广场</button>
+    <button class="joke-pool-btn" onclick="replayClawGame()" style="margin-top:10px;">🔄 再玩一次哈哈机</button>
+  </div>
+  <!-- 泡泡池 -->
+  <div class="bubble-pool-view" id="bubble-pool-view" style="display:none;">
+    <div class="pool-header">
+      <button class="back-btn" onclick="closeBubblePool()">‹ 返回哈哈机</button>
+      <h3 class="pool-title">🫧 我的泡泡池</h3>
+    </div>
+    <div class="pool-list" id="pool-list"></div>
+  </div>
+</div>
+
+<!-- 坏情绪粉碎机 -->
+<div class="shredder-overlay" id="shredder-overlay">
+  <div class="shredder-page">
+    <div class="shredder-header">
+      <button class="back-btn" onclick="closeShredder()">‹ 返回</button>
+      <h2 class="shredder-title">💥 坏情绪粉碎机</h2>
+    </div>
+    <div class="shred-stats" id="shred-stats" onclick="toggleShredHistory()">
+      <span>已粉碎 <strong id="shred-count">0</strong> 条烦恼</span>
+      <span class="stats-arrow" id="stats-arrow">查看记录 ›</span>
+    </div>
+    <!-- 粉碎输入区 -->
+    <div class="shredder-input-area" id="shredder-input-area">
+      <div class="shredder-body">
+        <div class="paper-note" id="paper-note">
+          <textarea id="shred-text" placeholder="把让你不爽的事写在这里...&#10;写完就粉碎它。" maxlength="500"></textarea>
+        </div>
+        <div class="shredder-machine" id="shredder-machine">
+          <div class="machine-slot"></div>
+          <div class="machine-body">
+            <div class="machine-label">粉碎机</div>
+          </div>
+        </div>
+      </div>
+      <button class="shred-btn" id="shred-btn" onclick="doShred()">
+        🗑️ 投入粉碎机
+      </button>
+      <div class="shred-result" id="shred-result" style="display:none;">
+        <div class="result-emoji">🎉</div>
+        <div class="result-text" id="result-text"></div>
+        <button class="shred-again-btn" onclick="resetShredder()">再来一次</button>
+      </div>
+    </div>
+    <!-- 粉碎历史区 -->
+    <div class="shred-history" id="shred-history" style="display:none;">
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </div>
+  <!-- 碎片容器 -->
+  <div class="shred-pieces" id="shred-pieces"></div>
+</div>
+
+<!-- 删除确认 -->
+<div class="delete-confirm" id="delete-confirm">
+  <div class="dialog">
+    <h3>确定删除？</h3>
+    <p>这条快乐小事将被移除</p>
+    <div class="actions">
+      <button class="btn-cancel" onclick="cancelDelete()">留着吧</button>
+      <button class="btn-del" onclick="confirmDelete()">删除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 配置 ==========
+const APP_KEY = 'happy_diary_v1';
+const PWD_KEY = 'happy_diary_pwd';
+const WEATHER_CACHE_KEY = 'happy_diary_weather';
+
+// 随机花卉emoji
+const flowers = ['🌸', '🌺', '🌷', '🌹', '🌻', '💐', '🌼', '🪷', '🌿', '🍀', '🪻', '🌾'];
+
+// 快乐属性 emoji
+const happyEmojis = ['🎉', '🥳', '✨', '🌈', '☀️', '💛', '🧡', '❤️', '💕', '🎊', '🎈', '🍀', '🌟', '⭐', '🦋', '🐣', '🍰', '🧁', '🍩', '🎵', '🎶', '💃', '🏖️', '🌺', '🍉', '🥂', '🫶', '😊', '😄', '🥰', '💖', '🌻', '🍭', '🎀', '🪄'];
+
+function getRandomHappyEmoji() {
+  return happyEmojis[Math.floor(Math.random() * happyEmojis.length)];
+}
+function getRandomFlower() {
+  return flowers[Math.floor(Math.random() * flowers.length)];
+}
+// 登录页每次显示不同的花
+document.addEventListener('DOMContentLoaded', () => {
+  const flowerEl = document.getElementById('login-flower');
+  if (flowerEl) flowerEl.textContent = getRandomFlower();
+});
+
+const DB_NAME = 'HappyDiaryDB';
+const DB_VERSION = 3;
+const STORE_NAME = 'entries';
+
+// IndexedDB 封装（比localStorage更可靠持久）
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains('shredded')) {
+        database.createObjectStore('shredded', { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains('bubblePool')) {
+        database.createObjectStore('bubblePool', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      // 迁移：如果localStorage有旧数据，搬到IndexedDB
+      const oldData = localStorage.getItem(APP_KEY);
+      if (oldData) {
+        try {
+          const entries = JSON.parse(oldData);
+          if (entries.length > 0) {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            entries.forEach(entry => store.put(entry));
+            tx.oncomplete = () => localStorage.removeItem(APP_KEY);
+          }
+        } catch(err) {}
+      }
+      resolve(db);
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function dbGetAll() {
+  return new Promise((resolve, reject) => {
+    if (!db) { resolve([]); return; }
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const entries = req.result || [];
+      // 按日期+时间排序
+      entries.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.time || '').localeCompare(b.time || '');
+      });
+      resolve(entries);
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+function dbPut(entry) {
+  return new Promise((resolve, reject) => {
+    if (!db) { reject('no db'); return; }
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(entry);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function dbDelete(id) {
+  return new Promise((resolve, reject) => {
+    if (!db) { reject('no db'); return; }
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// 清除旧版本可能存入的错误天气缓存（HTML内容）
+try {
+  const oldCache = localStorage.getItem(WEATHER_CACHE_KEY);
+  if (oldCache) {
+    const parsed = JSON.parse(oldCache);
+    if (parsed.data && parsed.data.condition && parsed.data.condition.includes('<')) {
+      localStorage.removeItem(WEATHER_CACHE_KEY);
+    }
+  }
+} catch(e) { localStorage.removeItem(WEATHER_CACHE_KEY); }
+
+// 固定密码
+let currentUsername = localStorage.getItem('hd_current_user') || '';
+let isRegisterMode = false;
+
+function toggleRegister() {
+  isRegisterMode = !isRegisterMode;
+  const btn = document.getElementById('login-btn');
+  const toggle = document.querySelector('.login-toggle');
+  if (isRegisterMode) {
+    btn.textContent = '注册';
+    toggle.innerHTML = '已有账号？<span style="color:#d4956a;font-weight:600;">点此登录</span>';
+  } else {
+    btn.textContent = '登录';
+    toggle.innerHTML = '没有账号？<span style="color:#d4956a;font-weight:600;">点此注册</span>';
+  }
+}
+
+// ========== 名言库 ==========
+const quotes = [
+  { text: "生活不是等待风暴过去，而是学会在雨中翩翩起舞。", author: "维维安·格林" },
+  { text: "把每一个平凡的日子，过成一首诗。", author: "汪曾祺" },
+  { text: "人间烟火气，最抚凡人心。", author: "苏轼" },
+  { text: "愿你一生努力，一生被爱。", author: "八月长安" },
+  { text: "世界上只有一种英雄主义，就是看清生活的真相之后依然热爱生活。", author: "罗曼·罗兰" },
+  { text: "采菊东篱下，悠然见南山。", author: "陶渊明" },
+  { text: "且将新火试新茶，诗酒趁年华。", author: "苏轼" },
+  { text: "山中何所有，岭上多白云。", author: "陶弘景" },
+  { text: "人生如逆旅，我亦是行人。", author: "苏轼" },
+  { text: "春水初生，春林初盛，春风十里，不如你。", author: "冯唐" },
+  { text: "岁月不居，时节如流。", author: "孔融" },
+  { text: "一个人知道自己为什么而活，就可以忍受任何一种生活。", author: "尼采" },
+  { text: "浮生若梦，为欢几何？", author: "李白" },
+  { text: "行到水穷处，坐看云起时。", author: "王维" },
+  { text: "小楼一夜听春雨，深巷明朝卖杏花。", author: "陆游" },
+  { text: "生如夏花之绚烂，死如秋叶之静美。", author: "泰戈尔" },
+  { text: "你若盛开，蝴蝶自来。", author: "佚名" },
+  { text: "每一个不曾起舞的日子，都是对生命的辜负。", author: "尼采" },
+  { text: "晚来天欲雪，能饮一杯无？", author: "白居易" },
+  { text: "人生得意须尽欢，莫使金樽空对月。", author: "李白" },
+  { text: "日日是好日。", author: "禅语" },
+  { text: "不乱于心，不困于情。不畏将来，不念过往。", author: "丰子恺" },
+  { text: "温柔半两，从容一生。", author: "佚名" },
+  { text: "万物皆有裂痕，那是光照进来的地方。", author: "莱昂纳德·科恩" },
+  { text: "但愿日子清净，抬头遇见的都是柔情。", author: "佚名" },
+  { text: "慢慢来，比较快。", author: "佚名" },
+  { text: "心有猛虎，细嗅蔷薇。", author: "萨松" },
+  { text: "所有的相遇，都是久别重逢。", author: "白落梅" },
+  { text: "生活明朗，万物可爱。", author: "佚名" },
+  { text: "人生天地间，忽如远行客。", author: "古诗十九首" },
+  { text: "何以解忧，唯有杜康。", author: "曹操" },
+  { text: "海内存知己，天涯若比邻。", author: "王勃" },
+  { text: "长风破浪会有时，直挂云帆济沧海。", author: "李白" },
+  { text: "落霞与孤鹜齐飞，秋水共长天一色。", author: "王勃" },
+  { text: "但行好事，莫问前程。", author: "佚名" },
+  { text: "一花一世界，一叶一菩提。", author: "佛语" },
+  { text: "此心安处是吾乡。", author: "苏轼" },
+  { text: "时光不老，我们不散。", author: "佚名" },
+  { text: "人生若只如初见，何事秋风悲画扇。", author: "纳兰性德" },
+  { text: "最是人间留不住，朱颜辞镜花辞树。", author: "王国维" },
+  { text: "愿你走出半生，归来仍是少年。", author: "佚名" },
+  { text: "你要悄悄拔尖，然后惊艳所有人。", author: "佚名" },
+  { text: "世事洞明皆学问，人情练达即文章。", author: "曹雪芹" },
+  { text: "时光如水，总是无言。", author: "佚名" },
+  { text: "星光不负赶路人。", author: "佚名" },
+  { text: "没有一个冬天不可逾越，没有一个春天不会来临。", author: "佚名" },
+  { text: "所有好运，都是努力的伏笔。", author: "佚名" },
+  { text: "风起于青萍之末，浪成于微澜之间。", author: "宋玉" },
+  { text: "千里之行，始于足下。", author: "老子" },
+  { text: "天行健，君子以自强不息。", author: "周易" },
+  { text: "纵使黑夜吞噬了一切，太阳还可以重新回来。", author: "汪国真" },
+  { text: "你是你自己的太阳，无须凭借谁的光。", author: "佚名" },
+  { text: "种一棵树最好的时间是十年前，其次是现在。", author: "谚语" },
+  { text: "若无闲事挂心头，便是人间好时节。", author: "无门慧开" },
+  { text: "花开堪折直须折，莫待无花空折枝。", author: "杜秋娘" },
+  { text: "人间有味是清欢。", author: "苏轼" },
+  { text: "只要路是对的，就不怕路远。", author: "佚名" },
+  { text: "生命是一团欲望，欲望不满足便痛苦，满足便无聊。", author: "叔本华" },
+  { text: "世上本没有路，走的人多了便成了路。", author: "鲁迅" },
+  { text: "不要因为走得太远，而忘记为什么出发。", author: "纪伯伦" },
+  { text: "所谓岁月静好，不过是有人替你负重前行。", author: "佚名" },
+  { text: "今人不见古时月，今月曾经照古人。", author: "李白" },
+  { text: "山高月小，水落石出。", author: "苏轼" },
+  { text: "宠辱不惊，看庭前花开花落。", author: "洪应明" },
+  { text: "去留无意，望天上云卷云舒。", author: "洪应明" },
+  { text: "世间好物不坚牢，彩云易散琉璃脆。", author: "白居易" },
+  { text: "我见青山多妩媚，料青山见我应如是。", author: "辛弃疾" },
+  { text: "一生一世一双人，半醉半醒半浮生。", author: "纳兰性德" },
+  { text: "何须浅碧深红色，自是花中第一流。", author: "李清照" },
+  { text: "试问闲愁都几许？一川烟草，满城风絮。", author: "贺铸" },
+  { text: "等闲识得东风面，万紫千红总是春。", author: "朱熹" },
+  { text: "好风凭借力，送我上青云。", author: "曹雪芹" },
+  { text: "不以物喜，不以己悲。", author: "范仲淹" },
+  { text: "天生我材必有用，千金散尽还复来。", author: "李白" },
+  { text: "苔花如米小，也学牡丹开。", author: "袁枚" },
+  { text: "人生到处知何似，应似飞鸿踏雪泥。", author: "苏轼" },
+  { text: "山不在高，有仙则名。", author: "刘禹锡" },
+  { text: "莫道桑榆晚，为霞尚满天。", author: "刘禹锡" },
+  { text: "勿以善小而不为，勿以恶小而为之。", author: "刘备" },
+  { text: "路漫漫其修远兮，吾将上下而求索。", author: "屈原" },
+  { text: "世界是你的，也是我的，但归根结底还是你的。", author: "佚名" },
+  { text: "大鹏一日同风起，扶摇直上九万里。", author: "李白" },
+  { text: "少年不识愁滋味，爱上层楼。", author: "辛弃疾" },
+  { text: "纸上得来终觉浅，绝知此事要躬行。", author: "陆游" },
+  { text: "春风得意马蹄疾，一日看尽长安花。", author: "孟郊" },
+  { text: "仰天大笑出门去，我辈岂是蓬蒿人。", author: "李白" },
+  { text: "白日放歌须纵酒，青春作伴好还乡。", author: "杜甫" },
+  { text: "会当凌绝顶，一览众山小。", author: "杜甫" },
+  { text: "海阔凭鱼跃，天高任鸟飞。", author: "佚名" },
+  { text: "知足者常乐，能忍者自安。", author: "佚名" },
+  { text: "山重水复疑无路，柳暗花明又一村。", author: "陆游" },
+  { text: "旧书不厌百回读，熟读深思子自知。", author: "苏轼" },
+  { text: "宁可枝头抱香死，何曾吹落北风中。", author: "郑思肖" },
+  { text: "不畏浮云遮望眼，自缘身在最高层。", author: "王安石" },
+  { text: "落红不是无情物，化作春泥更护花。", author: "龚自珍" },
+  { text: "千磨万击还坚劲，任尔东西南北风。", author: "郑燮" },
+  { text: "粗缯大布裹生涯，腹有诗书气自华。", author: "苏轼" },
+  { text: "问渠那得清如许，为有源头活水来。", author: "朱熹" },
+  { text: "读书破万卷，下笔如有神。", author: "杜甫" },
+  { text: "博观而约取，厚积而薄发。", author: "苏轼" },
+  { text: "岁月极美，在于它必然的流逝。", author: "三毛" },
+  { text: "我们都是阴沟里的虫子，但总还是得有人仰望星空。", author: "王尔德" },
+  { text: "永远年轻，永远热泪盈眶。", author: "凯鲁亚克" }
+];
+
+// ========== 天气 ==========
+const weatherIcons = {
+  'Clear': '☀️', 'Sunny': '☀️',
+  'Clouds': '☁️', 'Cloudy': '☁️', 'Overcast': '☁️',
+  'Rain': '🌧️', 'Drizzle': '🌦️', 'Thunderstorm': '⛈️',
+  'Snow': '🌨️', 'Mist': '🌫️', 'Fog': '🌫️',
+  'Haze': '🌫️', 'Dust': '🌫️'
+};
+
+async function getWeather() {
+  const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+  if (cached) {
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp < 3600000) return data; // 1小时缓存
+  }
+  try {
+    // 使用 wttr.in JSON 格式（避免返回HTML）
+    const resp = await fetch('https://wttr.in/Shenzhen?format=j1', {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!resp.ok) throw new Error('weather fetch failed');
+    const json = await resp.json();
+    const current = json.current_condition[0];
+    const tempC = current.temp_C;
+    const desc = current.lang_zh && current.lang_zh[0] ? current.lang_zh[0].value : current.weatherDesc[0].value;
+    const code = parseInt(current.weatherCode);
+    // 根据天气代码匹配emoji
+    let icon = '🌤️';
+    if (code === 113) icon = '☀️';
+    else if (code === 116) icon = '⛅';
+    else if (code === 119 || code === 122) icon = '☁️';
+    else if (code >= 176 && code <= 299) icon = '🌧️';
+    else if (code >= 300 && code <= 399) icon = '🌨️';
+    else if (code >= 200 && code <= 232) icon = '⛈️';
+    else if (code === 143 || code === 248 || code === 260) icon = '🌫️';
+    const data = { condition: desc, temp: tempC + '°C', icon };
+    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+    return data;
+  } catch (e) {
+    // 备用：不显示天气，只显示城市
+    return { condition: '深圳', temp: '', icon: '🌤️' };
+  }
+}
+
+// ========== 数据管理（使用IndexedDB） ==========
+// entries 缓存在内存中，异步同步到IndexedDB
+let entriesCache = [];
+
+async function loadEntries() {
+  entriesCache = await dbGetAll();
+  return entriesCache;
+}
+
+function getEntries() {
+  return entriesCache;
+}
+
+async function addEntry(entry) {
+  await dbPut(entry);
+  entriesCache = await dbGetAll();
+}
+
+async function removeEntry(id) {
+  await dbDelete(id);
+  entriesCache = await dbGetAll();
+}
+
+function getRandomQuote() {
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+// ========== 登录逻辑 ==========
+function doLogin() {
+  const email = document.getElementById('username-input').value.trim();
+  const password = document.getElementById('pwd-input').value;
+  
+  if (!email || !password) { showError('请输入邮箱和密码'); return; }
+  if (!email.includes('@')) { showError('请输入有效的邮箱'); return; }
+  if (password.length < 4) { showError('密码至少4位'); return; }
+  
+  const users = JSON.parse(localStorage.getItem('hd_users') || '{}');
+  const pwdKey = btoa(email + ':' + password);
+  
+  if (isRegisterMode) {
+    if (users[email]) { showError('该邮箱已注册'); return; }
+    users[email] = pwdKey;
+    localStorage.setItem('hd_users', JSON.stringify(users));
+    currentUsername = email;
+    localStorage.setItem('hd_current_user', email);
+    enterApp();
+  } else {
+    if (!users[email]) { showError('该邮箱未注册，请先注册'); return; }
+    if (users[email] !== pwdKey) { showError('密码错误'); return; }
+    currentUsername = email;
+    localStorage.setItem('hd_current_user', email);
+    enterApp();
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initDiary();
+  switchTab('laugh');
+  startFallingBubbles();
+  ensureBubblePoolStore().then(() => updatePoolCount());
+  initCloudSync();
+}
+
+// 检查是否已登录（自动登录，不需要重新输入）
+if (currentUsername) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.addEventListener('DOMContentLoaded', () => {
+    initDiary();
+    switchTab('laugh');
+    startFallingBubbles();
+    ensureBubblePoolStore().then(() => updatePoolCount());
+    initCloudSync();
+  });
+}
+
+document.getElementById('pwd-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function initDiary() {
+  await openDB();
+  await loadEntries();
+  currentIndex = getEntries().length - 1;
+  if (currentIndex < 0) currentIndex = 0;
+  renderPlaza();
+}
+
+// ========== 快乐广场 ==========
+function renderPlaza() {
+  const entries = getEntries();
+  const grid = document.getElementById('plaza-grid');
+  const empty = document.getElementById('plaza-empty');
+  
+  if (entries.length === 0) {
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    document.getElementById('plaza-flower').textContent = getRandomFlower();
+    return;
+  }
+  
+  grid.style.display = 'grid';
+  empty.style.display = 'none';
+  
+  // 按倒序展示（最新在前）
+  let html = '';
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    const dateObj = new Date(entry.date);
+    const dateStr = `${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+    const bgHtml = entry.image ? `<div class="card-bg" style="background-image:url(${entry.image})"></div>` : '';
+    const quoteText = entry.quote ? entry.quote.text : '';
+    
+    html += `
+      <div class="plaza-card" onclick="openDetail(${i})">
+        ${bgHtml}
+        <div class="card-content">
+          <div class="card-date">${dateStr}</div>
+          <div class="card-num">${entry.emoji || '✨'} 第 ${i + 1} 个快乐</div>
+          <div class="card-text">${entry.text}</div>
+        </div>
+        ${quoteText ? `<div class="card-quote">「${quoteText}」</div>` : ''}
+      </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function openDetail(index) {
+  currentIndex = index;
+  document.getElementById('plaza-view').style.display = 'none';
+  document.getElementById('detail-view').style.display = 'block';
+  renderPage();
+}
+
+function backToPlaza() {
+  document.getElementById('detail-view').style.display = 'none';
+  document.getElementById('plaza-view').style.display = 'block';
+  renderPlaza();
+}
+
+// ========== 翻页逻辑 ==========
+let currentIndex = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+let isDragging = false;
+
+function renderPage() {
+  const entries = getEntries();
+  const container = document.getElementById('diary-container');
+  const indicator = document.getElementById('page-indicator');
+  
+  if (entries.length === 0) {
+    container.innerHTML = `
+      <div class="diary-page">
+        <div class="page-content">
+          <div class="empty-state">
+            <div class="emoji">${getRandomFlower()}</div>
+            <h2>还没有记录</h2>
+            <p>点击下方 ✍️ 按钮<br>记录今天的第一件快乐小事</p>
+          </div>
+        </div>
+      </div>`;
+    indicator.textContent = '';
+    return;
+  }
+  
+  const entry = entries[currentIndex];
+  const quote = entry.quote || getRandomQuote();
+  const dateObj = new Date(entry.date);
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  
+  const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+  const weekday = `星期${weekdays[dateObj.getDay()]}`;
+  
+  const bgStyle = entry.image ? `background-image: url(${entry.image})` : '';
+  const hasBgClass = entry.image ? 'has-bg' : '';
+  
+  container.innerHTML = `
+    <div class="diary-page ${hasBgClass}">
+      ${entry.image ? `<div class="bg-image" style="${bgStyle}"></div>` : ''}
+      <div class="page-content">
+        <div class="page-header">
+          <div class="page-date">${dateStr}</div>
+          <div class="page-weekday">${weekday}</div>
+          <div class="page-weather" id="weather-display">🌤️ 加载天气中...</div>
+          <div class="page-count">这是你第 ${currentIndex + 1} 个快乐 ✨</div>
+        </div>
+        <div class="page-body">
+          <div class="page-emoji">${entry.emoji || '✨'}</div>
+          <div class="page-text">${entry.text}</div>
+        </div>
+        ${entry.tag ? `<div class="page-tag">${entry.tag}</div>` : ''}
+        <div class="page-footer">
+          <div class="page-quote">
+            「${quote.text}」
+            <span class="author">—— ${quote.author}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  
+  indicator.textContent = `${currentIndex + 1} / ${entries.length}`;
+  
+  // 加载天气
+  loadWeatherForPage(entry.date);
+}
+
+async function loadWeatherForPage(dateStr) {
+  const display = document.getElementById('weather-display');
+  if (!display) return;
+  
+  const today = new Date().toISOString().split('T')[0];
+  if (dateStr === today) {
+    const weather = await getWeather();
+    display.textContent = `${weather.icon || '🌤️'} ${weather.condition} ${weather.temp}`;
+  } else {
+    display.textContent = `📅 ${dateStr}`;
+  }
+}
+
+// 触摸翻页
+document.addEventListener('touchstart', e => {
+  if (document.querySelector('.modal-overlay.active') || 
+      document.querySelector('.date-picker-overlay.active') ||
+      document.querySelector('.delete-confirm.active')) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isDragging = true;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
+    const entries = getEntries();
+    if (dx < 0 && currentIndex < entries.length - 1) {
+      // 左滑 → 下一页
+      currentIndex++;
+      renderPage();
+    } else if (dx > 0 && currentIndex > 0) {
+      // 右滑 → 上一页
+      currentIndex--;
+      renderPage();
+    }
+  }
+}, { passive: true });
+
+// ========== 新增记录 ==========
+let uploadedImage = null;
+let selectedTag = '';
+
+function toggleTag(el) {
+  // 取消其他已选
+  document.querySelectorAll('.quick-tag.active').forEach(t => {
+    if (t !== el) t.classList.remove('active');
+  });
+  el.classList.toggle('active');
+  selectedTag = el.classList.contains('active') ? el.dataset.tag : '';
+}
+
+// ========== 音效系统（Web Audio API） ==========
+let audioCtx = null;
+let audioUnlocked = false;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+// iOS Safari 需要在用户交互中解锁音频
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') {
+    ctx.resume();
+  }
+  // 播放一个静音buffer来解锁
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  audioUnlocked = true;
+}
+
+// 在所有用户交互中尝试解锁音频
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
+
+// 快乐音效：清脆的叮咚上升音
+function playHappySound() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    
+    // 音符序列（上升的叮咚）
+    const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.4, now + i * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.45);
+    });
+    
+    // 额外的闪亮音效
+    const shimmer = ctx.createOscillator();
+    const shimGain = ctx.createGain();
+    shimmer.connect(shimGain);
+    shimGain.connect(ctx.destination);
+    shimmer.type = 'triangle';
+    shimmer.frequency.value = 1568; // G6
+    shimGain.gain.setValueAtTime(0, now + 0.4);
+    shimGain.gain.linearRampToValueAtTime(0.2, now + 0.42);
+    shimGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+    shimmer.start(now + 0.4);
+    shimmer.stop(now + 1.1);
+  } catch(e) {}
+}
+
+// 粉碎音效：从高到低的噪音碎裂感（加长版）
+function playShredSound() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    
+    // 撕裂声（白噪音 + 滤波器下扫，3秒长版）
+    const bufferSize = ctx.sampleRate * 3;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(5000, now);
+    filter.frequency.exponentialRampToValueAtTime(100, now + 2.5);
+    filter.Q.value = 1.5;
+    
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.linearRampToValueAtTime(0.6, now + 0.15);
+    gain.gain.setValueAtTime(0.5, now + 1.0);
+    gain.gain.setValueAtTime(0.35, now + 2.0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 3.0);
+    
+    // 碎片落地的咕噜敲击声（更多更密集）
+    [0.4, 0.6, 0.75, 0.9, 1.05, 1.2, 1.35, 1.5, 1.65, 1.8, 1.95, 2.1, 2.25, 2.4, 2.55, 2.7, 2.85].forEach(t => {
+      const click = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      click.connect(cGain);
+      cGain.connect(ctx.destination);
+      click.type = 'sine';
+      click.frequency.value = 120 + Math.random() * 400;
+      cGain.gain.setValueAtTime(0, now + t);
+      cGain.gain.linearRampToValueAtTime(0.1 * (1 - t/3), now + t + 0.01);
+      cGain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.12);
+      click.start(now + t);
+      click.stop(now + t + 0.15);
+    });
+  } catch(e) {}
+}
+
+// ========== 诗词选择器 ==========
+let currentQuoteIndex = 0;
+let shuffledQuotes = [];
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function renderQuotePicker() {
+  const q = shuffledQuotes[currentQuoteIndex];
+  document.getElementById('quote-picker-scroll').innerHTML = 
+    `「${q.text}」<br><span style="font-size:12px;color:#c0392b;">—— ${q.author}</span>`;
+  document.getElementById('quote-nav-idx').textContent = `${currentQuoteIndex + 1}/${shuffledQuotes.length}`;
+}
+
+function prevQuote() {
+  currentQuoteIndex = (currentQuoteIndex - 1 + shuffledQuotes.length) % shuffledQuotes.length;
+  renderQuotePicker();
+}
+
+function nextQuote() {
+  currentQuoteIndex = (currentQuoteIndex + 1) % shuffledQuotes.length;
+  renderQuotePicker();
+}
+
+function getSelectedQuote() {
+  return shuffledQuotes[currentQuoteIndex];
+}
+
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('active');
+  document.getElementById('entry-text').value = '';
+  document.getElementById('char-num').textContent = '0';
+  uploadedImage = null;
+  selectedTag = '';
+  document.querySelectorAll('.quick-tag.active').forEach(t => t.classList.remove('active'));
+  document.getElementById('image-preview').style.display = 'none';
+  // 初始化诗词选择器（每次打开随机打乱顺序）
+  shuffledQuotes = shuffleArray(quotes);
+  currentQuoteIndex = 0;
+  renderQuotePicker();
+  document.getElementById('entry-text').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+
+document.getElementById('entry-text').addEventListener('input', e => {
+  document.getElementById('char-num').textContent = e.target.value.length;
+});
+
+document.getElementById('image-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // 压缩图片以节省 localStorage 空间
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      uploadedImage = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('preview-img').src = uploadedImage;
+      document.getElementById('image-preview').style.display = 'block';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function removeImage() {
+  uploadedImage = null;
+  document.getElementById('image-preview').style.display = 'none';
+  document.getElementById('image-input').value = '';
+}
+
+async function saveEntry() {
+  const text = document.getElementById('entry-text').value.trim();
+  if (!text) {
+    document.getElementById('entry-text').placeholder = '写点什么再保存吧...';
+    document.getElementById('entry-text').focus();
+    return;
+  }
+  
+  const now = new Date();
+  const entry = {
+    id: Date.now().toString(),
+    date: now.toISOString().split('T')[0],
+    time: now.toTimeString().slice(0, 5),
+    text: text,
+    image: uploadedImage || null,
+    emoji: getRandomHappyEmoji(),
+    tag: selectedTag || '',
+    quote: getSelectedQuote()
+  };
+  
+  await addEntry(entry);
+  playHappySound();
+  currentIndex = getEntries().length - 1;
+  closeModal();
+  // 如果在广场视图，切到详情页展示新记录
+  document.getElementById('plaza-view').style.display = 'none';
+  document.getElementById('detail-view').style.display = 'block';
+  renderPage();
+}
+
+// ========== 删除 ==========
+function deleteCurrentEntry() {
+  const entries = getEntries();
+  if (entries.length === 0) return;
+  document.getElementById('delete-confirm').classList.add('active');
+}
+
+function cancelDelete() {
+  document.getElementById('delete-confirm').classList.remove('active');
+}
+
+async function confirmDelete() {
+  const entries = getEntries();
+  const entry = entries[currentIndex];
+  if (entry) {
+    await removeEntry(entry.id);
+  }
+  if (currentIndex >= getEntries().length) currentIndex = getEntries().length - 1;
+  if (currentIndex < 0) currentIndex = 0;
+  document.getElementById('delete-confirm').classList.remove('active');
+  if (getEntries().length === 0) {
+    backToPlaza();
+  } else {
+    renderPage();
+  }
+}
+
+// ========== 日期跳转 ==========
+function openDatePicker() {
+  document.getElementById('dp-overlay').classList.add('active');
+  document.getElementById('dp-date').value = new Date().toISOString().split('T')[0];
+}
+
+function closeDatePicker() {
+  document.getElementById('dp-overlay').classList.remove('active');
+}
+
+function jumpToDate() {
+  const target = document.getElementById('dp-date').value;
+  if (!target) return;
+  
+  const entries = getEntries();
+  const idx = entries.findIndex(e => e.date === target);
+  
+  if (idx >= 0) {
+    currentIndex = idx;
+    renderPage();
+  } else {
+    // 找最近的日期
+    let closest = 0;
+    let minDiff = Infinity;
+    entries.forEach((e, i) => {
+      const diff = Math.abs(new Date(e.date) - new Date(target));
+      if (diff < minDiff) { minDiff = diff; closest = i; }
+    });
+    if (entries.length > 0) {
+      currentIndex = closest;
+      renderPage();
+    }
+  }
+  closeDatePicker();
+}
+
+// ========== 翻页提示 ==========
+function showSwipeHint() {
+  const hint = document.getElementById('swipe-hint');
+  const entries = getEntries();
+  if (entries.length <= 1) return;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 2500);
+}
+
+// ========== 点击弹窗外关闭 ==========
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+document.getElementById('dp-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDatePicker();
+});
+
+// ========== 抓运气机 ==========
+const jokes = [
+  "今天的你，比昨天多了24小时的经验值 🎮",
+  "据说打哈欠会传染，所以我对你微笑，你也会开心的 😊",
+  "企鹅一生只对一个对象表白……不是专一，是走路太慢追不上第二个 🐧",
+  "今天不开心也没关系，反正明天也不一定开心（开玩笑的，会的！）😆",
+  "如果生活给了你柠檬，就加点糖做柠檬茶 🍋",
+  "你今天的任务：什么都不做也不要有罪恶感 ✨",
+  "研究表明，摸猫可以降低血压。没有猫的话，摸摸自己也行 🐱",
+  "鱼的记忆才7秒？不，那是鱼想忘记的事只需要7秒 🐟",
+  "今天份的运气已加载完毕，请注意查收 📦",
+  "科学家说：每天笑15秒等于多活5分钟 ⏰",
+  "有人对你微笑不一定是因为你可爱，但大概率是的 💛",
+  "别减肥了，你照的镜子是打折的，你本人美多了 🪞",
+  "加油？不，你是电动的，要充电 🔋",
+  "躺平也是一种态度，叫做「战略性休整」🛋️",
+  "人生建议：饿了就吃，困了就睡，想笑就笑 🌟",
+  "你不需要很厉害才能开始，但你需要开始才能很厉害 🚀",
+  "据统计，100%觉得自己不行的人最后都行了 📊",
+  "此刻最重要的事：深呼吸，然后告诉自己「我很棒」💪",
+  "世界上最短的笑话：你说你不可爱 😤",
+  "今天的小确幸预告：会有好事发生在你身上 🎁",
+  "提醒你：你已经战胜了人生中100%的坏日子 🏆",
+  "悄悄告诉你：下一件好事正在路上 🚗💨",
+  "你的笑容被列为今日限定珍稀资源 💎",
+  "打工人打工魂，下班就是胜利 🎊",
+  "恭喜你抓到一颗快乐泡泡，有效期：一整天 🫧",
+  "生活不止眼前的枸杞，还有远方的火锅 🍲",
+  "你现在的状态：优秀但不自知 😎",
+  "今天也要做一个快乐的小废物哦 🌈",
+  "帮你算了一卦——大吉大利，今天适合吃好的 🍰",
+  "你的存在本身就是一种浪漫 🌹",
+  "人生苦短，何不甜一点 🍬",
+  "你比你想象中强大100倍 💫",
+  "今天的你，值得一个大大的拥抱 🤗",
+  "世界那么大，你那么好 🌍",
+  "快乐不需要理由，但你可以成为别人快乐的理由 😊",
+  "做不了太阳就做月亮，做不了月亮就做星星，反正都会发光 ⭐",
+  "你的笑容是世界上最便宜的奢侈品 😄",
+  "人生没有白走的路，每一步都算数 👣",
+  "今天虽然平凡，但也值得被记住 📝",
+  "你已经很努力了，偶尔允许自己放松一下吧 🧘",
+  "好事正在向你靠近，你只需要耐心等一等 ⏳",
+  "宇宙中你独一无二，这就是你最大的超能力 🦸",
+  "哪怕今天只做了一件小事，也是进步 📈",
+  "每个人都值得被温柔以待，尤其是你 💝",
+  "学会和自己相处，你会发现自己很有趣 🎭",
+  "今天不完美？没关系，完美太无聊了 🤪",
+  "你是别人羡慕的存在，只是你还不知道 ✨",
+  "给自己一朵小红花，你今天也很棒 🌺",
+  "生活从来不缺美好，缺的是发现美好的眼睛 👁️",
+  "你的每一天都值得一首BGM 🎶",
+  "世上有那么多巧合，你是我遇到的最好的那个 🍀",
+  "忙碌了一天，辛苦了，晚上好好休息 🌙",
+  "阳光洒在你肩上时，全世界都在对你微笑 ☀️",
+  "你今天笑了吗？如果没有，现在开始 😁",
+  "成年人最大的自律，就是学会好好对自己 💆",
+  "做自己的太阳，不需要借谁的光 🌞",
+  "你值得世界上所有的温柔和美好 🌸",
+  "不要低估一杯奶茶带来的快乐 🧋",
+  "有些路虽然远，但走着走着就到了 🚶",
+  "今天也是元气满满的一天！💥",
+  "每个认真生活的人，都值得被认真对待 🎀",
+  "你的小宇宙里，藏着大大的能量 🔥",
+  "保持微笑，好运会不请自来 🍀",
+  "你是最好版本的自己，不需要成为任何人 👑",
+  "愿你的快乐不需要翻译 🌐",
+  "吃饱了才有力气减肥（不是 🍕",
+  "你今天好好吃饭了吗？好好吃饭也是一种修行 🍚",
+  "所有的坏情绪，睡一觉就好了（大概）😴",
+  "没有什么问题是一顿火锅解决不了的 🫕",
+  "你看，天气也在努力变好呢 🌤️",
+  "把期待降低一点，把快乐放大一点 📐",
+  "如果快乐太难，那就祝你平安 🕊️",
+  "今天的风很温柔，就像你 🌬️",
+  "别着急，面包会有的，牛奶也会有的 🥛",
+  "你的努力，终将变成脚下的路 🛤️",
+  "让我告诉你一个秘密：你真的很不错 🤫",
+  "今天的月亮好圆，一定是在偷看你 🌕",
+  "每天进步一点点，就是最好的人生策略 📌",
+  "你笑起来的时候，全世界都亮了 💡",
+  "保持热爱，奔赴下一场山海 ⛰️",
+  "好好爱自己，才有力量爱世界 ❤️",
+  "时间会给你答案，不必太焦虑 🕰️",
+  "凡是过往，皆为序章 📖",
+  "你的时区里，一切都刚刚好 ⌚",
+  "你不用做到100分，60分就已经很棒了 💯",
+  "等你的好消息 📬",
+  "世界很大，但快乐可以很小 🐣",
+  "深呼吸，一切都会好起来的 🌊",
+  "你是自己故事里的主角，配得上所有好剧本 🎬",
+  "今天的小确幸：你还在，多好 🌱",
+  "愿所有的不安都是虚惊一场 🍃",
+  "你已经很棒了，不信你回头看看 👀",
+  "快乐这件事，你说了算 ✋",
+  "谢谢你今天也在努力生活 🙏",
+  "你值得拥有一个不被打扰的好觉 😴",
+  "明天的你一定会感谢今天的你 🤝",
+  "快乐是免费的，但也要记得领取 🎫",
+  "你的存在让这个世界多了一份温度 🌡️",
+  "今日份的可爱已上线 📡",
+  "希望你的每一天都被快乐填满 🧩",
+  "你已经拥有了很多很多，只是偶尔忘了 💭"
+];
+
+const bubbleColors = [
+  'radial-gradient(circle at 30% 30%, #ff9a9e, #fad0c4)',
+  'radial-gradient(circle at 30% 30%, #a18cd1, #fbc2eb)',
+  'radial-gradient(circle at 30% 30%, #ffecd2, #fcb69f)',
+  'radial-gradient(circle at 30% 30%, #89f7fe, #66a6ff)',
+  'radial-gradient(circle at 30% 30%, #96fbc4, #f9f586)',
+  'radial-gradient(circle at 30% 30%, #fbc2eb, #a6c1ee)',
+  'radial-gradient(circle at 30% 30%, #fdcbf1, #e6dee9)',
+  'radial-gradient(circle at 30% 30%, #84fab0, #8fd3f4)',
+  'radial-gradient(circle at 30% 30%, #fccb90, #d57eeb)',
+  'radial-gradient(circle at 30% 30%, #e0c3fc, #8ec5fc)',
+];
+
+function showClawGame() {
+  document.getElementById('claw-overlay').classList.add('active');
+  document.getElementById('joke-result').style.display = 'none';
+  document.getElementById('bubble-pool-view').style.display = 'none';
+  document.getElementById('claw-btn').disabled = false;
+  document.getElementById('claw-btn').textContent = '🫧 开始接泡泡！';
+  document.getElementById('catch-flash').classList.remove('show');
+  document.getElementById('claw-machine-main').style.display = 'flex';
+  const runner = document.getElementById('runner');
+  runner.classList.remove('running');
+  runner.style.left = '50%';
+  startFallingBubbles();
+  ensureBubblePoolStore().then(() => updatePoolCount());
+}
+
+let fallingAnimId = null;
+let bubbleObjs = [];
+
+function startFallingBubbles() {
+  const container = document.getElementById('falling-bubbles');
+  container.innerHTML = '';
+  bubbleObjs = [];
+  
+  // 创建持续下落的泡泡
+  for (let i = 0; i < 8; i++) {
+    spawnBubble(container, Math.random() * 3);
+  }
+}
+
+function spawnBubble(container, delay) {
+  const bubble = document.createElement('div');
+  bubble.className = 'fall-bubble';
+  const isEmoji = Math.random() < 0.2;
+  let color;
+  if (isEmoji) {
+    color = 'radial-gradient(circle at 30% 30%, #ffd700, #ffb800)';
+    bubble.style.background = 'rgba(255,215,0,0.3)';
+    bubble.style.border = '2px solid rgba(255,215,0,0.6)';
+    bubble.style.display = 'flex';
+    bubble.style.alignItems = 'center';
+    bubble.style.justifyContent = 'center';
+    bubble.style.fontSize = '18px';
+    bubble.textContent = luckyEmojis[Math.floor(Math.random() * luckyEmojis.length)];
+  } else {
+    color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+    bubble.style.background = color;
+  }
+  const size = 34 + Math.random() * 18;
+  bubble.style.width = size + 'px';
+  bubble.style.height = size + 'px';
+  const x = 10 + Math.random() * 80;
+  bubble.style.left = x + '%';
+  bubble.style.top = '-50px';
+  container.appendChild(bubble);
+  
+  const speed = 1.2 + Math.random() * 1.2;
+  const swingSpeed = 0.02 + Math.random() * 0.03;
+  const swingAmp = 15 + Math.random() * 25;
+  const swingOffset = Math.random() * Math.PI * 2;
+  const obj = { el: bubble, x, baseX: x, y: -50, speed, size, color, delay: delay * 60, caught: false, swingSpeed, swingAmp, swingOffset, frame: 0, isEmoji };
+  bubbleObjs.push(obj);
+}
+
+function generateFallingBubbles() {
+  // kept for compatibility
+  startFallingBubbles();
+}
+
+let catchColor = '';
+let gameRunning = false;
+let touchMoveHandler = null;
+let touchEndHandler = null;
+
+// 特殊emoji球（接到这些才触发笑话）
+const luckyEmojis = ['⭐', '🌟', '💫', '🎁', '🎀', '❤️', '🍀'];
+
+function startCatch() {
+  const btn = document.getElementById('claw-btn');
+  btn.disabled = true;
+  btn.textContent = '👆 滑动屏幕接球！';
+  
+  const runner = document.getElementById('runner');
+  runner.classList.add('running');
+  gameRunning = true;
+  
+  // 绑定触摸滑动控制小人移动
+  const skyBox = document.getElementById('sky-box');
+  
+  let lastStepTime = 0;
+  
+  touchMoveHandler = (e) => {
+    if (!gameRunning) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = skyBox.getBoundingClientRect();
+    const relX = ((touch.clientX - rect.left) / rect.width) * 100;
+    const clampedX = Math.max(10, Math.min(90, relX));
+    const prevX = parseFloat(runner.style.left) || 50;
+    // 根据移动方向翻转朝向
+    if (clampedX > prevX + 1) {
+      runner.classList.remove('face-left');
+      runner.classList.add('face-right');
+    } else if (clampedX < prevX - 1) {
+      runner.classList.remove('face-right');
+      runner.classList.add('face-left');
+    }
+    runner.style.left = clampedX + '%';
+    // 跑动脚步声（节流200ms）
+    const now = Date.now();
+    if (Math.abs(clampedX - prevX) > 2 && now - lastStepTime > 200) {
+      playClawSound('lever');
+      lastStepTime = now;
+    }
+  };
+  
+  skyBox.addEventListener('touchmove', touchMoveHandler, { passive: false });
+  // 也支持鼠标拖拽（桌面调试）
+  skyBox.addEventListener('mousemove', (e) => {
+    if (!gameRunning) return;
+    const rect = skyBox.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * 100;
+    const clampedX = Math.max(10, Math.min(90, relX));
+    const prevX = parseFloat(runner.style.left) || 50;
+    if (clampedX > prevX + 1) {
+      runner.classList.remove('face-left');
+      runner.classList.add('face-right');
+    } else if (clampedX < prevX - 1) {
+      runner.classList.remove('face-right');
+      runner.classList.add('face-left');
+    }
+    runner.style.left = clampedX + '%';
+  });
+  
+  // 游戏循环：更新泡泡+碰撞检测
+  const gameLoop = setInterval(() => {
+    if (!gameRunning) { clearInterval(gameLoop); return; }
+    
+    const container = document.getElementById('falling-bubbles');
+    bubbleObjs.forEach(obj => {
+      if (obj.caught) return;
+      if (obj.delay > 0) { obj.delay--; return; }
+      obj.y += obj.speed;
+      obj.frame++;
+      obj.x = obj.baseX + Math.sin(obj.frame * obj.swingSpeed + obj.swingOffset) * obj.swingAmp;
+      obj.el.style.top = obj.y + 'px';
+      obj.el.style.left = obj.x + '%';
+      
+      // 碰撞检测：泡泡到达网兜高度且水平距离够近
+      const runnerLeft = parseFloat(runner.style.left) || 50;
+      if (obj.y >= 310 && obj.y <= 380 && Math.abs(obj.x - runnerLeft) < 12) {
+        obj.caught = true;
+        obj.el.style.transition = 'transform 0.2s, opacity 0.2s';
+        obj.el.style.transform = 'scale(1.5)';
+        obj.el.style.opacity = '0';
+        
+        // 判断是不是emoji球
+        if (obj.isEmoji) {
+          // 接到emoji球！触发笑话
+          catchColor = obj.color;
+          gameRunning = false;
+          clearInterval(gameLoop);
+          runner.classList.remove('running');
+          removeTouchHandlers(skyBox);
+          
+          playClawSound('grab');
+          if (navigator.vibrate) navigator.vibrate([30, 20, 80]);
+          
+          const flash = document.getElementById('catch-flash');
+          flash.classList.add('show');
+          
+          setTimeout(() => {
+            playClawSound('pop');
+            flash.classList.remove('show');
+            setTimeout(async () => {
+              const joke = jokes[Math.floor(Math.random() * jokes.length)];
+              document.getElementById('claw-machine-main').style.display = 'none';
+              document.getElementById('joke-result').style.display = 'flex';
+              document.getElementById('joke-text').textContent = joke;
+              await ensureBubblePoolStore();
+              await saveBubbleToPool(joke, catchColor);
+              await updatePoolCount();
+            }, 500);
+          }, 800);
+        } else {
+          // 普通泡泡——只有音效，继续游戏
+          playClawSound('lever');
+        }
+      }
+      
+      // 超出屏幕重新生成
+      if (obj.y > 430) {
+        obj.y = -50;
+        obj.baseX = 10 + Math.random() * 80;
+        obj.x = obj.baseX;
+        obj.frame = 0;
+        // 小概率变成emoji球
+        obj.isEmoji = Math.random() < 0.2;
+        if (obj.isEmoji) {
+          obj.el.textContent = luckyEmojis[Math.floor(Math.random() * luckyEmojis.length)];
+          obj.el.style.background = 'rgba(255,215,0,0.3)';
+          obj.el.style.border = '2px solid rgba(255,215,0,0.6)';
+          obj.el.style.display = 'flex';
+          obj.el.style.alignItems = 'center';
+          obj.el.style.justifyContent = 'center';
+          obj.el.style.fontSize = '18px';
+          obj.color = 'radial-gradient(circle at 30% 30%, #ffd700, #ffb800)';
+        } else {
+          obj.el.textContent = '';
+          obj.el.style.border = 'none';
+          obj.el.style.display = 'block';
+          obj.color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+          obj.el.style.background = obj.color;
+        }
+        obj.el.style.left = obj.x + '%';
+        obj.el.style.transform = '';
+        obj.el.style.opacity = '0.85';
+        obj.el.style.transition = '';
+        obj.caught = false;
+      }
+    });
+  }, 16);
+  
+  // 超时保护 15秒
+  setTimeout(() => {
+    if (gameRunning) {
+      gameRunning = false;
+      clearInterval(gameLoop);
+      runner.classList.remove('running');
+      removeTouchHandlers(skyBox);
+      catchColor = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+      playClawSound('pop');
+      setTimeout(async () => {
+        const joke = jokes[Math.floor(Math.random() * jokes.length)];
+        document.getElementById('claw-machine-main').style.display = 'none';
+        document.getElementById('joke-result').style.display = 'flex';
+        document.getElementById('joke-text').textContent = joke;
+        await ensureBubblePoolStore();
+        await saveBubbleToPool(joke, catchColor);
+        await updatePoolCount();
+      }, 300);
+    }
+  }, 15000);
+}
+
+function removeTouchHandlers(el) {
+  if (touchMoveHandler) {
+    el.removeEventListener('touchmove', touchMoveHandler);
+    touchMoveHandler = null;
+  }
+}
+
+// 哈哈机音效
+function playClawSound(type) {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    
+    if (type === 'lever') {
+      // 脚步声
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = 200 + Math.random() * 100;
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+    
+    else if (type === 'grab') {
+      // 接住emoji——欢乐上升音阶 🎉
+      const notes = [523, 659, 784, 1047, 1318];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, now + i * 0.08);
+        gain.gain.linearRampToValueAtTime(0.35, now + i * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.3);
+      });
+    }
+    
+    else if (type === 'pop') {
+      // 泡泡爆破 + 撒花
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.25);
+      
+      [0.15, 0.25, 0.35].forEach(t => {
+        const s = ctx.createOscillator();
+        const g = ctx.createGain();
+        s.connect(g);
+        g.connect(ctx.destination);
+        s.type = 'sine';
+        s.frequency.value = 1200 + Math.random() * 800;
+        g.gain.setValueAtTime(0, now + t);
+        g.gain.linearRampToValueAtTime(0.15, now + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.15);
+        s.start(now + t);
+        s.stop(now + t + 0.2);
+      });
+    }
+  } catch(e) {}
+}
+
+function closeClawGame() {
+  document.getElementById('claw-overlay').classList.remove('active');
+  document.getElementById('claw-machine-main').style.display = 'flex';
+  document.getElementById('bubble-pool-view').style.display = 'none';
+}
+
+function replayClawGame() {
+  document.getElementById('joke-result').style.display = 'none';
+  document.getElementById('claw-machine-main').style.display = 'flex';
+  document.getElementById('claw-btn').disabled = false;
+  document.getElementById('claw-btn').textContent = '🫧 开始接泡泡！';
+  document.getElementById('catch-flash').classList.remove('show');
+  const runner = document.getElementById('runner');
+  runner.classList.remove('running');
+  runner.style.left = '50%';
+  startFallingBubbles();
+}
+
+// ========== 泡泡池 ==========
+const BUBBLE_POOL_STORE = 'bubblePool';
+
+function ensureBubblePoolStore() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 3);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains('shredded')) {
+        database.createObjectStore('shredded', { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains(BUBBLE_POOL_STORE)) {
+        database.createObjectStore(BUBBLE_POOL_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = (e) => {
+      db = e.target.result;
+      resolve();
+    };
+    req.onerror = () => resolve();
+  });
+}
+
+async function saveBubbleToPool(joke, color) {
+  if (!db || !db.objectStoreNames.contains(BUBBLE_POOL_STORE)) {
+    await ensureBubblePoolStore();
+  }
+  return new Promise((resolve) => {
+    const tx = db.transaction(BUBBLE_POOL_STORE, 'readwrite');
+    const store = tx.objectStore(BUBBLE_POOL_STORE);
+    const now = new Date();
+    store.put({
+      id: Date.now().toString(),
+      joke: joke,
+      color: color,
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().slice(0, 5)
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+}
+
+async function getBubblePool() {
+  if (!db || !db.objectStoreNames.contains(BUBBLE_POOL_STORE)) {
+    await ensureBubblePoolStore();
+  }
+  return new Promise((resolve) => {
+    if (!db || !db.objectStoreNames.contains(BUBBLE_POOL_STORE)) { resolve([]); return; }
+    const tx = db.transaction(BUBBLE_POOL_STORE, 'readonly');
+    const store = tx.objectStore(BUBBLE_POOL_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const records = req.result || [];
+      records.sort((a, b) => b.id.localeCompare(a.id));
+      resolve(records);
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function updatePoolCount() {
+  const pool = await getBubblePool();
+  const el = document.getElementById('pool-count');
+  if (el) el.textContent = pool.length;
+}
+
+async function toggleBubblePool() {
+  document.querySelector('.claw-machine').style.display = 'none';
+  document.getElementById('joke-result').style.display = 'none';
+  document.getElementById('bubble-pool-view').style.display = 'block';
+  await renderBubblePool();
+}
+
+function closeBubblePool() {
+  document.getElementById('bubble-pool-view').style.display = 'none';
+  document.querySelector('.claw-machine').style.display = 'flex';
+}
+
+async function renderBubblePool() {
+  const pool = await getBubblePool();
+  const list = document.getElementById('pool-list');
+  
+  if (pool.length === 0) {
+    list.innerHTML = '<div class="pool-empty">还没有抓到泡泡哦<br>每次登录都可以抓一个！</div>';
+    return;
+  }
+  
+  let html = '';
+  pool.forEach(item => {
+    html += `
+      <div class="pool-item">
+        <div class="pool-bubble" style="background:${item.color}"></div>
+        <div class="pool-info">
+          <div class="pool-date">${item.date} ${item.time}</div>
+          <div class="pool-joke">${item.joke}</div>
+        </div>
+      </div>`;
+  });
+  list.innerHTML = html;
+}
+
+// ========== 坏情绪粉碎机 ==========
+const SHRED_STORE = 'shredded';
+const shredQuotes = [
+  "已粉碎 ✨ 它不值得占用你的快乐",
+  "碎了碎了！坏情绪已化为齑粉 💨",
+  "粉碎完毕！你比这些破事强一百倍 💪",
+  "嗡嗡嗡… 搞定！世界清净了 🌈",
+  "它已经不存在了，就像从没发生过 🍃",
+  "垃圾已清理 🗑️ 给快乐腾地方吧",
+  "粉碎成功！深呼吸，重新出发 🌸",
+  "撕碎它！你的时间值得花在更好的事上 ⏳",
+  "消失吧！你看，天还是蓝的 ☀️",
+  "已销毁，不留一丝痕迹。你很棒 🫶",
+  "这件事已经被碎成了灰，风一吹就没了 💨",
+  "从现在起，这件事跟你无关了 ✂️",
+  "粉碎完成！让位给更值得的事吧 🎯",
+  "坏情绪？what 坏情绪？我没看到 🙈",
+  "已处理。你的心理垃圾桶已清空 🧹",
+  "碎碎平安！坏的都走了，好的正在来 🕊️",
+  "扔掉吧！你的肩膀不是用来扛破事的 💆",
+  "粉碎完毕。明天的你会感谢现在放下的你 🌅",
+  "这些破事配不上你的注意力 👑",
+  "已删除。你的人生内存不该浪费在这里 💾",
+  "烟消云散！你依然闪闪发光 ✨",
+  "放过它，也放过自己 🍀",
+  "粉碎了！现在给自己倒杯水歇一歇 ☕",
+  "它不重要。你快乐才重要 🌟",
+  "生气是拿别人的错误惩罚自己，不值得 💎",
+  "想开了就是晴天 🌤️",
+  "不开心的事情扔掉就好，你不是垃圾回收站 ♻️",
+  "碎了！这些情绪像碎纸一样轻飘飘的，无足轻重 🪶",
+  "处理完毕！你现在自由了 🦋",
+  "往前看，好事在前面等着你呢 🏃‍♀️",
+  "世界上没有过不去的坎，只有过不去的心情 🌊",
+  "粉碎成功！坏情绪保质期到了，该扔了 📅",
+  "你的快乐不需要任何人批准 👍",
+  "扔了扔了！轻装上阵吧 🎒",
+  "记住：你永远有权利让自己开心 🎫",
+  "这些事不会改变你是一个很好的人这个事实 🌻",
+  "粉碎完毕，现在去做一件让你开心的事吧 🎉",
+  "它已经是过去式了，未来才是你要去的地方 🚀",
+  "不值得你难过的人和事，通通粉碎 💥",
+  "完事了！给自己一个微笑奖励一下 😊",
+  "已销毁。你的好心情即将重启 🔄",
+  "碎了碎了！腾出空间装更多快乐 🧳",
+  "这件事的体积正在缩小…缩小…没了 🔬",
+  "想象它变成蒲公英飞走了 🌾",
+  "坏情绪已归零，快乐值正在充满 📊",
+  "粉碎了！给自己比个心 ❤️",
+  "你的时间很贵，别浪费在不值得的事上 ⌛",
+  "过去的就让它过去吧，你值得更好的 🌺",
+  "甩掉包袱，轻松前行 🎈",
+  "人间不值得（生气），快乐才值得 🎠",
+  "碎纸机已吃饱，你的心可以放空了 🧘",
+  "不开心的保质期只有5秒——5…4…3…2…1…好了！⏱️",
+  "你看，写出来是不是就没那么沉重了？📝",
+  "呼——长舒一口气，世界依然美好 🌍",
+  "这些破事就像灰尘，擦掉就干净了 🧽",
+  "你值得一个没有阴霾的好天气 ⛅",
+  "删除成功！你的心理硬盘已释放空间 💻",
+  "去他的！你今天照样很棒 🏅",
+  "碎了！你猜怎么着？明天又是新的一天 🌄",
+  "不重要的事情就让它随风去吧 🍂",
+  "你不需要完美，你只需要快乐 🎪",
+  "粉碎完毕！现在的你轻了好几斤（心理上）⚖️",
+  "这件事的影响力正在归零…归零…完成 📉",
+  "坏情绪已过期作废，请以最新心情为准 📋",
+  "你已经做到能做的最好了，其余交给时间 ⏰",
+  "如果改变不了事情，就改变心情 💫",
+  "粉碎成功！快乐正在配送中，请保持微笑签收 📬",
+  "这些事配不上你的眼泪 💧",
+  "清空完毕。你现在可以安心去做开心的事了 🎮",
+  "怎么说呢？碎了就碎了吧，反正也不值钱 🪙",
+  "你笑起来的样子很好看，别让破事抢了你的笑容 😁",
+  "生气的时候想想：他们配让你不开心吗？不配！🙅",
+  "写完了？碎完了？好了，现在你是自由的 🕊️",
+  "没什么大不了的，天塌下来有高个儿顶着 🏔️",
+  "坏心情是暂时的，你的好运是长期的 📈",
+  "扔掉一件烦心事，你今天就赚了 💰",
+  "处理情绪的最好方式：承认它、面对它、然后碎了它 ✅",
+  "OK，这件事到此为止，翻篇了 📄",
+  "你已经比大多数人勇敢了，因为你敢面对它 🦁",
+  "碎片已飘散在风中，你的心回来了 💗",
+  "下一秒开始，你只收集快乐 🧲",
+  "所有让你难过的事都是纸老虎，一戳就破 🐯",
+  "粉碎了！你的防御力+100 🛡️",
+  "人生不如意十之八九，但你只需记住那一二 📌",
+  "请相信：一切都是最好的安排 🎯",
+  "碎了碎了！接下来请享受你应得的好心情 🌸",
+  "往事清零，爱恨随意 🎲",
+  "你这么好的人，不值得为这些事心烦 🌼",
+  "粉碎完成！系统提示：你的快乐值已恢复满格 💯",
+  "麻烦归麻烦，你还是你——那个很酷的人 😎",
+  "打包→压缩→粉碎→消失！操作完成 📦",
+  "天大的事，睡一觉都能小一圈 😴",
+  "你已经打赢了今天的boss战 🎮",
+  "粉碎完毕，系统奖励你一个好梦 🌙",
+  "记住：你的能量应该用来创造，不是用来消耗 ⚡",
+  "好了好了，收拾好心情，明天还要继续闪亮 💫",
+  "这些事只是生命长河中的一粒沙 🏖️",
+  "碎了就碎了，你还有全世界的快乐在等你 🌍",
+  "Done！你的情绪管理能力又升级了 📈",
+  "最后一句：你真的很棒，别忘了 🫶"
+];
+
+// 确保IndexedDB有shredded store
+function ensureShredStore() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(DB_NAME, 2);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains(SHRED_STORE)) {
+        database.createObjectStore(SHRED_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = (e) => {
+      db = e.target.result;
+      resolve();
+    };
+    req.onerror = () => resolve();
+  });
+}
+
+async function getShredRecords() {
+  return new Promise((resolve) => {
+    if (!db || !db.objectStoreNames.contains(SHRED_STORE)) { resolve([]); return; }
+    const tx = db.transaction(SHRED_STORE, 'readonly');
+    const store = tx.objectStore(SHRED_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const records = req.result || [];
+      records.sort((a, b) => b.id.localeCompare(a.id)); // 最新在前
+      resolve(records);
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function saveShredRecord(text) {
+  if (!db || !db.objectStoreNames.contains(SHRED_STORE)) {
+    await ensureShredStore();
+  }
+  return new Promise((resolve) => {
+    const tx = db.transaction(SHRED_STORE, 'readwrite');
+    const store = tx.objectStore(SHRED_STORE);
+    const now = new Date();
+    store.put({
+      id: Date.now().toString(),
+      text: text,
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().slice(0, 5)
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve();
+  });
+}
+
+let shredHistoryVisible = false;
+
+async function openShredder() {
+  await ensureShredStore();
+  document.getElementById('shredder-overlay').classList.add('active');
+  document.getElementById('shred-text').value = '';
+  document.getElementById('paper-note').classList.remove('shredding');
+  document.getElementById('paper-note').style.display = 'block';
+  document.getElementById('shred-btn').style.display = 'block';
+  document.getElementById('shred-btn').disabled = false;
+  document.getElementById('shred-btn').textContent = '🗑️ 投入粉碎机';
+  document.getElementById('shred-result').style.display = 'none';
+  document.getElementById('shred-pieces').innerHTML = '';
+  document.getElementById('shredder-input-area').style.display = 'flex';
+  document.getElementById('shred-history').style.display = 'none';
+  shredHistoryVisible = false;
+  document.getElementById('stats-arrow').textContent = '查看记录 ›';
+  updateShredCount();
+  document.getElementById('shred-text').focus();
+}
+
+async function updateShredCount() {
+  const records = await getShredRecords();
+  document.getElementById('shred-count').textContent = records.length;
+}
+
+async function toggleShredHistory() {
+  if (shredHistoryVisible) {
+    // 切回输入
+    document.getElementById('shredder-input-area').style.display = 'flex';
+    document.getElementById('shred-history').style.display = 'none';
+    document.getElementById('stats-arrow').textContent = '查看记录 ›';
+    shredHistoryVisible = false;
+  } else {
+    // 显示历史
+    document.getElementById('shredder-input-area').style.display = 'none';
+    document.getElementById('shred-history').style.display = 'block';
+    document.getElementById('stats-arrow').textContent = '‹ 返回粉碎';
+    shredHistoryVisible = true;
+    await renderShredHistory();
+  }
+}
+
+async function renderShredHistory() {
+  const records = await getShredRecords();
+  const list = document.getElementById('history-list');
+  if (records.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#90a4ae;">还没有粉碎记录</div>';
+    return;
+  }
+  let html = '';
+  records.forEach((r, i) => {
+    html += `
+      <div class="history-item">
+        <div class="h-date">${r.date} ${r.time}</div>
+        <div class="h-text">${r.text}</div>
+        <div class="h-badge">已粉碎</div>
+      </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function closeShredder() {
+  document.getElementById('shredder-overlay').classList.remove('active');
+}
+
+async function doShred() {
+  const text = document.getElementById('shred-text').value.trim();
+  if (!text) {
+    document.getElementById('shred-text').placeholder = '写点什么再粉碎吧…';
+    return;
+  }
+  
+  // 保存粉碎记录
+  await saveShredRecord(text);
+  
+  const btn = document.getElementById('shred-btn');
+  btn.disabled = true;
+  btn.textContent = '粉碎中...';
+  
+  // 1. 纸条被吸入动画
+  const note = document.getElementById('paper-note');
+  note.classList.add('shredding');
+  
+  // 2. 触发震动反馈（如果支持）
+  if (navigator.vibrate) {
+    navigator.vibrate([50, 30, 80, 30, 100]);
+  }
+  
+  // 2.5 播放粉碎音效
+  playShredSound();
+  
+  // 3. 生成碎片
+  setTimeout(() => {
+    createShredPieces();
+    note.style.display = 'none';
+    btn.style.display = 'none';
+  }, 500);
+  
+  // 4. 显示结果 + 更新计数
+  setTimeout(async () => {
+    const result = document.getElementById('shred-result');
+    const resultText = document.getElementById('result-text');
+    resultText.textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
+    result.style.display = 'block';
+    await updateShredCount();
+  }, 1800);
+}
+
+function createShredPieces() {
+  const container = document.getElementById('shred-pieces');
+  container.innerHTML = '';
+  const colors = ['#fffef9', '#f5f5f5', '#e0e0e0', '#fafafa'];
+  
+  for (let i = 0; i < 20; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'shred-piece';
+    piece.style.left = (20 + Math.random() * 60) + '%';
+    piece.style.top = (30 + Math.random() * 20) + '%';
+    piece.style.width = (8 + Math.random() * 16) + 'px';
+    piece.style.height = (30 + Math.random() * 60) + 'px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = (Math.random() * 0.5) + 's';
+    piece.style.animationDuration = (1 + Math.random() * 1) + 's';
+    piece.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+    container.appendChild(piece);
+  }
+  
+  // 清除碎片
+  setTimeout(() => { container.innerHTML = ''; }, 2500);
+}
+
+function resetShredder() {
+  document.getElementById('shred-text').value = '';
+  document.getElementById('paper-note').classList.remove('shredding');
+  document.getElementById('paper-note').style.display = 'block';
+  document.getElementById('shred-btn').style.display = 'block';
+  document.getElementById('shred-btn').disabled = false;
+  document.getElementById('shred-btn').textContent = '🗑️ 投入粉碎机';
+  document.getElementById('shred-result').style.display = 'none';
+  document.getElementById('shred-pieces').innerHTML = '';
+  document.getElementById('shred-text').focus();
+}
+
+// ========== CloudBase 云同步（后台静默） ==========
+let cloudApp = null;
+let cloudDb = null;
+let cloudReady = false;
+
+async function initCloudSync() {
+  try {
+    if (typeof cloudbase === 'undefined') return;
+    cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
+    const auth = cloudApp.auth();
+    
+    // 尝试匿名登录（兼容两种API）
+    try {
+      if (auth.anonymousAuthProvider) {
+        await auth.anonymousAuthProvider().signIn();
+      } else if (auth.signInAnonymously) {
+        await auth.signInAnonymously();
+      }
+    } catch(e) {
+      console.log('Cloud auth failed, using local only');
+      return;
+    }
+    
+    cloudDb = cloudApp.database();
+    cloudReady = true;
+    console.log('Cloud sync ready');
+    
+    // 同步本地数据到云端
+    syncLocalToCloud();
+  } catch(e) {
+    console.log('Cloud init failed, using local only:', e.message);
+  }
+}
+
+async function syncLocalToCloud() {
+  if (!cloudReady || !cloudDb) return;
+  try {
+    const entries = getEntries();
+    const col = cloudDb.collection('entries');
+    
+    // 获取云端已有数据
+    const cloudData = await col.where({ _username: currentUsername }).limit(1000).get();
+    const cloudIds = new Set((cloudData.data || []).map(d => d.localId));
+    
+    // 把本地有而云端没有的数据同步上去
+    for (const entry of entries) {
+      const localId = entry.id || entry._id;
+      if (!cloudIds.has(localId)) {
+        await col.add({ ...entry, localId, _username: currentUsername });
+      }
+    }
+  } catch(e) {
+    console.log('Sync failed:', e.message);
+  }
+}
+
+// 每次 addEntry 后也同步到云端
+const originalAddEntry = addEntry;
+addEntry = async function(entry) {
+  await originalAddEntry(entry);
+  if (cloudReady && cloudDb) {
+    try {
+      await cloudDb.collection('entries').add({ ...entry, localId: entry.id, _username: currentUsername });
+    } catch(e) {}
+  }
+};
+
+// ========== 观音灵签 ==========
+const guanyinSigns = [
+  {num:1,level:"上签",ancient:"钟离成道",poem:"开天辟地作良缘\n吉日良时万事全\n若得此签非小可\n人行忠正帝王宣",summary:"此乃天地开泰之象，万事大吉。",detail:"急速兆速 年未值时 观音降笔 先报君知",items:{marriage:"大吉",career:"顺利",wealth:"丰收",health:"平安",travel:"宜行",lawsuit:"有理"}},
+  {num:2,level:"上签",ancient:"董永遇仙",poem:"签上神仙指引明\n机缘到来有贵人\n云开月出照前路\n凡事随心得称情",summary:"此乃贵人相助之象，诸事顺遂。",detail:"云开见月 守旧待时 贵人相助 万事如意",items:{marriage:"合",career:"遇贵人",wealth:"渐旺",health:"安",travel:"吉",lawsuit:"和"}},
+  {num:3,level:"中签",ancient:"吕后害韩信",poem:"临风冒雨去还乡\n正是其身不自量\n此去不知前路险\n何须回首问苍苍",summary:"此乃凶中有吉之象，宜守不宜进。",detail:"一箭射红心 人人说好音 日长鸡唱午 真正是知音",items:{marriage:"待",career:"守旧",wealth:"平",health:"注意",travel:"缓行",lawsuit:"和为贵"}},
+  {num:4,level:"上签",ancient:"玉莲会十朋",poem:"千年古镜复重圆\n女再求夫男再婚\n天下有缘方可配\n自然金玉满其门",summary:"此乃破镜重圆之象，有情人终成眷属。",detail:"淘沙得金 骑龙跨凤 月出光辉 合家欢喜",items:{marriage:"大吉",career:"上升",wealth:"有财",health:"安康",travel:"吉",lawsuit:"胜"}},
+  {num:5,level:"中签",ancient:"刘晨遇仙",poem:"一锥刺地要求泉\n努力难为掘井人\n莫道无心应不遂\n看看雨过竹生笋",summary:"此乃先难后易之象，须耐心等待。",detail:"临事心迷 及做三思 坚持到底 自有收获",items:{marriage:"迟",career:"努力方成",wealth:"先苦后甜",health:"平",travel:"可",lawsuit:"先难后易"}},
+  {num:6,level:"中签",ancient:"仁贵遇主",poem:"投身岩下铜鸟居\n须是还他大丈夫\n混沌有期开古镜\n一朝识主始安居",summary:"此乃怀才待用之象，需等机缘。",detail:"稳水行舟 虽无大利 孜孜努力 自有所得",items:{marriage:"待",career:"待时",wealth:"平",health:"安",travel:"平",lawsuit:"忍"}},
+  {num:7,level:"下签",ancient:"苏娘走难",poem:"莫信直中直\n须防仁不仁\n山中有直树\n世上无直人",summary:"此乃人心叵测之象，宜小心谨慎。",detail:"路有陷阱 被人暗算 小心行事 戒之慎之",items:{marriage:"不宜",career:"防小人",wealth:"破",health:"注意",travel:"不宜",lawsuit:"败"}},
+  {num:8,level:"上签",ancient:"姚能遇仙",poem:"茂林松柏正兴旺\n雨雪风霜总莫为\n异日忽然成大用\n一朝荣达振家邦",summary:"此乃大器晚成之象，终有出头之日。",detail:"经营茂盛 财禄丰亨 文武声名 威震四方",items:{marriage:"吉",career:"大成",wealth:"旺",health:"壮",travel:"吉",lawsuit:"胜"}},
+  {num:9,level:"中签",ancient:"孔明点将",poem:"烦君勿作私心事\n此意何曾有别全\n一片明心光皎洁\n宛如皎月映寒泉",summary:"此乃光明正大之象，以诚待人自然顺。",detail:"心地光明 逢凶化吉 正直无私 自有福报",items:{marriage:"诚则合",career:"正道",wealth:"稳",health:"安",travel:"平",lawsuit:"理直"}},
+  {num:10,level:"中签",ancient:"庞涓观阵",poem:"石藏无价玉和珍\n只管他乡外客寻\n宛如持灯更觅火\n不如收拾枉劳心",summary:"此乃舍近求远之象，幸福就在身边。",detail:"自身有宝 无须远求 安分守己 福自天来",items:{marriage:"近处寻",career:"本分",wealth:"身边",health:"养生",travel:"不宜远",lawsuit:"和"}},
+  {num:11,level:"上签",ancient:"书荐姜维",poem:"有大行藏未可知\n莫将疑虑自迟疑\n须知一势千钧重\n后顾牵心事更危",summary:"此乃把握时机之象，勿犹豫当断则断。",detail:"逢桥须下马 有路莫行船 善抓机遇 前途光明",items:{marriage:"速决",career:"行动",wealth:"把握",health:"安",travel:"速行",lawsuit:"速决"}},
+  {num:12,level:"中签",ancient:"武吉遇师",poem:"否去泰来咫尺间\n暂交君子出于山\n若逢虎兔佳音信\n门外人来到此间",summary:"此乃否极泰来之象，转机将至。",detail:"宝在眼前 迟早有缘 功名富贵 自有天安排",items:{marriage:"有望",career:"转运",wealth:"渐好",health:"好转",travel:"吉",lawsuit:"有转"}},
+  {num:13,level:"中签",ancient:"罗通叩关",poem:"自小生身福自然\n名声富贵出人前\n若能守分如前日\n一身安泰到晚年",summary:"此乃安分守福之象，知足常乐。",detail:"平安是福 勿贪勿妄 安守本分 自然如意",items:{marriage:"平顺",career:"稳",wealth:"足",health:"安",travel:"平",lawsuit:"和"}},
+  {num:14,level:"中签",ancient:"子牙弃官",poem:"宛如仙鹤出凡笼\n脱得凡笼路路通\n南北东西无阻隔\n任君直上九重宫",summary:"此乃仙鹤离笼之象，凡事先凶后吉。",detail:"走失行人 寻即见 家宅不安 自安然",items:{marriage:"先难后合",career:"有变动",wealth:"先失后得",health:"先忧后安",travel:"远行吉",lawsuit:"终解"}},
+  {num:15,level:"中签",ancient:"苏秦得志",poem:"行船正遇打头风\n月色云昏雾濛濛\n若是有心待月出\n也须等到雨过晴",summary:"此乃风雨后晴之象，耐心等待。",detail:"若问前程 等候时至 须耐心守 忌急忌躁",items:{marriage:"等",career:"待机",wealth:"后旺",health:"养",travel:"缓",lawsuit:"等"}},
+  {num:16,level:"中签",ancient:"叶梦熊朝圣",poem:"攀援高处望前程\n一路风霜雪满巾\n回首看来终有望\n鹏程万里已分明",summary:"此乃登高望远之象，吃苦方得甜。",detail:"千里之行 始于足下 脚踏实地 步步高升",items:{marriage:"可成",career:"升",wealth:"积少成多",health:"强健",travel:"宜",lawsuit:"理胜"}},
+  {num:17,level:"中签",ancient:"话梅止渴",poem:"莫听旁人说是非\n自家主意要坚持\n若是半途生退意\n前功尽弃太可悲",summary:"此乃坚持到底之象，切忌半途而废。",detail:"坚定信心 莫听闲言 持之以恒 终有所成",items:{marriage:"坚持",career:"莫弃",wealth:"持续",health:"坚持调养",travel:"继续",lawsuit:"坚持"}},
+  {num:18,level:"上签",ancient:"曹国舅为仙",poem:"必得高人来指点\n凡事应当看其势\n若能趁此好时光\n必然鼎甲威名世",summary:"此乃贵人指引之象，跟对人做对事。",detail:"时来运转 贵人扶持 功名富贵 指日可待",items:{marriage:"大吉",career:"贵人助",wealth:"大发",health:"安康",travel:"大吉",lawsuit:"大胜"}},
+  {num:19,level:"中签",ancient:"子仪封王",poem:"急水滩头放船归\n心中漫自用心机\n尽管不是凡间物\n也须耐心待时期",summary:"此乃静待时机之象，急则生变。",detail:"心急无益 过于操切 安守静候 时到自成",items:{marriage:"缓",career:"等",wealth:"稳",health:"静养",travel:"不急",lawsuit:"缓"}},
+  {num:20,level:"中签",ancient:"姜太公遇文王",poem:"一世文章未得通\n半生事业尽成空\n等闲白了少年头\n暮景残年亦有功",summary:"此乃大器晚成之象，莫灰心。",detail:"时运未到 不可强求 坚守正道 终有出头",items:{marriage:"晚婚吉",career:"晚成",wealth:"后发",health:"养生",travel:"后期吉",lawsuit:"迟"}},
+  {num:21,level:"上签",ancient:"李旦龙凤配",poem:"天开地辟日光明\n富贵荣华在此行\n若是良辰兼美景\n今朝便是锦前程",summary:"此乃锦绣前程之象，万事亨通。",detail:"吉日良辰 喜气临门 富贵双全 一路顺风",items:{marriage:"天作之合",career:"大成",wealth:"大吉",health:"大安",travel:"大利",lawsuit:"大胜"}},
+  {num:22,level:"中签",ancient:"陈桥兵变",poem:"秋月虽然分外明\n只是云遮暂不清\n略待片时云散去\n皎然月上十分明",summary:"此乃云开月明之象，障碍暂时。",detail:"暂时受阻 不必忧心 守得云开 见月明时",items:{marriage:"稍等",career:"暂缓",wealth:"先缓后来",health:"调养",travel:"稍后",lawsuit:"等"}},
+  {num:23,level:"下签",ancient:"怀德招亲",poem:"是非终日有何因\n人事纷纷自扰人\n忍耐三分何必怒\n万般皆是命安排",summary:"此乃是非缠身之象，忍字当头。",detail:"是非口舌 小心应对 忍一时之气 免百日之灾",items:{marriage:"多口舌",career:"有纠纷",wealth:"防破",health:"注意",travel:"不宜",lawsuit:"不利"}},
+  {num:24,level:"中签",ancient:"殷纣王宠妲己",poem:"天边消息实难猜\n切莫多心枉用猜\n若是有心来问我\n门前自有贵人来",summary:"此乃贵人自来之象，不必强求。",detail:"莫劳心力 随遇而安 该来则来 何须强求",items:{marriage:"随缘",career:"顺其自然",wealth:"自来",health:"放宽心",travel:"随意",lawsuit:"自解"}},
+  {num:25,level:"上签",ancient:"唐明皇游月宫",poem:"过了忧危第几重\n从今在望显前功\n莫嫌道路平如砥\n满目花开达上峰",summary:"此乃一路坦途之象，越走越顺。",detail:"道路平坦 前途光明 花开满路 步步高升",items:{marriage:"吉",career:"升",wealth:"旺",health:"安",travel:"大利",lawsuit:"胜"}}
+];
+
+let currentSign = null;
+let shakeTimer = null;
+
+function startShake() {
+  const btn = document.getElementById('shake-btn');
+  const bucket = document.getElementById('sign-bucket');
+  const tip = document.getElementById('temple-tip');
+  
+  if (btn.textContent.includes('开始')) {
+    // 开始摇签
+    btn.textContent = '🛑 停止摇签';
+    btn.style.background = 'linear-gradient(135deg, #ef5350, #c62828)';
+    btn.style.color = 'white';
+    bucket.classList.add('shaking');
+    tip.textContent = '正在摇签...心中默念所求之事';
+    playShakeSound();
+  } else {
+    // 停止摇签
+    bucket.classList.remove('shaking');
+    btn.disabled = true;
+    btn.textContent = '签出了！';
+    tip.textContent = '签已出...';
+    stopShakeSound();
+    
+    // 随机抽签（100签全部启用）
+    setTimeout(() => {
+      const signNum = Math.floor(Math.random() * 100) + 1;
+      currentSign = guanyinSigns.find(s => s.num === signNum) || { num: signNum, level: '中签', ancient: '观音灵签', poem: '心诚则灵\n善恶有报\n但行好事\n莫问前程', summary: '此签劝人行善积德，自有福报。', detail: '心存善念 自有贵人 凡事随缘 不必强求', items: {marriage:'随缘',career:'平稳',wealth:'平',health:'安',travel:'可',lawsuit:'和'} };
+      showSignResult();
+      saveSignRecord();
+    }, 800);
+  }
+}
+
+function showSignResult() {
+  document.getElementById('luck-temple').style.display = 'none';
+  const page = document.getElementById('sign-result-page');
+  page.style.display = 'flex';
+  
+  // 显示对应签号的图片
+  document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif';
+  
+  playClawSound('grab');
+}
+
+function showInterpret() {
+  document.getElementById('sign-result-page').style.display = 'none';
+  document.getElementById('interpret-page').style.display = 'block';
+  
+  const data = (typeof signFullData !== 'undefined' && signFullData[currentSign.num]) || currentSign;
+  
+  document.getElementById('interpret-title').textContent = `第${currentSign.num}签 · ${data.level} · ${data.ancient}`;
+  
+  // 诗意 + 本签精髓
+  let summaryHtml = '';
+  if (data.poyi) summaryHtml += '<strong>诗意：</strong>' + data.poyi + '<br><br>';
+  if (data.jingsui) summaryHtml += '<strong>本签精髓：</strong>' + data.jingsui;
+  document.getElementById('interpret-summary').innerHTML = summaryHtml;
+  
+  // 解曰
+  document.getElementById('interpret-detail').textContent = data.jieyu || '';
+  
+  // 仙机
+  const xianjiStr = data.xianji || '';
+  const items = xianjiStr.split('｜');
+  document.getElementById('interpret-items').innerHTML = items.map(item => {
+    const [label, value] = item.split('：');
+    return label && value ? `<span style="color:var(--ink-light);font-weight:600;">${label.trim()}：</span><span>${value.trim()}</span>` : '';
+  }).join('');
+  
+  // 完整详解（各事项）
+  const detailEl = document.getElementById('interpret-full-detail');
+  if (detailEl && data.detail) {
+    detailEl.innerHTML = data.detail.replace(/\n/g, '<br>').replace(/【(.+?)】/g, '<strong style="color:#c62828;display:block;margin-top:12px;">【$1】</strong>');
+    detailEl.style.display = 'block';
+  }
+  
+  // 典故
+  const storyEl = document.getElementById('interpret-story');
+  if (storyEl && data.story) {
+    storyEl.textContent = data.story;
+    storyEl.style.display = 'block';
+  }
+}
+
+function backToTemple() {
+  document.getElementById('sign-result-page').style.display = 'none';
+  document.getElementById('interpret-page').style.display = 'none';
+  document.getElementById('sign-history-page').style.display = 'none';
+  document.getElementById('luck-temple').style.display = 'flex';
+  
+  // 重置按钮
+  const btn = document.getElementById('shake-btn');
+  btn.textContent = '🎋 开始摇签';
+  btn.style.background = 'linear-gradient(135deg, #ffd700, #ffb300)';
+  btn.style.color = '#2d1810';
+  btn.disabled = false;
+  document.getElementById('temple-tip').textContent = '心中默念所求之事，然后摇签';
+  
+  updateSignCount();
+}
+
+// 摇签音效
+let shakeOsc = null;
+let shakeInterval = null;
+
+function playShakeSound() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    
+    // 有节奏的竹签碰撞声（每300ms一次敲击）
+    shakeInterval = setInterval(() => {
+      const now = ctx.currentTime;
+      // 竹签碰撞——短促的高频敲击
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = 800 + Math.random() * 600;
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.start(now);
+      osc.stop(now + 0.08);
+      
+      // 第二下碰撞（稍低频，模拟多根签碰撞）
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.value = 400 + Math.random() * 300;
+      gain2.gain.setValueAtTime(0.12, now + 0.04);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc2.start(now + 0.04);
+      osc2.stop(now + 0.12);
+    }, 280);
+  } catch(e) {}
+}
+
+function stopShakeSound() {
+  if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
+  if (shakeOsc) { try { shakeOsc.stop(); } catch(e) {} shakeOsc = null; }
+  
+  // 播放签落出的声音——木质清脆的"啪嗒"
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    
+    // 签掉出——清脆木质撞击
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.start(now);
+    osc.stop(now + 0.25);
+    
+    // 落地弹跳声
+    [0.15, 0.25].forEach(t => {
+      const s = ctx.createOscillator();
+      const g = ctx.createGain();
+      s.connect(g);
+      g.connect(ctx.destination);
+      s.type = 'triangle';
+      s.frequency.value = 600 + Math.random() * 200;
+      g.gain.setValueAtTime(0, now + t);
+      g.gain.linearRampToValueAtTime(0.15, now + t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.08);
+      s.start(now + t);
+      s.stop(now + t + 0.1);
+    });
+  } catch(e) {}
+}
+
+// 签文存储
+function saveSignRecord() {
+  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  records.unshift({
+    num: currentSign.num,
+    level: currentSign.level,
+    ancient: currentSign.ancient,
+    poem: currentSign.poem,
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().slice(0, 5)
+  });
+  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(records.slice(0, 100)));
+  updateSignCount();
+}
+
+function updateSignCount() {
+  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  const el = document.getElementById('sign-count');
+  if (el) el.textContent = records.length;
+}
+
+function showSignHistory() {
+  document.getElementById('luck-temple').style.display = 'none';
+  document.getElementById('sign-history-page').style.display = 'block';
+  
+  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  const list = document.getElementById('sign-history-list');
+  if (records.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
+    return;
+  }
+  list.innerHTML = records.map(r => `
+    <div class="sign-history-item">
+      <div class="sh-top">
+        <span class="sh-num">第${r.num}签 · ${r.level}</span>
+        <span class="sh-date">${r.date} ${r.time}</span>
+      </div>
+      <div class="sh-poem">${r.poem.replace(/\n/g, ' / ')}</div>
+    </div>`).join('');
+}
+
+// ========== Tab 导航 ==========
+function switchTab(tab) {
+  // 隐藏所有tab页
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  // 取消所有tab高亮
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  // 显示目标tab
+  document.getElementById('tab-' + tab).classList.add('active');
+  // 高亮对应tab按钮
+  const tabs = ['laugh', 'happy', 'shred', 'luck', 'me'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.tab-item')[idx].classList.add('active');
+  
+  // 隐藏详情页（如果在看详情页）
+  document.getElementById('detail-view').style.display = 'none';
+  // 显示Tab栏
+  document.getElementById('tab-bar').style.display = 'flex';
+  
+  // 特定tab的初始化
+  if (tab === 'laugh') { startFallingBubbles(); }
+  if (tab === 'happy') { renderPlaza(); }
+  if (tab === 'shred') { updateShredCountTab(); }
+  if (tab === 'luck') { updateSignCount(); backToTemple(); }
+  if (tab === 'me') { document.getElementById('my-username').textContent = currentUsername; }
+}
+
+// 打开详情页时隐藏Tab栏
+function openDetail(index) {
+  currentIndex = index;
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('detail-view').style.display = 'block';
+  document.getElementById('tab-bar').style.display = 'none';
+  renderPage();
+}
+
+function backToPlaza() {
+  document.getElementById('detail-view').style.display = 'none';
+  switchTab('happy');
+}
+
+// ========== 粉碎机Tab版 ==========
+let shredHistoryVisibleTab = false;
+
+async function updateShredCountTab() {
+  const records = await getShredRecords();
+  const el = document.getElementById('shred-count-tab');
+  if (el) el.textContent = records.length;
+}
+
+async function toggleShredHistory() {
+  if (shredHistoryVisibleTab) {
+    document.getElementById('shred-input-tab').style.display = 'block';
+    document.getElementById('shred-history-tab').style.display = 'none';
+    document.getElementById('stats-arrow-tab').textContent = '查看记录 ›';
+    shredHistoryVisibleTab = false;
+  } else {
+    document.getElementById('shred-input-tab').style.display = 'none';
+    document.getElementById('shred-history-tab').style.display = 'block';
+    document.getElementById('stats-arrow-tab').textContent = '‹ 返回粉碎';
+    shredHistoryVisibleTab = true;
+    await renderShredHistoryTab();
+  }
+}
+
+async function renderShredHistoryTab() {
+  const records = await getShredRecords();
+  const list = document.getElementById('history-list-tab');
+  if (records.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#90a4ae;">还没有粉碎记录</div>';
+    return;
+  }
+  list.innerHTML = records.map(r => `
+    <div class="history-item">
+      <div class="h-date">${r.date} ${r.time}</div>
+      <div class="h-text">${r.text}</div>
+      <div class="h-badge">已粉碎</div>
+    </div>`).join('');
+}
+
+async function doShredTab() {
+  const text = document.getElementById('shred-text-tab').value.trim();
+  if (!text) { document.getElementById('shred-text-tab').placeholder = '写点什么再粉碎吧…'; return; }
+  await saveShredRecord(text);
+  document.getElementById('paper-note-tab').style.display = 'none';
+  document.getElementById('shred-btn-tab').style.display = 'none';
+  playShredSound();
+  if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 100]);
+  setTimeout(() => {
+    document.getElementById('shred-result-tab').style.display = 'block';
+    document.getElementById('result-text-tab').textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
+    updateShredCountTab();
+  }, 1500);
+}
+
+function resetShredTab() {
+  document.getElementById('shred-text-tab').value = '';
+  document.getElementById('paper-note-tab').style.display = 'block';
+  document.getElementById('shred-btn-tab').style.display = 'block';
+  document.getElementById('shred-result-tab').style.display = 'none';
+}
+
+// showClawGame 改为切换到笑一声tab
+function showClawGame() {
+  switchTab('laugh');
+  startFallingBubbles();
+  ensureBubblePoolStore().then(() => updatePoolCount());
+}
+
+// 导出数据
+async function exportData() {
+  const entries = getEntries();
+  const data = {
+    exportDate: new Date().toISOString(),
+    user: currentUsername,
+    totalEntries: entries.length,
+    entries: entries
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'happy-diary-' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// 退出登录
+function doLogout() {
+  localStorage.removeItem('hd_current_user');
+  location.reload();
+}
+
+// 注册 Service Worker（PWA离线支持）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
