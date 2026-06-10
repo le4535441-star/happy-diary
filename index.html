@@ -657,11 +657,112 @@ body {
 
 /* ========== 快乐广场 ========== */
 #plaza-view {
-  padding: 20px 16px;
-  padding-bottom: 40px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
+  padding-bottom: 70px;
+}
+
+.plaza-top-fixed {
+  flex-shrink: 0;
+  padding: 20px 16px 0;
+  background: var(--warm-bg);
+  z-index: 10;
+}
+
+.plaza-sub-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--accent-soft);
+}
+
+.plaza-sub-tab {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plaza-sub-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.plaza-scroll {
+  flex: 1;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 0 16px 20px;
+}
+
+/* 回看时光-日期筛选 */
+.timeline-filter {
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline-filter input[type="date"] {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--accent-soft);
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.timeline-filter input:focus { border-color: var(--accent); }
+
+.timeline-filter button {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.timeline-filter button:active { transform: scale(0.95); }
+
+.timeline-list { margin-top: 8px; }
+
+.timeline-item {
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(61,48,40,0.06);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.timeline-item:active { transform: scale(0.97); }
+
+.timeline-item .tl-date {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.timeline-item .tl-text {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
 }
 
 /* 两个入口按钮 */
@@ -991,7 +1092,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 58px;
+  height: 64px;
   background: var(--paper);
   border-top: 1px solid rgba(61,48,40,0.08);
   display: flex;
@@ -1006,17 +1107,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 6px 10px;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tab-item.active .tab-icon { transform: scale(1.15); }
+.tab-item.active .tab-icon { transform: scale(1.2); }
 .tab-item.active .tab-label { color: var(--accent); font-weight: 700; }
 
-.tab-icon { font-size: 22px; transition: transform 0.15s; }
-.tab-label { font-size: 10px; color: var(--ink-light); }
+.tab-icon { font-size: 26px; transition: transform 0.15s; }
+.tab-label { font-size: 11px; color: var(--ink-light); font-weight: 500; }
 
 /* Tab内容页 */
 .tab-page {
@@ -2210,20 +2311,39 @@ body {
   <!-- Tab2: 记好事（快乐广场） -->
   <div id="tab-happy" class="tab-page">
     <div id="plaza-view">
-      <div class="plaza-header">
-        <h1 class="plaza-title">快乐广场</h1>
+      <div class="plaza-top-fixed">
+        <div class="plaza-header">
+          <h1 class="plaza-title">快乐广场</h1>
+        </div>
+        <div class="plaza-actions">
+          <button class="action-btn action-happy" onclick="openModal()">
+            <span class="action-icon">✍️</span>
+            <span class="action-label">记录好事</span>
+          </button>
+        </div>
+        <div class="plaza-sub-tabs">
+          <div class="plaza-sub-tab active" id="sub-tab-plaza" onclick="switchPlazaSubTab('plaza')">快乐广场</div>
+          <div class="plaza-sub-tab" id="sub-tab-timeline" onclick="switchPlazaSubTab('timeline')">回看时光</div>
+        </div>
       </div>
-      <div class="plaza-actions">
-        <button class="action-btn action-happy" onclick="openModal()">
-          <span class="action-icon">✍️</span>
-          <span class="action-label">记录好事</span>
-        </button>
-      </div>
-      <div class="plaza-grid" id="plaza-grid"></div>
-      <div class="plaza-empty" id="plaza-empty" style="display:none;">
-        <div class="emoji" id="plaza-flower">🌸</div>
-        <h2>还没有记录</h2>
-        <p>点击上方「记录好事」写下第一件快乐小事</p>
+      <!-- 快乐广场瀑布流 -->
+      <div class="plaza-scroll" id="plaza-scroll-area">
+        <div id="plaza-content-area">
+          <div class="plaza-grid" id="plaza-grid"></div>
+          <div class="plaza-empty" id="plaza-empty" style="display:none;">
+            <div class="emoji" id="plaza-flower">🌸</div>
+            <h2>还没有记录</h2>
+            <p>点击上方「记录好事」写下第一件快乐小事</p>
+          </div>
+        </div>
+        <!-- 回看时光 -->
+        <div id="timeline-content-area" style="display:none;">
+          <div class="timeline-filter">
+            <input type="date" id="timeline-date-input">
+            <button onclick="jumpToTimelineDate()">跳转</button>
+          </div>
+          <div class="timeline-list" id="timeline-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -3348,7 +3468,7 @@ function renderPlaza() {
     return;
   }
   
-  grid.style.display = 'grid';
+  grid.style.display = 'block';
   empty.style.display = 'none';
   
   // 按倒序展示（最新在前）
@@ -3372,6 +3492,92 @@ function renderPlaza() {
       </div>`;
   }
   grid.innerHTML = html;
+}
+
+// ========== 快乐广场子Tab切换 ==========
+function switchPlazaSubTab(tab) {
+  const tabPlaza = document.getElementById('sub-tab-plaza');
+  const tabTimeline = document.getElementById('sub-tab-timeline');
+  const contentPlaza = document.getElementById('plaza-content-area');
+  const contentTimeline = document.getElementById('timeline-content-area');
+  
+  if (tab === 'plaza') {
+    tabPlaza.classList.add('active');
+    tabTimeline.classList.remove('active');
+    contentPlaza.style.display = 'block';
+    contentTimeline.style.display = 'none';
+  } else {
+    tabPlaza.classList.remove('active');
+    tabTimeline.classList.add('active');
+    contentPlaza.style.display = 'none';
+    contentTimeline.style.display = 'block';
+    renderTimeline();
+  }
+}
+
+function renderTimeline(filterDate) {
+  const entries = getEntries();
+  const list = document.getElementById('timeline-list');
+  
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有记录哦~</div>';
+    return;
+  }
+  
+  // 按日期分组，倒序排列
+  let filtered = [...entries];
+  if (filterDate) {
+    filtered = filtered.filter(e => e.date === filterDate);
+  }
+  
+  if (filtered.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-light);">📅 ${filterDate || ''} 没有找到记录</div>`;
+    return;
+  }
+  
+  // 按日期倒序
+  filtered.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+  
+  // 按日期分组
+  const groups = {};
+  filtered.forEach(e => {
+    const d = e.date || '未知日期';
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(e);
+  });
+  
+  let html = '';
+  const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  
+  for (const date of sortedDates) {
+    const dateObj = new Date(date);
+    const weekdays = ['日','一','二','三','四','五','六'];
+    const dateLabel = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日 周${weekdays[dateObj.getDay()]}`;
+    
+    html += `<div style="font-size:13px;color:var(--accent);font-weight:700;margin:16px 0 8px;padding-left:4px;">📅 ${dateLabel}</div>`;
+    
+    for (const entry of groups[date]) {
+      const idx = entries.indexOf(entry);
+      html += `
+        <div class="timeline-item" onclick="openDetail(${idx})">
+          <div class="tl-date">${entry.time || ''} ${entry.emoji || '✨'}</div>
+          <div class="tl-text">${entry.text}</div>
+        </div>`;
+    }
+  }
+  
+  list.innerHTML = html;
+}
+
+function jumpToTimelineDate() {
+  const dateInput = document.getElementById('timeline-date-input');
+  const selectedDate = dateInput.value;
+  if (!selectedDate) {
+    // 没选日期时显示全部
+    renderTimeline();
+    return;
+  }
+  renderTimeline(selectedDate);
 }
 
 function openDetail(index) {
@@ -5340,20 +5546,6 @@ function switchTab(tab) {
   if (tab === 'shred') { updateShredCountTab(); }
   if (tab === 'luck') { updateSignCount(); backToTemple(); }
   if (tab === 'me') { document.getElementById('my-username').textContent = currentUsername; }
-}
-
-// 打开详情页时隐藏Tab栏
-function openDetail(index) {
-  currentIndex = index;
-  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
-  document.getElementById('detail-view').style.display = 'block';
-  document.getElementById('tab-bar').style.display = 'none';
-  renderPage();
-}
-
-function backToPlaza() {
-  document.getElementById('detail-view').style.display = 'none';
-  switchTab('happy');
 }
 
 // ========== 粉碎机Tab版 ==========
