@@ -2495,10 +2495,8 @@ body {
     <div id="plaza-view">
       <div class="plaza-top-fixed">
         <div class="plaza-header">
-          <h1 class="plaza-title">快乐广场</h1>
           <div class="happy-index" id="happy-index" onclick="showHappyIndexTip()">
             <svg id="happy-sun-svg" width="44" height="44" viewBox="0 0 44 44"></svg>
-            <span class="happy-index-num" id="happy-index-num">0</span>
           </div>
         </div>
         <div class="plaza-actions">
@@ -2595,6 +2593,11 @@ body {
     <div class="sign-result-page" id="sign-result-page" style="display:none;">
       <div class="sign-image-wrap">
         <img class="sign-image" id="sign-image" src="" alt="签文">
+      </div>
+      <!-- 签文基本信息（第一版面直接显示，不用等点解签） -->
+      <div id="sign-brief" style="text-align:center;padding:12px 20px 0;">
+        <div id="sign-brief-title" style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;color:var(--ink);margin-bottom:8px;"></div>
+        <div id="sign-brief-poem" style="font-size:13px;color:var(--ink-light);line-height:2;white-space:pre-line;"></div>
       </div>
       <button class="interpret-btn" onclick="showInterpret()">📖 详细解签</button>
       <button class="reshake-btn" onclick="backToTemple()">🔄 重新摇签</button>
@@ -3787,7 +3790,9 @@ function renderHappyIndex() {
   const count = weekEntries.length;
   const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
   
-  document.getElementById('happy-index-num').textContent = count;
+  // 数值不外显，只更新太阳图标
+  const numEl = document.getElementById('happy-index-num');
+  if (numEl) numEl.textContent = count; // 保留数据以供弹窗使用，元素已隐藏
   
   const svg = document.getElementById('happy-sun-svg');
   const cx = 22, cy = 22;
@@ -3869,10 +3874,10 @@ function showHappyIndexTip() {
   
   const tips = [
     '本周还没有记录哦，记一个快乐小事吧 ☀️',
-    `本周记了 ${count} 个快乐！太阳在微微发光 🌤️`,
-    `本周记了 ${count} 个快乐！温暖的阳光 ☀️`,
-    `本周记了 ${count} 个快乐！阳光灿烂！🌟`,
-    `本周记了 ${count} 个快乐！快乐爆棚！太阳都在为你鼓掌 🔥☀️🔥`,
+    `本周快乐指数：${count} 条记录，太阳在微微发光 🌤️`,
+    `本周快乐指数：${count} 条记录，温暖的阳光 ☀️`,
+    `本周快乐指数：${count} 条记录，阳光灿烂！🌟`,
+    `本周快乐指数：${count} 条记录，快乐爆棚！太阳都在为你鼓掌 🔥☀️🔥`,
   ];
   const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
   alert(tips[level]);
@@ -5866,6 +5871,11 @@ function showSignResult() {
   // 显示对应签号的图片
   document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif';
   
+  // 立即填充签文基本信息（第一版面就能看到）
+  const data = (typeof signFullData !== 'undefined' && signFullData[currentSign.num]) || currentSign;
+  document.getElementById('sign-brief-title').textContent = `第${currentSign.num}签 · ${data.level} · ${data.ancient}`;
+  document.getElementById('sign-brief-poem').textContent = data.poem || '';
+  
   playClawSound('grab');
 }
 
@@ -6806,10 +6816,14 @@ async function confirmClearData() {
       }
     }
     
-    // 5. 刷新 UI
+    // 5. 清除签文历史（localStorage，按用户隔离）
+    localStorage.removeItem('hd_signs_' + currentUsername);
+    
+    // 6. 刷新 UI
     await loadEntries();
     renderPlaza();
     updatePoolCount();
+    updateSignCount(); // 重置太阳指数
     
     // 恢复按钮文字
     if (btn) btn.textContent = '一键清除历史数据';
