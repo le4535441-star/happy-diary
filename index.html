@@ -3379,9 +3379,13 @@ async function showSplashThenApp() {
   
   const entries = getEntries();
   const localHasData = entries && entries.length > 0;
+  // 用户主动清除过的标记（清除后、未写新数据前有效）
+  const justCleared = currentUsername && localStorage.getItem('hd_just_cleared_' + currentUsername);
   
   if (localHasData) {
     // 本地有数据 —— 先展示 splash（最近一条），同时后台同步
+    // 如果有 justCleared 标记也一并清掉（数据已恢复，标记没用了）
+    if (justCleared) localStorage.removeItem('hd_just_cleared_' + currentUsername);
     const latest = entries[entries.length - 1];
     const splash = document.getElementById('splash-screen');
     document.getElementById('splash-emoji').textContent = latest.emoji || '🌸';
@@ -3418,23 +3422,23 @@ async function showSplashThenApp() {
       }
     }, 3000);
   } else {
-    // 本地无数据 —— 检查是否是用户主动清除还是真的要恢复
-    const justCleared = localStorage.getItem('hd_just_cleared_' + currentUsername);
+    // 本地无数据
     if (justCleared) {
-      // 用户刚主动清除，不要恢复，直接进主界面
+      // 用户主动清除后的空状态 —— 直接进主界面，不走恢复逻辑
       localStorage.removeItem('hd_just_cleared_' + currentUsername);
       document.getElementById('app').style.display = 'block';
-      const finalEntries = getEntries();
       currentIndex = 0;
       renderPlaza();
       switchTab('laugh');
       startFallingBubbles();
       ensureBubblePoolStore().then(() => updatePoolCount());
       loadTheme();
+      // 后台轻量同步（只推本地→云端，不拉云端→本地）
+      try { await initCloudSync(); } catch(e) {}
       return;
     }
     
-    // 真的是空数据（新设备/清缓存），显示 loading 同步屏尝试恢复
+    // 真的是空数据（新设备/清浏览器缓存），显示 loading 同步屏尝试恢复
     const syncScreen = document.getElementById('sync-loading-screen');
     syncScreen.style.display = 'flex';
     
