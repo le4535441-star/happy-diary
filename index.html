@@ -2058,6 +2058,25 @@ body {
   padding: 0 4px;
 }
 
+.happy-index {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  transition: transform 0.15s;
+}
+
+.happy-index:active { transform: scale(0.92); }
+
+.happy-index-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
 .plaza-title {
   font-family: 'ZCOOL XiaoWei', serif;
   font-size: 24px;
@@ -2437,6 +2456,10 @@ body {
       <div class="plaza-top-fixed">
         <div class="plaza-header">
           <h1 class="plaza-title">快乐广场</h1>
+          <div class="happy-index" id="happy-index" onclick="showHappyIndexTip()">
+            <svg id="happy-sun-svg" width="44" height="44" viewBox="0 0 44 44"></svg>
+            <span class="happy-index-num" id="happy-index-num">0</span>
+          </div>
         </div>
         <div class="plaza-actions">
           <button class="action-btn action-happy" onclick="openModal()">
@@ -3637,6 +3660,95 @@ function renderPlaza() {
       </div>`;
   }
   grid.innerHTML = html;
+  renderHappyIndex();
+}
+
+// ========== 本周快乐指数 ==========
+function renderHappyIndex() {
+  const entries = getEntries();
+  const now = new Date();
+  // 计算本周一的日期
+  const dayOfWeek = now.getDay() || 7; // 周日=7
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek + 1);
+  monday.setHours(0, 0, 0, 0);
+  
+  // 统计本周记录数
+  const weekEntries = entries.filter(e => {
+    const d = new Date(e.date);
+    return d >= monday;
+  });
+  const count = weekEntries.length;
+  
+  // 指数等级：0=无光 1-2=微光 3-4=温暖 5-7=明亮 8+=炽热
+  const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
+  
+  // 更新数字
+  document.getElementById('happy-index-num').textContent = count;
+  
+  // 绘制太阳SVG（光芒强弱跟随level）
+  const svg = document.getElementById('happy-sun-svg');
+  const colors = [
+    ['#ccc', '#eee'],         // level 0: 灰色无光
+    ['#ffd54f', '#fff8e1'],   // level 1: 淡黄微光
+    ['#ffb300', '#fff3e0'],   // level 2: 暖黄
+    ['#ff8f00', '#ffe0b2'],   // level 3: 明亮橙
+    ['#e65100', '#ffcc80'],   // level 4: 炽热橙红
+  ];
+  const [coreColor, glowColor] = colors[level];
+  const rays = level === 0 ? 0 : 4 + level * 2; // 光线数量
+  const rayLen = level * 3; // 光线长度
+  const coreR = 8 + level * 1.5; // 核心圆大小
+  const pulse = level >= 3 ? 'class="sun-pulse"' : '';
+  
+  let svgContent = '';
+  
+  // 外发光
+  if (level > 0) {
+    svgContent += `<circle cx="22" cy="22" r="${coreR + 6}" fill="${glowColor}" opacity="0.4"/>`;
+  }
+  
+  // 光线
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
+    const x1 = 22 + Math.cos(angle) * (coreR + 2);
+    const y1 = 22 + Math.sin(angle) * (coreR + 2);
+    const x2 = 22 + Math.cos(angle) * (coreR + 2 + rayLen);
+    const y2 = 22 + Math.sin(angle) * (coreR + 2 + rayLen);
+    svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${coreColor}" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>`;
+  }
+  
+  // 核心圆
+  svgContent += `<circle cx="22" cy="22" r="${coreR}" fill="${coreColor}" ${pulse}/>`;
+  
+  // 笑脸（level>=2时显示）
+  if (level >= 2) {
+    svgContent += `<circle cx="19" cy="20" r="1.5" fill="#fff"/>`;
+    svgContent += `<circle cx="25" cy="20" r="1.5" fill="#fff"/>`;
+    svgContent += `<path d="M18,24 Q22,${26 + level},26,24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>`;
+  }
+  
+  svg.innerHTML = svgContent;
+}
+
+function showHappyIndexTip() {
+  const entries = getEntries();
+  const now = new Date();
+  const dayOfWeek = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek + 1);
+  monday.setHours(0, 0, 0, 0);
+  const count = entries.filter(e => new Date(e.date) >= monday).length;
+  
+  const tips = [
+    '本周还没有记录哦，记一个快乐小事吧 ☀️',
+    `本周记了 ${count} 个快乐！太阳在微微发光 🌤️`,
+    `本周记了 ${count} 个快乐！温暖的阳光 ☀️`,
+    `本周记了 ${count} 个快乐！阳光灿烂！🌟`,
+    `本周记了 ${count} 个快乐！快乐爆棚！太阳都在为你鼓掌 🔥☀️🔥`,
+  ];
+  const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 7 ? 3 : 4;
+  alert(tips[level]);
 }
 
 // ========== 快乐广场子Tab切换 ==========
