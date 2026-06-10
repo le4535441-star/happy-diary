@@ -3361,6 +3361,12 @@ function showError(msg) {
 
 function enterApp() {
   entriesCache = [];  // 切换账号时强制清空内存缓存，防止上一个账号数据残留
+  // 请求全屏（安卓华为/Chrome/Edge 均支持；iOS Safari 不支持但 PWA 本来就全屏；不支持则静默跳过）
+  try {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (req) req.call(el).catch(() => {});
+  } catch(e) {}
   document.getElementById('login-screen').style.display = 'none';
   showSplashThenApp();
 }
@@ -3470,6 +3476,18 @@ async function initCloudSyncAndRefresh() {
 if (currentUsername) {
   document.getElementById('login-screen').style.display = 'none';
   document.addEventListener('DOMContentLoaded', () => {
+    // 自动登录时也尝试全屏（需要用户首次交互触发，绑在第一次 touchstart/click 上）
+    const tryFullscreen = () => {
+      try {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (req) req.call(el).catch(() => {});
+      } catch(e) {}
+      document.removeEventListener('touchstart', tryFullscreen);
+      document.removeEventListener('click', tryFullscreen);
+    };
+    document.addEventListener('touchstart', tryFullscreen, { once: true });
+    document.addEventListener('click', tryFullscreen, { once: true });
     showSplashThenApp();
   });
 }
