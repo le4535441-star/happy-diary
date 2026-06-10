@@ -2371,6 +2371,7 @@ body {
       <div>📖 所有快乐记录</div>
       <div>💥 所有粉碎记录</div>
       <div>🫧 所有泡泡池笑话</div>
+      <div>🔮 所有抽签记录</div>
     </div>
     <div id="clear-cloud-row" style="display:flex;align-items:center;gap:10px;background:rgba(192,57,43,0.04);border-radius:10px;padding:12px 14px;margin-bottom:20px;cursor:pointer;" onclick="toggleClearCloud()">
       <div id="clear-cloud-checkbox" style="width:22px;height:22px;border-radius:6px;border:2px solid #c0392b;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-size:14px;"></div>
@@ -3415,7 +3416,23 @@ async function showSplashThenApp() {
       }
     }, 3000);
   } else {
-    // 本地无数据 —— 可能是清了缓存，显示 loading 同步屏
+    // 本地无数据 —— 检查是否是用户主动清除还是真的要恢复
+    const justCleared = localStorage.getItem('hd_just_cleared_' + currentUsername);
+    if (justCleared) {
+      // 用户刚主动清除，不要恢复，直接进主界面
+      localStorage.removeItem('hd_just_cleared_' + currentUsername);
+      document.getElementById('app').style.display = 'block';
+      const finalEntries = getEntries();
+      currentIndex = 0;
+      renderPlaza();
+      switchTab('laugh');
+      startFallingBubbles();
+      ensureBubblePoolStore().then(() => updatePoolCount());
+      loadTheme();
+      return;
+    }
+    
+    // 真的是空数据（新设备/清缓存），显示 loading 同步屏尝试恢复
     const syncScreen = document.getElementById('sync-loading-screen');
     syncScreen.style.display = 'flex';
     
@@ -5550,14 +5567,7 @@ async function initCloudSync() {
     console.log('Cloud sync ready, starting sync...');
     
     // 双向同步
-    // 如果用户刚刚主动清除了云端数据，本次跳过 syncFromCloud，避免把"已删除"的数据再拉回来
-    const justCleared = localStorage.getItem('hd_just_cleared_' + currentUsername);
-    if (justCleared) {
-      localStorage.removeItem('hd_just_cleared_' + currentUsername); // 只跳过一次
-      console.log('[CloudSync] 跳过本次 syncFromCloud（用户刚清除过云端数据）');
-    } else {
-      await syncFromCloud();
-    }
+    await syncFromCloud();
     await syncLocalToCloud();
     await loadProfileFromCloud();
     console.log('Cloud sync completed');
@@ -6835,10 +6845,8 @@ async function confirmClearData() {
     // 5. 清除签文历史（localStorage，按用户隔离）
     localStorage.removeItem('hd_signs_' + currentUsername);
     
-    // 6. 若同时清了云端，标记本次已主动清除，下次启动跳过自动云端恢复
-    if (clearCloudAlso) {
-      localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
-    }
+    // 6. 无论是否清云端，都写 justCleared 标记，防止下次打开时 loading 屏自动把数据拉回来
+    localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
     
     // 7. 刷新 UI
     await loadEntries();
