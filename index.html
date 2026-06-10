@@ -5923,11 +5923,12 @@ async function shareAsCard() {
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   
-  // 背景（跟随主题）
+  // 背景（与日历详情页一致的浅渐变）
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
   gradient.addColorStop(0, themeBg);
-  gradient.addColorStop(0.6, themeAccentSoft);
-  gradient.addColorStop(1, themeAccent);
+  gradient.addColorStop(0.5, themeBg);
+  gradient.addColorStop(0.85, themeAccentSoft);
+  gradient.addColorStop(1, themeAccentSoft);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
   
@@ -5982,6 +5983,9 @@ async function shareAsCard() {
   ctx.font = '20px "PingFang SC", sans-serif';
   ctx.fillStyle = themeGold;
   ctx.fillText('✨ 快乐小事 · 每天都有好事花生', w/2, h - 60);
+  ctx.font = '12px "PingFang SC", sans-serif';
+  ctx.fillStyle = 'rgba(128,128,128,0.3)';
+  ctx.fillText('v6', w - 60, h - 20);
   
   // 导出图片
   canvas.toBlob(async (blob) => {
