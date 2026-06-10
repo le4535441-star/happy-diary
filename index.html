@@ -5950,38 +5950,110 @@ function stopShakeSound() {
   if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
   if (shakeOsc) { try { shakeOsc.stop(); } catch(e) {} shakeOsc = null; }
   
-  // 播放签落出的声音——木质清脆的"啪嗒"
+  // 播放签落出的声音——竹签从签筒滑出、落地、弹跳
   ensureAudioRunning().then(ctx => {
   try {
     const now = ctx.currentTime;
     
-    // 签掉出——清脆木质撞击
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-    gain.gain.setValueAtTime(0.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    osc.start(now);
-    osc.stop(now + 0.25);
-    
-    // 落地弹跳声
-    [0.15, 0.25].forEach(t => {
+    // ① 竹签从筒里滑出——木质摩擦声（短促白噪音+高通滤波，0.0~0.12s）
+    const slideSize = ctx.sampleRate * 0.12;
+    const slideBuf = ctx.createBuffer(1, slideSize, ctx.sampleRate);
+    const slideData = slideBuf.getChannelData(0);
+    for (let i = 0; i < slideSize; i++) {
+      slideData[i] = (Math.random() * 2 - 1) * (1 - i / slideSize) * 0.6;
+    }
+    const slideNoise = ctx.createBufferSource();
+    slideNoise.buffer = slideBuf;
+    const slideFilter = ctx.createBiquadFilter();
+    slideFilter.type = 'highpass';
+    slideFilter.frequency.value = 3000;
+    const slideGain = ctx.createGain();
+    slideGain.gain.setValueAtTime(0, now);
+    slideGain.gain.linearRampToValueAtTime(0.35, now + 0.02);
+    slideGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    slideNoise.connect(slideFilter);
+    slideFilter.connect(slideGain);
+    slideGain.connect(ctx.destination);
+    slideNoise.start(now);
+    slideNoise.stop(now + 0.14);
+
+    // ② 竹签落地——清脆重击（1200→180Hz 下扫，0.12s时触发，持续0.35s）
+    const hitOsc = ctx.createOscillator();
+    const hitGain = ctx.createGain();
+    hitOsc.connect(hitGain);
+    hitGain.connect(ctx.destination);
+    hitOsc.type = 'sine';
+    hitOsc.frequency.setValueAtTime(1200, now + 0.12);
+    hitOsc.frequency.exponentialRampToValueAtTime(180, now + 0.45);
+    hitGain.gain.setValueAtTime(0, now + 0.12);
+    hitGain.gain.linearRampToValueAtTime(0.7, now + 0.13);
+    hitGain.gain.exponentialRampToValueAtTime(0.001, now + 0.47);
+    hitOsc.start(now + 0.12);
+    hitOsc.stop(now + 0.5);
+
+    // 落地同时的木质撞击噪音（短促白噪音加强冲击感）
+    const impactSize = ctx.sampleRate * 0.06;
+    const impactBuf = ctx.createBuffer(1, impactSize, ctx.sampleRate);
+    const impactData = impactBuf.getChannelData(0);
+    for (let i = 0; i < impactSize; i++) {
+      impactData[i] = (Math.random() * 2 - 1) * (1 - i / impactSize);
+    }
+    const impactNoise = ctx.createBufferSource();
+    impactNoise.buffer = impactBuf;
+    const impactFilter = ctx.createBiquadFilter();
+    impactFilter.type = 'bandpass';
+    impactFilter.frequency.value = 800;
+    impactFilter.Q.value = 0.8;
+    const impactGain = ctx.createGain();
+    impactGain.gain.setValueAtTime(0.45, now + 0.12);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    impactNoise.connect(impactFilter);
+    impactFilter.connect(impactGain);
+    impactGain.connect(ctx.destination);
+    impactNoise.start(now + 0.12);
+    impactNoise.stop(now + 0.22);
+
+    // ③ 弹跳两次（越来越小，越来越短，模拟竹签在地上滚弹）
+    [
+      { t: 0.52, freq: 900, gain: 0.35, dur: 0.18 },
+      { t: 0.74, freq: 700, gain: 0.18, dur: 0.12 },
+    ].forEach(({ t, freq, gain: gv, dur }) => {
       const s = ctx.createOscillator();
       const g = ctx.createGain();
       s.connect(g);
       g.connect(ctx.destination);
       s.type = 'triangle';
-      s.frequency.value = 600 + Math.random() * 200;
+      s.frequency.setValueAtTime(freq, now + t);
+      s.frequency.exponentialRampToValueAtTime(freq * 0.5, now + t + dur);
       g.gain.setValueAtTime(0, now + t);
-      g.gain.linearRampToValueAtTime(0.15, now + t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.08);
+      g.gain.linearRampToValueAtTime(gv, now + t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
       s.start(now + t);
-      s.stop(now + t + 0.1);
+      s.stop(now + t + dur + 0.02);
     });
+
+    // ④ 最后一声细微滚动静止（轻微沙沙声，0.88~1.05s）
+    const rollSize = ctx.sampleRate * 0.18;
+    const rollBuf = ctx.createBuffer(1, rollSize, ctx.sampleRate);
+    const rollData = rollBuf.getChannelData(0);
+    for (let i = 0; i < rollSize; i++) {
+      rollData[i] = (Math.random() * 2 - 1) * (1 - i / rollSize) * 0.3;
+    }
+    const rollNoise = ctx.createBufferSource();
+    rollNoise.buffer = rollBuf;
+    const rollFilter = ctx.createBiquadFilter();
+    rollFilter.type = 'bandpass';
+    rollFilter.frequency.value = 1500;
+    rollFilter.Q.value = 2;
+    const rollGain = ctx.createGain();
+    rollGain.gain.setValueAtTime(0.12, now + 0.88);
+    rollGain.gain.exponentialRampToValueAtTime(0.001, now + 1.06);
+    rollNoise.connect(rollFilter);
+    rollFilter.connect(rollGain);
+    rollGain.connect(ctx.destination);
+    rollNoise.start(now + 0.88);
+    rollNoise.stop(now + 1.08);
+
   } catch(e) {}
   }); // ensureAudioRunning end
 }
