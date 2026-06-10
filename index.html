@@ -2803,10 +2803,14 @@ function dbGetAll() {
     const store = tx.objectStore(STORE_NAME);
     const req = store.getAll();
     req.onsuccess = () => {
-      const entries = req.result || [];
+      let entries = req.result || [];
+      // 多账号隔离：只返回当前用户的数据
+      if (currentUsername) {
+        entries = entries.filter(e => !e._owner || e._owner === currentUsername);
+      }
       // 按日期+时间排序
       entries.sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.date !== b.date) return (a.date || '').localeCompare(b.date || '');
         return (a.time || '').localeCompare(b.time || '');
       });
       resolve(entries);
@@ -2818,6 +2822,10 @@ function dbGetAll() {
 function dbPut(entry) {
   return new Promise((resolve, reject) => {
     if (!db) { reject('no db'); return; }
+    // 多账号隔离：写入时标记归属用户
+    if (currentUsername && !entry._owner) {
+      entry._owner = currentUsername;
+    }
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     store.put(entry);
@@ -4871,7 +4879,11 @@ async function getShredRecords() {
     const store = tx.objectStore(SHRED_STORE);
     const req = store.getAll();
     req.onsuccess = () => {
-      const records = req.result || [];
+      let records = req.result || [];
+      // 多账号隔离：只返回当前用户的粉碎记录
+      if (currentUsername) {
+        records = records.filter(r => !r._owner || r._owner === currentUsername);
+      }
       records.sort((a, b) => b.id.localeCompare(a.id)); // 最新在前
       resolve(records);
     };
@@ -4891,7 +4903,8 @@ async function saveShredRecord(text) {
       id: Date.now().toString(),
       text: text,
       date: now.toISOString().split('T')[0],
-      time: now.toTimeString().slice(0, 5)
+      time: now.toTimeString().slice(0, 5),
+      _owner: currentUsername
     });
     tx.oncomplete = () => resolve();
     tx.onerror = () => resolve();
