@@ -3240,6 +3240,8 @@ function getEntries() {
 async function addEntry(entry) {
   await dbPut(entry);
   entriesCache = await dbGetAll();
+  // 新增记录成功后，清除"刚清除"标记，避免下次登录误触发恢复流程
+  if (currentUsername) localStorage.removeItem('hd_just_cleared_' + currentUsername);
 }
 
 async function removeEntry(id) {
