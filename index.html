@@ -3698,17 +3698,22 @@ document.getElementById('image-input').addEventListener('change', e => {
   
   const reader = new FileReader();
   reader.onload = ev => {
-    // 压缩图片以节省 localStorage 空间
+    // 压缩图片（控制在200KB以内，确保能存入云端数据库）
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const maxW = 800;
+      const maxW = 600;
       let w = img.width, h = img.height;
       if (w > maxW) { h = h * maxW / w; w = maxW; }
       canvas.width = w;
       canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      uploadedImage = canvas.toDataURL('image/jpeg', 0.7);
+      // 先尝试0.6质量，如果还太大再降到0.4
+      let result = canvas.toDataURL('image/jpeg', 0.6);
+      if (result.length > 300000) {
+        result = canvas.toDataURL('image/jpeg', 0.4);
+      }
+      uploadedImage = result;
       document.getElementById('preview-img').src = uploadedImage;
       document.getElementById('image-preview').style.display = 'block';
     };
@@ -4925,14 +4930,16 @@ async function syncFromCloud() {
     for (const cloudEntry of allCloudEntries) {
       const localId = cloudEntry.localId || cloudEntry.id;
       if (!localIds.has(localId)) {
-        // 构建本地格式的 entry
+        // 构建本地格式的 entry（完整字段）
         const entry = {
           id: localId,
           date: cloudEntry.date,
+          time: cloudEntry.time,
           text: cloudEntry.text,
           emoji: cloudEntry.emoji,
           quote: cloudEntry.quote,
           tag: cloudEntry.tag,
+          image: cloudEntry.image || null,
           weather: cloudEntry.weather,
           timestamp: cloudEntry.timestamp
         };
