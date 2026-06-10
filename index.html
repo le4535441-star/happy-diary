@@ -5906,6 +5906,16 @@ async function shareAsCard() {
   if (entries.length === 0) return;
   const entry = entries[currentIndex];
   
+  // 读取当前主题的CSS变量值
+  const cs = getComputedStyle(document.documentElement);
+  const themeBg = cs.getPropertyValue('--warm-bg').trim();
+  const themePaper = cs.getPropertyValue('--paper').trim();
+  const themeInk = cs.getPropertyValue('--ink').trim();
+  const themeInkLight = cs.getPropertyValue('--ink-light').trim();
+  const themeAccent = cs.getPropertyValue('--accent').trim();
+  const themeAccentSoft = cs.getPropertyValue('--accent-soft').trim();
+  const themeGold = cs.getPropertyValue('--gold').trim();
+  
   // 创建 Canvas 生成卡片图
   const canvas = document.createElement('canvas');
   const w = 750, h = 1000;
@@ -5913,34 +5923,34 @@ async function shareAsCard() {
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   
-  // 背景
+  // 背景（跟随主题）
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, '#fdf6e3');
-  gradient.addColorStop(0.5, '#f7e8d4');
-  gradient.addColorStop(1, '#f0d9c4');
+  gradient.addColorStop(0, themeBg);
+  gradient.addColorStop(0.6, themeAccentSoft);
+  gradient.addColorStop(1, themeAccent);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, w, h);
   
   // 纸张纹理（点状）
-  ctx.fillStyle = 'rgba(61,48,40,0.02)';
+  ctx.fillStyle = 'rgba(128,128,128,0.03)';
   for (let i = 0; i < 200; i++) {
     ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
   }
   
-  // 卡片区域
+  // 卡片区域（跟随主题paper色）
   const cardX = 50, cardY = 80, cardW = w - 100, cardH = h - 200;
-  ctx.fillStyle = '#fffef9';
-  ctx.shadowColor = 'rgba(61,48,40,0.12)';
+  ctx.fillStyle = themePaper;
+  ctx.shadowColor = 'rgba(0,0,0,0.12)';
   ctx.shadowBlur = 30;
   roundRect(ctx, cardX, cardY, cardW, cardH, 24);
   ctx.fill();
   ctx.shadowBlur = 0;
   
-  // 日期
+  // 日期（跟随主题ink-light色）
   const dateObj = new Date(entry.date);
   const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
   ctx.font = '28px "PingFang SC", sans-serif';
-  ctx.fillStyle = '#7a6b5d';
+  ctx.fillStyle = themeInkLight;
   ctx.textAlign = 'center';
   ctx.fillText(dateStr, w/2, cardY + 60);
   
@@ -5948,9 +5958,9 @@ async function shareAsCard() {
   ctx.font = '56px serif';
   ctx.fillText(entry.emoji || '✨', w/2, cardY + 140);
   
-  // 正文
+  // 正文（跟随主题ink色）
   ctx.font = 'bold 32px "PingFang SC", sans-serif';
-  ctx.fillStyle = '#3d3028';
+  ctx.fillStyle = themeInk;
   const lines = wrapText(ctx, entry.text, cardW - 80);
   let textY = cardY + 200;
   lines.forEach(line => {
@@ -5958,19 +5968,19 @@ async function shareAsCard() {
     textY += 48;
   });
   
-  // 配文
+  // 配文（跟随主题色）
   if (entry.quote && entry.quote.text) {
     ctx.font = 'italic 22px "PingFang SC", sans-serif';
-    ctx.fillStyle = '#7a6b5d';
+    ctx.fillStyle = themeInkLight;
     ctx.fillText(`「${entry.quote.text}」`, w/2, textY + 40);
     ctx.font = '18px "PingFang SC", sans-serif';
-    ctx.fillStyle = '#c0392b';
+    ctx.fillStyle = themeAccent;
     ctx.fillText(`—— ${entry.quote.author || ''}`, w/2, textY + 72);
   }
   
-  // 底部水印
+  // 底部水印（跟随主题gold色）
   ctx.font = '20px "PingFang SC", sans-serif';
-  ctx.fillStyle = '#c8a45c';
+  ctx.fillStyle = themeGold;
   ctx.fillText('✨ 快乐小事 · 每天都有好事花生', w/2, h - 60);
   
   // 导出图片
