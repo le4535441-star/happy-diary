@@ -4049,10 +4049,10 @@ function toggleTag(el) {
   selectedTag = el.classList.contains('active') ? el.dataset.tag : '';
 }
 
-// ========== 音效系统（Web Audio API） ==========
+// ========== 音效系统（Web Audio API）稳定版 ==========
 let audioCtx = null;
-let audioUnlocked = false;
 
+// 懒初始化，只在用户交互时创建 AudioContext（避免 suspended 问题）
 function getAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -4060,31 +4060,42 @@ function getAudioCtx() {
   return audioCtx;
 }
 
-// iOS Safari 需要在用户交互中解锁音频
-function unlockAudio() {
-  if (audioUnlocked) return;
+// 核心：确保 AudioContext 处于 running 状态，返回 Promise
+async function ensureAudioRunning() {
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') {
-    ctx.resume();
+    await ctx.resume();
   }
-  // 播放一个静音buffer来解锁
-  const buf = ctx.createBuffer(1, 1, 22050);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  src.start(0);
-  audioUnlocked = true;
+  return ctx;
 }
 
-// 在所有用户交互中尝试解锁音频
-document.addEventListener('touchstart', unlockAudio, { once: false });
-document.addEventListener('click', unlockAudio, { once: false });
-
-// 快乐音效：清脆的叮咚上升音
-function playHappySound() {
+// iOS Safari 解锁：每次用户交互时都尝试 resume（不依赖 flag）
+// 原因：页面刷新后 AudioContext 重新进入 suspended，需要重新解锁
+async function unlockAudio() {
   try {
     const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+    // 额外播放静音 buffer 确保解锁（某些 iOS 版本需要）
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch(e) {}
+}
+
+// 持续监听所有可能的用户交互，每次都尝试（页面刷新后必须重新解锁）
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+document.addEventListener('touchend', unlockAudio, { passive: true });
+document.addEventListener('click', unlockAudio, { passive: true });
+document.addEventListener('keydown', unlockAudio, { passive: true });
+
+// 快乐音效：清脆的叮咚上升音
+async function playHappySound() {
+  try {
+    const ctx = await ensureAudioRunning();
     const now = ctx.currentTime;
     
     // 音符序列（上升的叮咚）
@@ -4119,10 +4130,9 @@ function playHappySound() {
 }
 
 // 粉碎音效：从高到低的噪音碎裂感（加长版）
-function playShredSound() {
+async function playShredSound() {
   try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
+    const ctx = await ensureAudioRunning();
     const now = ctx.currentTime;
     
     // 撕裂声（白噪音 + 滤波器下扫，3秒长版）
@@ -4844,9 +4854,8 @@ function removeTouchHandlers(el) {
 
 // 哈哈机音效
 function playClawSound(type) {
+  ensureAudioRunning().then(ctx => {
   try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
     const now = ctx.currentTime;
     
     if (type === 'lever') {
@@ -4944,6 +4953,7 @@ function playClawSound(type) {
       });
     }
   } catch(e) {}
+  }); // ensureAudioRunning end
 }
 
 function closeClawGame() {
@@ -5746,10 +5756,8 @@ let shakeOsc = null;
 let shakeInterval = null;
 
 function playShakeSound() {
+  ensureAudioRunning().then(ctx => {
   try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-    
     // 有节奏的竹签碰撞声（每300ms一次敲击）
     shakeInterval = setInterval(() => {
       const now = ctx.currentTime;
@@ -5778,6 +5786,7 @@ function playShakeSound() {
       osc2.stop(now + 0.12);
     }, 280);
   } catch(e) {}
+  }); // ensureAudioRunning end
 }
 
 function stopShakeSound() {
@@ -5785,8 +5794,8 @@ function stopShakeSound() {
   if (shakeOsc) { try { shakeOsc.stop(); } catch(e) {} shakeOsc = null; }
   
   // 播放签落出的声音——木质清脆的"啪嗒"
+  ensureAudioRunning().then(ctx => {
   try {
-    const ctx = getAudioCtx();
     const now = ctx.currentTime;
     
     // 签掉出——清脆木质撞击
@@ -5817,6 +5826,7 @@ function stopShakeSound() {
       s.stop(now + t + 0.1);
     });
   } catch(e) {}
+  }); // ensureAudioRunning end
 }
 
 // 签文存储
