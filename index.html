@@ -5257,6 +5257,7 @@ async function initCloudSync() {
     // 双向同步
     await syncFromCloud();
     await syncLocalToCloud();
+    await loadProfileFromCloud();
     console.log('Cloud sync completed');
   } catch(e) {
     console.log('Cloud init failed:', e.message, e);
@@ -6154,10 +6155,10 @@ function closeThemePicker() {
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('hd_theme_' + currentUsername, theme);
-  // 更新选中状态
   document.querySelectorAll('.theme-option').forEach(el => {
     el.style.borderColor = el.getAttribute('data-theme-val') === theme ? '#d4956a' : 'transparent';
   });
+  saveProfileToCloud();
 }
 
 function loadTheme() {
@@ -6279,26 +6280,23 @@ function handleAvatarUpload(e) {
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = () => {
-      // 裁剪为正方形并压缩
       const canvas = document.createElement('canvas');
       const size = 200;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
-      
-      // 居中裁剪
       const min = Math.min(img.width, img.height);
       const sx = (img.width - min) / 2;
       const sy = (img.height - min) / 2;
       ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      
-      // 保存到 localStorage
+      // 保存到本地
       localStorage.setItem('hd_avatar_' + currentUsername, dataUrl);
-      
-      // 更新显示
       displayAvatar();
+      
+      // 同步到云端
+      saveProfileToCloud();
     };
     img.src = ev.target.result;
   };
@@ -6321,13 +6319,65 @@ function editSpaceName() {
   if (newName !== null && newName.trim()) {
     localStorage.setItem('hd_space_name_' + currentUsername, newName.trim());
     document.getElementById('my-space-name').textContent = newName.trim();
+    // 同步到云端
+    saveProfileToCloud();
+  }
+}
+
+// 将头像和空间名同步到CloudBase
+async function saveProfileToCloud() {
+  if (!cloudReady || !cloudDb) return;
+  try {
+    const col = cloudDb.collection('entries');
+    const profileId = '_profile_' + currentUsername;
+    const avatar = localStorage.getItem('hd_avatar_' + currentUsername) || '';
+    const spaceName = localStorage.getItem('hd_space_name_' + currentUsername) || '';
+    const theme = localStorage.getItem('hd_theme_' + currentUsername) || 'warm';
+    
+    // 查询是否已有profile记录
+    const existing = await col.where({ _username: currentUsername, _type: 'profile' }).get();
+    if (existing.data && existing.data.length > 0) {
+      // 更新
+      await col.doc(existing.data[0]._id).update({ avatar, spaceName, theme });
+    } else {
+      // 新建
+      await col.add({ _username: currentUsername, _type: 'profile', avatar, spaceName, theme });
+    }
+  } catch(e) {
+    console.log('Save profile to cloud failed:', e.message);
+  }
+}
+
+// 从CloudBase加载头像和空间名（清缓存后恢复）
+async function loadProfileFromCloud() {
+  if (!cloudReady || !cloudDb) return;
+  try {
+    const col = cloudDb.collection('entries');
+    const result = await col.where({ _username: currentUsername, _type: 'profile' }).get();
+    if (result.data && result.data.length > 0) {
+      const profile = result.data[0];
+      if (profile.avatar && !localStorage.getItem('hd_avatar_' + currentUsername)) {
+        localStorage.setItem('hd_avatar_' + currentUsername, profile.avatar);
+      }
+      if (profile.spaceName && !localStorage.getItem('hd_space_name_' + currentUsername)) {
+        localStorage.setItem('hd_space_name_' + currentUsername, profile.spaceName);
+      }
+      if (profile.theme && !localStorage.getItem('hd_theme_' + currentUsername)) {
+        localStorage.setItem('hd_theme_' + currentUsername, profile.theme);
+        loadTheme();
+      }
+      // 刷新显示
+      displayAvatar();
+      const sn = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
+      document.getElementById('my-space-name').textContent = sn;
+    }
+  } catch(e) {
+    console.log('Load profile from cloud failed:', e.message);
   }
 }
 
 function loadMyProfile() {
-  // 加载头像
   displayAvatar();
-  // 加载空间名称
   const spaceName = localStorage.getItem('hd_space_name_' + currentUsername) || '我的快乐空间';
   document.getElementById('my-space-name').textContent = spaceName;
   // 加载用户名
