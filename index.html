@@ -2961,9 +2961,10 @@ function dbGetAll() {
     const req = store.getAll();
     req.onsuccess = () => {
       let entries = req.result || [];
-      // 多账号隔离：只返回当前用户的数据
+      // 多账号隔离：只返回当前用户的数据（忽略大小写）
       if (currentUsername) {
-        entries = entries.filter(e => !e._owner || e._owner === currentUsername);
+        const lowerUser = currentUsername.toLowerCase();
+        entries = entries.filter(e => !e._owner || e._owner.toLowerCase() === lowerUser);
       }
       // 按日期+时间排序
       entries.sort((a, b) => {
@@ -4967,7 +4968,7 @@ async function getBubblePool() {
       let records = req.result || [];
       // 多账号隔离
       if (currentUsername) {
-        records = records.filter(r => !r._owner || r._owner === currentUsername);
+        records = records.filter(r => !r._owner || r._owner.toLowerCase() === currentUsername.toLowerCase());
       }
       records.sort((a, b) => b.id.localeCompare(a.id));
       resolve(records);
@@ -5153,7 +5154,7 @@ async function getShredRecords() {
       let records = req.result || [];
       // 多账号隔离：只返回当前用户的粉碎记录
       if (currentUsername) {
-        records = records.filter(r => !r._owner || r._owner === currentUsername);
+        records = records.filter(r => !r._owner || r._owner.toLowerCase() === currentUsername.toLowerCase());
       }
       records.sort((a, b) => b.id.localeCompare(a.id)); // 最新在前
       resolve(records);
