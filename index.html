@@ -3329,6 +3329,7 @@ function showError(msg) {
 }
 
 function enterApp() {
+  entriesCache = [];  // 切换账号时强制清空内存缓存，防止上一个账号数据残留
   document.getElementById('login-screen').style.display = 'none';
   showSplashThenApp();
 }
@@ -3372,7 +3373,11 @@ async function showSplashThenApp() {
       checkMonthlyBackupReminder();
       checkMonthlyReport();
       // 后台同步 —— 完成后静默刷新 UI
-      await initCloudSyncAndRefresh();
+      try {
+        await initCloudSyncAndRefresh();
+      } catch(e) {
+        console.log('Background sync error:', e);
+      }
     }, 3000);
   } else {
     // 本地无数据 —— 可能是清了缓存，显示 loading 同步屏
@@ -3423,9 +3428,8 @@ async function initCloudSyncAndRefresh() {
   await initCloudSync();
   const afterCount = getEntries().length;
   
-  // 如果云端有新数据同步下来了，自动刷新界面
-  if (afterCount > beforeCount) {
-    currentIndex = afterCount - 1;
+  // 如果云端有新数据同步下来了，静默刷新广场（不强制跳转 currentIndex）
+  if (afterCount !== beforeCount) {
     renderPlaza();
     console.log(`Cloud sync refreshed UI: ${afterCount - beforeCount} new entries`);
   }
@@ -5397,8 +5401,11 @@ function resetShredder() {
 let cloudApp = null;
 let cloudDb = null;
 let cloudReady = false;
+let isSyncing = false; // 防重入锁，避免快速登录触发多次并发同步
 
 async function initCloudSync() {
+  if (isSyncing) return; // 已有同步在进行中，直接返回
+  isSyncing = true;
   try {
     if (typeof cloudbase === 'undefined') { console.log('cloudbase SDK not loaded'); return; }
     if (!cloudApp) {
@@ -5457,9 +5464,10 @@ async function initCloudSync() {
     console.log('Cloud sync completed');
   } catch(e) {
     console.log('Cloud init failed:', e.message, e);
+  } finally {
+    isSyncing = false; // 无论成功失败都释放锁
   }
 }
-
 // 从云端拉取数据到本地（新设备登录时关键）
 async function syncFromCloud() {
   if (!cloudReady || !cloudDb) return;
@@ -5472,65 +5480,122 @@ async function syncFromCloud() {
     while (true) {
       const result = await col.where({ _username: currentUsername }).skip(offset).limit(limit).get();
       if (!result.data || result.data.length === 0) break;
-      allCloudEntries = allCloudEntries.concat(result.data);
+      // 跳过 profile 类型文档，避免混入日记列表
+      const filtered = result.data.filter(e => e._type !== 'profile');
+      allCloudEntries = allCloudEntries.concat(filtered);
       if (result.data.length < limit) break;
       offset += limit;
     }
     
-    if (allCloudEntries.length === 0) return;
-    
-    // 获取本地所有条目
-    const localEntries = getEntries();
-    const localIds = new Set(localEntries.map(e => e.id));
-    
-    // 把云端有而本地没有的数据写入本地 IndexedDB
-    let newCount = 0;
-    for (const cloudEntry of allCloudEntries) {
-      const localId = cloudEntry.localId || cloudEntry.id;
-      if (!localIds.has(localId)) {
-        // 构建本地格式的 entry（完整字段）
-        const entry = {
-          id: localId,
-          date: cloudEntry.date,
-          time: cloudEntry.time,
-          text: cloudEntry.text,
-          emoji: cloudEntry.emoji,
-          quote: cloudEntry.quote,
-          tag: cloudEntry.tag,
-          image: cloudEntry.image || null,
-          weather: cloudEntry.weather,
-          timestamp: cloudEntry.timestamp
-        };
-        await dbPut(entry);
-        newCount++;
-      }
-    }
-    
-    if (newCount > 0) {
-      // 重新加载本地数据
-      entriesCache = await dbGetAll();
-      console.log(`Synced ${newCount} entries from cloud`);
-    }
-    
-    // 同步粉碎记录
-    try {
-      const shredCol = cloudDb.collection('shredded');
-      const shredResult = await shredCol.where({ _username: currentUsername }).limit(1000).get();
-      if (shredResult.data && shredResult.data.length > 0) {
-        const tx = db.transaction('shredded', 'readwrite');
-        const store = tx.objectStore('shredded');
-        const localShreds = await new Promise(r => { const req = store.getAll(); req.onsuccess = () => r(req.result || []); req.onerror = () => r([]); });
-        const localShredIds = new Set(localShreds.map(s => s.id));
-        
-        for (const item of shredResult.data) {
-          const id = item.localId || item.id;
-          if (!localShredIds.has(id)) {
-            const tx2 = db.transaction('shredded', 'readwrite');
-            tx2.objectStore('shredded').add({ id, text: item.text, date: item.date, timestamp: item.timestamp, _owner: currentUsername });
-          }
+    if (allCloudEntries.length === 0) {
+      // entries 为空不代表没有数据，继续同步其他集合
+    } else {
+      // 获取本地所有条目
+      const localEntries = getEntries();
+      const localIds = new Set(localEntries.map(e => e.id));
+      
+      // 把云端有而本地没有的数据写入本地 IndexedDB
+      let newCount = 0;
+      for (const cloudEntry of allCloudEntries) {
+        const localId = cloudEntry.localId || cloudEntry.id;
+        if (!localIds.has(localId)) {
+          // 构建本地格式的 entry（完整字段，显式写 _owner）
+          const entry = {
+            id: localId,
+            date: cloudEntry.date,
+            time: cloudEntry.time,
+            text: cloudEntry.text,
+            emoji: cloudEntry.emoji,
+            quote: cloudEntry.quote,
+            tag: cloudEntry.tag,
+            image: cloudEntry.image || null,
+            weather: cloudEntry.weather,
+            timestamp: cloudEntry.timestamp,
+            _owner: currentUsername  // 明确携带 _owner，不依赖 dbPut 副作用
+          };
+          await dbPut(entry);
+          newCount++;
         }
       }
-    } catch(e) {}
+      
+      if (newCount > 0) {
+        // 重新加载本地数据
+        entriesCache = await dbGetAll();
+        console.log(`Synced ${newCount} entries from cloud`);
+      }
+    }
+    
+    // ===== 同步粉碎记录（shredded） =====
+    try {
+      const shredCol = cloudDb.collection('shredded');
+      // 分页拉取，防止超过 1000 条截断
+      let allCloudShreds = [];
+      let shredOffset = 0;
+      while (true) {
+        const shredResult = await shredCol.where({ _username: currentUsername }).skip(shredOffset).limit(100).get();
+        if (!shredResult.data || shredResult.data.length === 0) break;
+        allCloudShreds = allCloudShreds.concat(shredResult.data);
+        if (shredResult.data.length < 100) break;
+        shredOffset += 100;
+      }
+      
+      if (allCloudShreds.length > 0) {
+        const localShreds = await getShredRecords(); // 已含 _owner 过滤
+        const localShredIds = new Set(localShreds.map(s => s.id));
+        
+        const newShreds = allCloudShreds.filter(item => !localShredIds.has(item.localId || item.id));
+        if (newShreds.length > 0) {
+          // 用单个事务批量写入（避免循环开多个事务）
+          await new Promise((resolve, reject) => {
+            if (!db || !db.objectStoreNames.contains('shredded')) { resolve(); return; }
+            const tx = db.transaction('shredded', 'readwrite');
+            const store = tx.objectStore('shredded');
+            newShreds.forEach(item => {
+              const id = item.localId || item.id;
+              store.put({ id, text: item.text, date: item.date, timestamp: item.timestamp, _owner: currentUsername });
+            });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+          });
+          console.log(`Synced ${newShreds.length} shreds from cloud`);
+        }
+      }
+    } catch(e) { console.log('Sync shredded from cloud failed:', e.message); }
+    
+    // ===== 同步泡泡池（bubblePool） =====
+    try {
+      const bubbleCol = cloudDb.collection('bubblePool');
+      let allCloudBubbles = [];
+      let bubbleOffset = 0;
+      while (true) {
+        const bubbleResult = await bubbleCol.where({ _username: currentUsername }).skip(bubbleOffset).limit(100).get();
+        if (!bubbleResult.data || bubbleResult.data.length === 0) break;
+        allCloudBubbles = allCloudBubbles.concat(bubbleResult.data);
+        if (bubbleResult.data.length < 100) break;
+        bubbleOffset += 100;
+      }
+      
+      if (allCloudBubbles.length > 0) {
+        const localBubbles = await getBubblePool();
+        const localBubbleIds = new Set(localBubbles.map(b => b.id));
+        
+        const newBubbles = allCloudBubbles.filter(item => !localBubbleIds.has(item.localId || item.id));
+        if (newBubbles.length > 0) {
+          await new Promise((resolve, reject) => {
+            if (!db || !db.objectStoreNames.contains('bubblePool')) { resolve(); return; }
+            const tx = db.transaction('bubblePool', 'readwrite');
+            const store = tx.objectStore('bubblePool');
+            newBubbles.forEach(item => {
+              const id = item.localId || item.id;
+              store.put({ id, joke: item.joke, color: item.color, date: item.date, time: item.time, _owner: currentUsername });
+            });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+          });
+          console.log(`Synced ${newBubbles.length} bubbles from cloud`);
+        }
+      }
+    } catch(e) { console.log('Sync bubblePool from cloud failed:', e.message); }
     
   } catch(e) {
     console.log('Sync from cloud failed:', e.message);
@@ -5554,30 +5619,63 @@ async function syncLocalToCloud() {
       offset += 100;
     }
     
-    // 把本地有而云端没有的数据同步上去
+    // 把本地有而云端没有的数据同步上去（大图片剥离，避免超过 CloudBase 单条 2MB 限制）
     for (const entry of entries) {
       const localId = entry.id || entry._id;
       if (!cloudIds.has(localId)) {
-        await col.add({ ...entry, localId, _username: currentUsername });
+        const entryToUpload = { ...entry, localId, _username: currentUsername };
+        // 超过 800KB 的 Base64 图片剥离，避免静默上传失败
+        if (entryToUpload.image && entryToUpload.image.length > 800000) {
+          entryToUpload.image = null;
+        }
+        await col.add(entryToUpload);
       }
     }
     
-    // 同步粉碎记录到云端
+    // ===== 同步粉碎记录到云端（使用 getShredRecords 确保 _owner 过滤） =====
     try {
-      const tx = db.transaction('shredded', 'readonly');
-      const store = tx.objectStore('shredded');
-      const localShreds = await new Promise(r => { const req = store.getAll(); req.onsuccess = () => r(req.result || []); req.onerror = () => r([]); });
+      const localShreds = await getShredRecords(); // 已按 currentUsername 过滤
       if (localShreds.length > 0) {
         const shredCol = cloudDb.collection('shredded');
-        const cloudShreds = await shredCol.where({ _username: currentUsername }).limit(1000).field({ localId: true }).get();
-        const cloudShredIds = new Set((cloudShreds.data || []).map(d => d.localId));
+        // 分页获取云端已有 ID
+        let cloudShredIds = new Set();
+        let shredOffset = 0;
+        while (true) {
+          const cloudShreds = await shredCol.where({ _username: currentUsername }).skip(shredOffset).limit(100).field({ localId: true }).get();
+          if (!cloudShreds.data || cloudShreds.data.length === 0) break;
+          cloudShreds.data.forEach(d => cloudShredIds.add(d.localId));
+          if (cloudShreds.data.length < 100) break;
+          shredOffset += 100;
+        }
         for (const s of localShreds) {
           if (!cloudShredIds.has(s.id)) {
             await shredCol.add({ ...s, localId: s.id, _username: currentUsername });
           }
         }
       }
-    } catch(e) {}
+    } catch(e) { console.log('Sync shredded to cloud failed:', e.message); }
+    
+    // ===== 同步泡泡池到云端 =====
+    try {
+      const localBubbles = await getBubblePool(); // 已按 currentUsername 过滤
+      if (localBubbles.length > 0) {
+        const bubbleCol = cloudDb.collection('bubblePool');
+        let cloudBubbleIds = new Set();
+        let bubbleOffset = 0;
+        while (true) {
+          const cloudBubbles = await bubbleCol.where({ _username: currentUsername }).skip(bubbleOffset).limit(100).field({ localId: true }).get();
+          if (!cloudBubbles.data || cloudBubbles.data.length === 0) break;
+          cloudBubbles.data.forEach(d => cloudBubbleIds.add(d.localId));
+          if (cloudBubbles.data.length < 100) break;
+          bubbleOffset += 100;
+        }
+        for (const b of localBubbles) {
+          if (!cloudBubbleIds.has(b.id)) {
+            await bubbleCol.add({ ...b, localId: b.id, _username: currentUsername });
+          }
+        }
+      }
+    } catch(e) { console.log('Sync bubblePool to cloud failed:', e.message); }
     
   } catch(e) {
     console.log('Sync to cloud failed:', e.message);
@@ -6458,8 +6556,13 @@ async function doLogout() {
       await cloudApp.auth().signOut();
     }
   } catch(e) {}
+  // 重置所有状态，防止 ServiceWorker 拦截 reload 时内存残留
   cloudReady = false;
   cloudDb = null;
+  cloudApp = null;
+  currentUsername = '';
+  entriesCache = [];
+  isSyncing = false;
   localStorage.removeItem('hd_current_user');
   location.reload();
 }
