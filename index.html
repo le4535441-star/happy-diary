@@ -5904,9 +5904,96 @@ async function exportData() {
 async function shareAsCard() {
   const entries = getEntries();
   if (entries.length === 0) return;
+  
+  // 获取当前详情页的 .diary-page 元素
+  const diaryPage = document.querySelector('#diary-container .diary-page');
+  if (!diaryPage) return;
+  
+  // 创建一个离屏容器，克隆详情页内容用于截图
+  const offscreen = document.createElement('div');
+  offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;width:375px;height:auto;z-index:-1;background:' + getComputedStyle(document.documentElement).getPropertyValue('--warm-bg') + ';padding:16px;';
+  
+  // 克隆当前页面的卡片
+  const clone = diaryPage.cloneNode(true);
+  clone.style.cssText = 'position:relative;width:100%;max-width:375px;height:auto;min-height:560px;max-height:none;transform:none;opacity:1;';
+  
+  // 添加水印
+  const watermark = document.createElement('div');
+  watermark.style.cssText = 'text-align:center;padding:16px 0 8px;font-size:12px;color:' + getComputedStyle(document.documentElement).getPropertyValue('--gold') + ';';
+  watermark.textContent = '✨ 快乐小事 · 每天都有好事花生';
+  
+  offscreen.appendChild(clone);
+  offscreen.appendChild(watermark);
+  document.body.appendChild(offscreen);
+  
+  // 等待渲染完成
+  await new Promise(r => setTimeout(r, 100));
+  
+  // 使用 Canvas 逐元素绘制（因为没有html2canvas库）
+  // 方案B：直接用SVG foreignObject渲染DOM为图片
+  const pageWidth = 375;
+  const pageHeight = offscreen.scrollHeight;
+  const scale = 2; // 2倍清晰度
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = pageWidth * scale;
+  canvas.height = pageHeight * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+  
+  // 获取完整的CSS样式
+  const allStyles = Array.from(document.styleSheets).map(sheet => {
+    try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
+    catch(e) { return ''; }
+  }).join('\n');
+  
+  // 用 SVG foreignObject 将 HTML 渲染为图片
+  const svgData = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${pageWidth}px;">
+          <style>${allStyles}</style>
+          ${offscreen.innerHTML}
+        </div>
+      </foreignObject>
+    </svg>`;
+  
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  
+  const img = new Image();
+  img.onload = async () => {
+    ctx.drawImage(img, 0, 0, pageWidth, pageHeight);
+    URL.revokeObjectURL(url);
+    document.body.removeChild(offscreen);
+    
+    canvas.toBlob(async (blob) => {
+      if (navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], 'happy-card.png', { type: 'image/png' });
+          await navigator.share({ files: [file], title: '快乐小事' });
+        } catch(e) {
+          downloadCard(blob);
+        }
+      } else {
+        downloadCard(blob);
+      }
+    }, 'image/png');
+  };
+  img.onerror = () => {
+    // SVG foreignObject 方案失败（可能因为安全限制），降级为简单截图
+    document.body.removeChild(offscreen);
+    fallbackShareCard();
+  };
+  img.src = url;
+}
+
+// 降级方案：如果SVG方案因安全限制失败，使用简化版Canvas绘制
+async function fallbackShareCard() {
+  const entries = getEntries();
+  if (entries.length === 0) return;
   const entry = entries[currentIndex];
   
-  // 读取当前主题的CSS变量值
   const cs = getComputedStyle(document.documentElement);
   const themeBg = cs.getPropertyValue('--warm-bg').trim();
   const themePaper = cs.getPropertyValue('--paper').trim();
@@ -5921,18 +6008,15 @@ async function shareAsCard() {
   
   const canvas = document.createElement('canvas');
   const w = 750, h = 1200;
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
   
-  // === 外层背景色（与详情页body一致）===
+  // 背景
   ctx.fillStyle = themeBg;
   ctx.fillRect(0, 0, w, h);
   
-  // === 卡片主体 ===
+  // 卡片
   const cardX = 32, cardY = 50, cardW = w - 64, cardH = h - 150;
-  
-  // 先画白色卡片底
   ctx.fillStyle = themePaper;
   ctx.shadowColor = 'rgba(0,0,0,0.08)';
   ctx.shadowBlur = 24;
@@ -5940,7 +6024,7 @@ async function shareAsCard() {
   ctx.fill();
   ctx.shadowBlur = 0;
   
-  // === 配图背景（与详情页一致：25%透明度铺满卡片内）===
+  // 配图
   if (entry.image) {
     try {
       const img = await loadImage(entry.image);
@@ -5948,144 +6032,62 @@ async function shareAsCard() {
       roundRect(ctx, cardX, cardY, cardW, cardH, 20);
       ctx.clip();
       ctx.globalAlpha = 0.25;
-      // 等比裁剪居中
-      const imgRatio = img.width / img.height;
-      const cardRatio = cardW / cardH;
-      let sx = 0, sy = 0, sw = img.width, sh = img.height;
-      if (imgRatio > cardRatio) { sw = img.height * cardRatio; sx = (img.width - sw) / 2; }
-      else { sh = img.width / cardRatio; sy = (img.height - sh) / 2; }
-      ctx.drawImage(img, sx, sy, sw, sh, cardX, cardY, cardW, cardH);
+      const ir = img.width/img.height, cr = cardW/cardH;
+      let sx=0,sy=0,sw=img.width,sh=img.height;
+      if(ir>cr){sw=img.height*cr;sx=(img.width-sw)/2;}else{sh=img.width/cr;sy=(img.height-sh)/2;}
+      ctx.drawImage(img,sx,sy,sw,sh,cardX,cardY,cardW,cardH);
       ctx.globalAlpha = 1.0;
       ctx.restore();
-    } catch(e) {}
+    } catch(e){}
   }
   
-  // === 布局计算（与详情页一致的三段式：顶部header / 中间body / 底部footer）===
-  const headerH = 200;  // 顶部区域高度
-  const footerH = 200;  // 底部区域高度
-  const bodyH = cardH - headerH - footerH; // 中间内容区
-  
-  // ===== 顶部 HEADER：日期+星期+天气+序号 =====
-  const headerTop = cardY + 40;
   ctx.textAlign = 'center';
   
-  // 日期（大号，深色）
-  ctx.font = '600 28px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeInk;
-  ctx.fillText(`${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`, w/2, headerTop);
-  
-  // 星期（小号，浅色）
-  ctx.font = '16px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeInkLight;
-  ctx.fillText(`星期${weekdays[dateObj.getDay()]}`, w/2, headerTop + 30);
-  
-  // 天气（红/强调色）
-  let weatherStr = '';
-  try {
-    const wc = localStorage.getItem('happy_diary_weather');
-    if (wc) { const { data } = JSON.parse(wc); weatherStr = `${data.icon} ${data.condition} ${data.temp}`; }
-  } catch(e) {}
-  if (weatherStr) {
-    ctx.font = '600 16px "PingFang SC", sans-serif';
-    ctx.fillStyle = themeAccent;
-    ctx.fillText(weatherStr, w/2, headerTop + 56);
-  }
-  
-  // 第N个快乐（红/强调色，加粗）
-  ctx.font = '600 16px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeAccent;
-  ctx.fillText(`这是你第 ${currentIndex + 1} 个快乐 ✨`, w/2, headerTop + 82);
-  
-  // 顶部分隔线
-  const divY1 = headerTop + 106;
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cardX + 40, divY1);
-  ctx.lineTo(cardX + cardW - 40, divY1);
-  ctx.stroke();
-  
-  // ===== 中间 BODY：emoji + 正文（垂直居中）=====
-  const bodyTop = cardY + headerH;
-  const bodyCenterY = bodyTop + bodyH / 2;
-  
-  // emoji（大号）
-  ctx.font = '48px serif';
-  ctx.fillStyle = themeInk;
-  ctx.fillText(entry.emoji || '✨', w/2, bodyCenterY - 40);
-  
-  // 正文（粗体，居中）
-  ctx.font = '600 28px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeInk;
-  const lines = wrapText(ctx, entry.text, cardW - 120);
-  const textBlockH = lines.length * 42;
-  let textStartY = bodyCenterY + 10;
-  lines.forEach(line => {
-    ctx.fillText(line, w/2, textStartY);
-    textStartY += 42;
-  });
-  
-  // ===== 底部 FOOTER：标签 + 分隔线 + 配文 =====
-  const footerTop = cardY + cardH - footerH;
-  
-  // 标签（如果有）——胶囊形状
-  let footerY = footerTop + 20;
-  if (entry.tag) {
-    ctx.font = '600 18px "PingFang SC", sans-serif';
-    const tagText = entry.tag;
-    const tagW = ctx.measureText(tagText).width + 36;
-    const tagX = (w - tagW) / 2;
-    // 胶囊背景
-    ctx.fillStyle = themeAccentSoft;
-    roundRect(ctx, tagX, footerY - 4, tagW, 34, 17);
-    ctx.fill();
-    // 标签文字
-    ctx.fillStyle = themeAccent;
-    ctx.fillText(tagText, w/2, footerY + 20);
-    footerY += 50;
-  }
+  // 顶部header
+  let y = cardY + 50;
+  ctx.font = '600 26px "PingFang SC",sans-serif'; ctx.fillStyle = themeInk;
+  ctx.fillText(`${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`, w/2, y); y+=30;
+  ctx.font = '15px "PingFang SC",sans-serif'; ctx.fillStyle = themeInkLight;
+  ctx.fillText(`星期${weekdays[dateObj.getDay()]}`, w/2, y); y+=26;
+  ctx.font = '600 15px "PingFang SC",sans-serif'; ctx.fillStyle = themeAccent;
+  try{const wc=localStorage.getItem('happy_diary_weather');if(wc){const{data}=JSON.parse(wc);ctx.fillText(`${data.icon} ${data.condition} ${data.temp}`,w/2,y);y+=26;}}catch(e){}
+  ctx.fillText(`这是你第 ${currentIndex+1} 个快乐 ✨`, w/2, y); y+=40;
   
   // 分隔线
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-  ctx.beginPath();
-  ctx.moveTo(cardX + 40, footerY);
-  ctx.lineTo(cardX + cardW - 40, footerY);
-  ctx.stroke();
-  footerY += 28;
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cardX+50,y);ctx.lineTo(cardX+cardW-50,y);ctx.stroke(); y+=40;
   
-  // 配文
-  if (entry.quote && entry.quote.text) {
-    ctx.font = 'italic 18px "PingFang SC", sans-serif';
-    ctx.fillStyle = themeInkLight;
-    const qLines = wrapText(ctx, `「${entry.quote.text}」`, cardW - 100);
-    qLines.forEach(line => {
-      ctx.fillText(line, w/2, footerY);
-      footerY += 28;
-    });
-    // 作者（红/强调色）
-    ctx.font = '600 16px "PingFang SC", sans-serif';
-    ctx.fillStyle = themeAccent;
-    ctx.fillText(`—— ${entry.quote.author || ''}`, w/2, footerY + 6);
+  // 中间body（居中）
+  const bodyCenter = cardY + cardH/2 + 30;
+  ctx.font = '42px serif'; ctx.fillStyle = themeInk;
+  ctx.fillText(entry.emoji||'✨', w/2, bodyCenter-30);
+  ctx.font = '600 24px "PingFang SC",sans-serif'; ctx.fillStyle = themeInk;
+  const lines = wrapText(ctx, entry.text, cardW-100);
+  let ty = bodyCenter + 10;
+  lines.forEach(l=>{ctx.fillText(l,w/2,ty);ty+=36;});
+  
+  // 底部footer
+  let fy = cardY + cardH - 160;
+  if(entry.tag){
+    ctx.font='600 16px "PingFang SC",sans-serif';
+    const tw=ctx.measureText(entry.tag).width+30;
+    ctx.fillStyle=themeAccentSoft;roundRect(ctx,(w-tw)/2,fy,tw,30,15);ctx.fill();
+    ctx.fillStyle=themeAccent;ctx.fillText(entry.tag,w/2,fy+21);fy+=50;
+  }
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.beginPath();ctx.moveTo(cardX+50,fy);ctx.lineTo(cardX+cardW-50,fy);ctx.stroke();fy+=30;
+  if(entry.quote&&entry.quote.text){
+    ctx.font='italic 16px "PingFang SC",sans-serif';ctx.fillStyle=themeInkLight;
+    ctx.fillText(`「${entry.quote.text}」`,w/2,fy);fy+=28;
+    ctx.font='600 14px "PingFang SC",sans-serif';ctx.fillStyle=themeAccent;
+    ctx.fillText(`—— ${entry.quote.author||''}`,w/2,fy);
   }
   
-  // === 底部水印（卡片外）===
-  ctx.font = '16px "PingFang SC", sans-serif';
-  ctx.fillStyle = themeGold;
-  ctx.fillText('✨ 快乐小事 · 每天都有好事花生', w/2, h - 50);
+  // 水印
+  ctx.font='15px "PingFang SC",sans-serif';ctx.fillStyle=themeGold;
+  ctx.fillText('✨ 快乐小事 · 每天都有好事花生',w/2,h-50);
   
-  // 导出图片
-  canvas.toBlob(async (blob) => {
-    if (navigator.share && navigator.canShare) {
-      try {
-        const file = new File([blob], 'happy-card.png', { type: 'image/png' });
-        await navigator.share({ files: [file], title: '快乐小事' });
-      } catch(e) {
-        downloadCard(blob);
-      }
-    } else {
-      downloadCard(blob);
-    }
-  }, 'image/png');
+  canvas.toBlob(async(blob)=>{
+    if(navigator.share&&navigator.canShare){try{await navigator.share({files:[new File([blob],'happy-card.png',{type:'image/png'})],title:'快乐小事'});}catch(e){downloadCard(blob);}}else{downloadCard(blob);}
+  },'image/png');
 }
 
 // 加载图片的Promise封装
