@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="快乐小事">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
-<script src="https://imgcache.qq.com/qcloud/cloudbase-js-sdk/1.7.1/cloudbase.full.js"></script>
+<script src="cloudbase.bundle.js"></script>
 <script src="sign-data.js"></script>
 <title>快乐小事</title>
 <style>
@@ -4704,41 +4704,25 @@ async function initCloudSync() {
     cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
     const auth = cloudApp.auth();
     
-    // 尝试多种匿名登录方式（兼容不同 SDK 版本）
+    // SDK 3.x 匿名登录
     let loginSuccess = false;
     
-    // 方式1: 直接 signInAnonymously
     try {
+      // 方式1: signInAnonymously (SDK 3.x 标准方式)
       await auth.signInAnonymously();
       loginSuccess = true;
       console.log('Auth: signInAnonymously success');
     } catch(e1) {
-      console.log('Auth method 1 failed:', e1.message);
-    }
-    
-    // 方式2: anonymousAuthProvider().signIn()
-    if (!loginSuccess) {
-      try {
-        if (auth.anonymousAuthProvider) {
-          await auth.anonymousAuthProvider().signIn();
-          loginSuccess = true;
-          console.log('Auth: anonymousAuthProvider success');
-        }
-      } catch(e2) {
-        console.log('Auth method 2 failed:', e2.message);
-      }
-    }
-    
-    // 方式3: 检查是否已有登录态
-    if (!loginSuccess) {
+      console.log('Auth signInAnonymously failed:', e1.message);
+      // 方式2: 检查已有登录态
       try {
         const loginState = await auth.getLoginState();
         if (loginState) {
           loginSuccess = true;
           console.log('Auth: already logged in');
         }
-      } catch(e3) {
-        console.log('Auth method 3 failed:', e3.message);
+      } catch(e2) {
+        console.log('Auth getLoginState failed:', e2.message);
       }
     }
     
