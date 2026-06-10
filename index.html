@@ -1632,8 +1632,9 @@ body {
   border-radius: 4px;
   box-shadow: 2px 3px 12px rgba(0,0,0,0.12);
   transform: rotate(-1deg);
-  transition: transform 0.4s, opacity 0.4s;
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.0s ease-in 0.5s, clip-path 1.5s ease-in;
   position: relative;
+  clip-path: inset(0 0 0 0);
 }
 
 .paper-note::before {
@@ -1661,8 +1662,9 @@ body {
 }
 
 .paper-note.shredding {
-  transform: translateY(60px) scale(0.8);
+  transform: translateY(80px) scale(0.7) rotate(0deg);
   opacity: 0;
+  clip-path: inset(0 0 100% 0);
 }
 
 /* 粉碎机 */
@@ -2106,7 +2108,7 @@ body {
 </div>
 
 <!-- 登录后闪屏：显示最近一条快乐记录 -->
-<div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
+<div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
   <div style="font-size:48px;margin-bottom:20px;" id="splash-emoji">🌸</div>
   <div style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;color:#3d3028;line-height:1.8;max-width:320px;" id="splash-content">
     <p style="font-size:13px;color:#7a6b5d;margin-bottom:12px;" id="splash-date"></p>
@@ -3819,7 +3821,103 @@ const jokes = [
   "你的存在让这个世界多了一份温度 🌡️",
   "今日份的可爱已上线 📡",
   "希望你的每一天都被快乐填满 🧩",
-  "你已经拥有了很多很多，只是偶尔忘了 💭"
+  "你已经拥有了很多很多，只是偶尔忘了 💭",
+  "问：世界上最长的单词是什么？答：smile，因为s和e中间隔了一mile 😄",
+  "我不是胖，我只是骨架大——大到肉都溢出来了 🦴",
+  "别人的起床闹钟：叮铃铃！我的起床闹钟：再睡五分钟…再五分钟…好吧十分钟 ⏰",
+  "我的钱包就像洋葱，每次打开都让我想哭 🧅",
+  "今天又是和被窝难舍难分的一天 🛏️",
+  "我的运动细胞只在躲避加班的时候苏醒 🏃",
+  "人为什么要工作？因为手机要充电 🔌",
+  "减肥的第一步：告诉别人你在减肥，然后吃东西就有负罪感了。第二步：习惯这种负罪感 🍔",
+  "成功的路上并不拥挤，因为坚持的人不多——我也不多 🛋️",
+  "我的理想型：不加班、不早起、工资高。请问这是在做梦吗？是的 💤",
+  "上班和打游戏的区别：打游戏你死了可以复活 🎮",
+  "我最近在练一种新的运动——翻来覆去 🤸",
+  "你有没有发现：周末两天过得比工作五天还快？这不科学！📅",
+  "别人是吃一堑长一智，我是吃一顿长一斤 ⚖️",
+  "问：如何让一个人停止打嗝？答：告诉他明天要上班 😱",
+  "人生就像电话，不是你挂就是我挂 📱",
+  "为什么蚊子不咬别人只咬我？因为我太甜了呀 🦟",
+  "地球是圆的，所以看起来像上坡的路其实是下坡——好吧这样走路还是很累 🌍",
+  "钱不是万能的，但没有钱是万万不能的——这话说得我很想充值 💰",
+  "如果努力有用的话，那驴岂不是当总裁了 🫏",
+  "早起的鸟儿有虫吃，早起的虫儿被鸟吃——所以你要当鸟还是虫？我选择不起 🐛",
+  "其实我不懒，我只是把勤快留给了更重要的事——比如睡觉 😴",
+  "我的特长是「想太多」和「啥也不干」🧠",
+  "问：为什么数学书总是不开心？答：因为它有太多问题 📐",
+  "我又不是人民币，凭什么让所有人喜欢——但人民币我是真的喜欢 💵",
+  "下雨了怎么办？当然是淋雨啊——伞在家里又不会自己跑来 ☔",
+  "如果你觉得自己什么都做不好，试试关门，大部分人都能做到 🚪",
+  "人生最大的勇气是什么？是看到自己余额之后还敢打开购物车 🛒",
+  "朋友问我理想是什么，我说是「有钱」——他说这不是理想是幻想 💫",
+  "躺平不可怕，可怕的是躺着躺着还饿了 🍜",
+  "我的减肥计划分三步：明天再说、后天开始、算了吧 📋",
+  "老板说我们是一家人——那请问家人要不要发年终奖？🏠",
+  "对象是什么？是java里的概念吗？👩‍💻",
+  "都说条条大路通罗马，可我连小路都找不到 🗺️",
+  "问：猪最讨厌什么运动？答：没有，猪讨厌所有运动 🐷",
+  "我的脑子里就两件事：一件是吃，另一件是想吃什么 🤔",
+  "历史课教会我一个道理：再牛的人最后也只是一道填空题 ✏️",
+  "三十而立？我三十了只想躺 🧘",
+  "小时候以为空调26度最冷，长大才知道银行卡余额才是 ❄️",
+  "你说做人要简简单单——好的，我简单到没钱 🙃",
+  "问：什么东西越洗越脏？答：水 💧",
+  "自拍不P图发朋友圈？这种勇气我不配 📸",
+  "如果掉头发算运动的话，那我每天都在锻炼 💇",
+  "我上辈子一定是个风筝，因为这辈子线断了我就飘了 🪁",
+  "专家说晚上11点前要睡觉——专家不知道11点我才开始真正的生活 🌃",
+  "问：世界上什么床最贵？答：起不来的那张 🛌",
+  "人要往高处走，水要往低处流——我选择随波逐流 🌊",
+  "我的朋友圈有两种人：晒娃的和晒猫的——我属于晒太阳的 ☀️",
+  "手机没电的焦虑 > 人生方向的焦虑 🪫",
+  "有人问我有没有梦想，当然有——每天都有，就是起不来 💭",
+  "月薪三千的我给月入十万的主播打赏，这叫「精神扶贫」🎪",
+  "问：为什么程序员总是分不清万圣节和圣诞节？答：因为 Oct 31 = Dec 25 🎃",
+  "成年人的快乐很简单：今天不用加班 🎊",
+  "问：什么动物最有钱？答：蜘蛛，因为它每天都在网上 🕷️",
+  "晚安这两个字，是我今天打的最后一句谎话 🌙",
+  "我要努力赚钱，争取做一个有钱人的祖宗 💎",
+  "减肥就是一个把「今天开始」改成「明天开始」的死循环 🔄",
+  "问：你相信缘分吗？答：信，因为我和我的床就是命中注定 ❤️",
+  "知识改变命运——但改变不了我不想上班的事实 📚",
+  "我不是不想社交，我只是找不到比独处更有趣的人 🧸",
+  "据说人一天只有4小时的高效时间——我好像还没用过 ⌛",
+  "周五的快乐只有四个字：明天不上班 🥂",
+  "我这个人很简单：给我wifi给我吃的，我就能活 📶",
+  "你有试过边哭边吃东西吗？很奇怪的是，最后总是被好吃的治愈了 🍦",
+  "别人是人间清醒，我是人间瞌睡 😪",
+  "问：猫为什么不玩手机？答：因为它有九条命也经不起熬夜 🐱",
+  "跑步五分钟，喘气两小时——这就是我的运动日常 🏃‍♂️",
+  "我不是懒，我只是在等一个机会——等到它自己走过来 🦥",
+  "闹钟存在的意义：让你知道你还能再睡几分钟 ⏲️",
+  "我的减肥方法：不吃晚饭——把晚饭改成夜宵 🌮",
+  "问：为什么外卖总是比预计晚到？答：因为它也不想上班 🛵",
+  "打工人打工魂，打工都是人上人——骗自己可还行 🎭",
+  "我的未读消息有99+，但没有一条是转账 📨",
+  "生活给了我柠檬，我却连糖都买不起 🍋",
+  "问：单身狗和热狗有什么区别？答：热狗还有面包抱着 🌭",
+  "之所以叫「理想」，是因为它一直只存在于「理论」中 💡",
+  "存钱和减肥一样，都是明天再开始的事 🐖",
+  "吃得苦中苦，瘦成人中人——算了吃完这顿再说 🥩",
+  "科学说人的身体70%是水——那我应该值不少水费 💧",
+  "问：什么样的人最怕热？答：打工人，因为压力山大 🥵",
+  "我的床是世界上引力最强的地方——连光都逃不出去 🕳️",
+  "开心的时候吃好的庆祝，不开心的时候吃好的安慰——所以到底什么时候不吃？⚡",
+  "我的口头禅：明天再说——这大概就是拖延症晚期 📆",
+  "问：为什么鱼不说话？答：因为它一开口就喝水 🐠",
+  "每次下决心省钱，一打开淘宝就失忆了 🛍️",
+  "能力配不上野心的时候怎么办？降低野心呗 📉",
+  "我最大的优点：脸皮厚。最大的缺点：厚得还不够 🤡",
+  "问：零食为什么叫零食？答：因为吃完余额变零 🍿",
+  "下班后的我VS上班时的我：换了一个人，字面意思 🦸‍♀️",
+  "问：为什么打工人喜欢下雨天？答：因为老天都在哭，我哭就不奇怪了 🌧️",
+  "我和社恐的区别：社恐是不想社交，我是没人找我社交 📵",
+  "刚发完工资的我：有什么好省的！月底的我：有什么好吃的... 📊",
+  "狗都有人遛，我连遛弯的力气都没有 🐕",
+  "人生就像一盒巧克力——打开发现已经被室友吃了 🍫",
+  "问：为什么我数学不好？答：因为我从不关注负面的东西（负数）➕",
+  "现在的我：想早睡但舍不得手机，想早起但舍不得床 😫"
 ];
 
 const bubbleColors = [
@@ -4988,32 +5086,42 @@ async function doShredTab() {
   
   const btn = document.getElementById('shred-btn-tab');
   btn.disabled = true;
-  btn.textContent = '粉碎中...';
+  btn.textContent = '正在送入粉碎机...';
   
-  // 1. 纸条被吸入动画
+  // 1. 纸条开始被吸入动画（CSS transition 1.5秒）
   const note = document.getElementById('paper-note-tab');
   note.classList.add('shredding');
   
   // 2. 触发震动
-  if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 100]);
+  if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 80, 30, 100, 30, 150]);
   
-  // 3. 播放粉碎音效
-  playShredSound();
+  // 3. 播放粉碎音效（音效本身3秒）
+  setTimeout(() => {
+    playShredSound();
+    btn.textContent = '粉碎中...🔥';
+  }, 800);
   
-  // 4. 生成碎片飞散
+  // 4. 纸条完全进入后，生成碎片飞散（1.5秒后）
   setTimeout(() => {
     createShredPiecesTab();
     note.style.display = 'none';
     btn.style.display = 'none';
-    document.getElementById('shredder-machine-tab').style.display = 'none';
-  }, 500);
+    document.getElementById('shredder-machine-tab').style.opacity = '0.5';
+  }, 1500);
   
-  // 5. 显示结果
+  // 5. 碎片飘落过程持续（3.5秒后再触发更多碎片）
   setTimeout(() => {
+    createShredPiecesTab();
+  }, 2500);
+  
+  // 6. 显示结果（5秒后）
+  setTimeout(() => {
+    document.getElementById('shredder-machine-tab').style.display = 'none';
+    document.getElementById('shredder-machine-tab').style.opacity = '1';
     document.getElementById('shred-result-tab').style.display = 'block';
     document.getElementById('result-text-tab').textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
     updateShredCountTab();
-  }, 2200);
+  }, 5000);
 }
 
 function createShredPiecesTab() {
