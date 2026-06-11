@@ -7127,11 +7127,17 @@ async function shareAsCard() {
   // 用 html2canvas 直接截图（100%还原页面渲染效果，1:1 清晰度）
   try {
     const canvas = await html2canvas(diaryPage, {
-      scale: window.devicePixelRatio || 3, // 匹配设备实际像素密度，无损输出
+      scale: window.devicePixelRatio || 3,
       useCORS: true,
       backgroundColor: null,
       logging: false,
-      allowTaint: true,
+      allowTaint: false,        // 不允许污染 canvas（严格模式）
+      foreignObjectRendering: false,
+      imageTimeout: 0,          // 跳过加载超时的图片
+      ignoreElements: (el) => {
+        // 忽略可能引入跨域的天气图标区域
+        return el.id === 'weather-display';
+      }
     });
     
     // 在截图下方添加水印
