@@ -2089,8 +2089,9 @@ body {
 }
 
 .plaza-grid {
-  columns: 2;
-  column-gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .plaza-card {
@@ -2105,8 +2106,8 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  break-inside: avoid;
-  margin-bottom: 12px;
+  /* 固定 4:3 宽高比（竖4:横3），确保双列左右对齐、大小统一 */
+  aspect-ratio: 3 / 4;
 }
 
 .plaza-card:active {
@@ -2145,6 +2146,10 @@ body {
   font-weight: 600;
   color: var(--ink);
   line-height: 1.6;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 }
 
 .plaza-card .card-quote {
@@ -2399,10 +2404,10 @@ body {
 <!-- 登录后闪屏：显示最近一条快乐记录 -->
 <div id="splash-screen" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(160deg,#fdf6e3 0%,#f7e8d4 50%,#f0d9c4 100%);flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
   <div style="font-size:56px;margin-bottom:24px;" id="splash-emoji">🌸</div>
-  <div style="font-family:'ZCOOL XiaoWei',serif;color:#3d3028;line-height:1.8;max-width:320px;" id="splash-content">
-    <p style="font-size:15px;color:#5a4a3a;margin-bottom:14px;letter-spacing:1px;" id="splash-date"></p>
-    <p id="splash-text" style="font-size:22px;color:#2c2016;font-weight:600;line-height:1.6;"></p>
-    <p style="font-size:14px;color:#6b5744;margin-top:20px;font-style:italic;line-height:1.6;" id="splash-quote"></p>
+  <div style="font-family:'ZCOOL XiaoWei',serif;color:#3d3028;line-height:1.8;max-width:320px;width:100%;" id="splash-content">
+    <p style="font-size:15px;color:#5a4a3a;margin-bottom:14px;letter-spacing:1px;text-align:center;" id="splash-date"></p>
+    <p id="splash-text" style="font-size:22px;color:#2c2016;font-weight:600;line-height:1.6;text-align:left;"></p>
+    <p style="font-size:14px;color:#6b5744;margin-top:20px;font-style:italic;line-height:1.6;text-align:left;" id="splash-quote"></p>
   </div>
   <p style="font-size:12px;color:#c8a45c;margin-top:32px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
 </div>
@@ -2671,6 +2676,9 @@ body {
           <span class="my-menu-icon">👋</span>
           <span class="my-menu-text">退出登录</span>
         </div>
+      </div>
+      <div style="text-align:center;margin-top:24px;padding-bottom:8px;">
+        <span style="font-size:11px;color:var(--ink-light);opacity:0.6;">快乐小事 v1.3.22 · 2026.06</span>
       </div>
     </div>
   </div>
@@ -3178,7 +3186,121 @@ const quotes = [
   { text: "博观而约取，厚积而薄发。", author: "苏轼" },
   { text: "岁月极美，在于它必然的流逝。", author: "三毛" },
   { text: "我们都是阴沟里的虫子，但总还是得有人仰望星空。", author: "王尔德" },
-  { text: "永远年轻，永远热泪盈眶。", author: "凯鲁亚克" }
+  { text: "永远年轻，永远热泪盈眶。", author: "凯鲁亚克" },
+  // ===== 扩充至365条 =====
+  // 唐诗
+  { text: "春眠不觉晓，处处闻啼鸟。", author: "孟浩然" },
+  { text: "床前明月光，疑是地上霜。", author: "李白" },
+  { text: "烽火连三月，家书抵万金。", author: "杜甫" },
+  { text: "随风潜入夜，润物细无声。", author: "杜甫" },
+  { text: "野火烧不尽，春风吹又生。", author: "白居易" },
+  { text: "曲径通幽处，禅房花木深。", author: "常建" },
+  { text: "相见时难别亦难，东风无力百花残。", author: "李商隐" },
+  { text: "身无彩凤双飞翼，心有灵犀一点通。", author: "李商隐" },
+  { text: "夕阳无限好，只是近黄昏。", author: "李商隐" },
+  { text: "东边日出西边雨，道是无晴却有晴。", author: "刘禹锡" },
+  { text: "沉舟侧畔千帆过，病树前头万木春。", author: "刘禹锡" },
+  { text: "独在异乡为异客，每逢佳节倍思亲。", author: "王维" },
+  { text: "劝君更尽一杯酒，西出阳关无故人。", author: "王维" },
+  { text: "明月松间照，清泉石上流。", author: "王维" },
+  { text: "大漠孤烟直，长河落日圆。", author: "王维" },
+  { text: "欲穷千里目，更上一层楼。", author: "王之涣" },
+  { text: "黄河远上白云间，一片孤城万仞山。", author: "王之涣" },
+  { text: "停车坐爱枫林晚，霜叶红于二月花。", author: "杜牧" },
+  { text: "南朝四百八十寺，多少楼台烟雨中。", author: "杜牧" },
+  { text: "商女不知亡国恨，隔江犹唱后庭花。", author: "杜牧" },
+  { text: "春色满园关不住，一枝红杏出墙来。", author: "叶绍翁" },
+  { text: "接天莲叶无穷碧，映日荷花别样红。", author: "杨万里" },
+  { text: "小荷才露尖尖角，早有蜻蜓立上头。", author: "杨万里" },
+  // 宋词
+  { text: "明月几时有？把酒问青天。", author: "苏轼" },
+  { text: "但愿人长久，千里共婵娟。", author: "苏轼" },
+  { text: "大江东去，浪淘尽，千古风流人物。", author: "苏轼" },
+  { text: "欲把西湖比西子，淡妆浓抹总相宜。", author: "苏轼" },
+  { text: "寒蝉凄切，对长亭晚，骤雨初歇。", author: "柳永" },
+  { text: "衣带渐宽终不悔，为伊消得人憔悴。", author: "柳永" },
+  { text: "兴尽晚回舟，误入藕花深处。", author: "李清照" },
+  { text: "知否，知否，应是绿肥红瘦。", author: "李清照" },
+  { text: "莫道不销魂，帘卷西风，人比黄花瘦。", author: "李清照" },
+  { text: "生当作人杰，死亦为鬼雄。", author: "李清照" },
+  { text: "众里寻他千百度，蓦然回首，那人却在灯火阑珊处。", author: "辛弃疾" },
+  { text: "醉里挑灯看剑，梦回吹角连营。", author: "辛弃疾" },
+  { text: "青山遮不住，毕竟东流去。", author: "辛弃疾" },
+  { text: "问君能有几多愁，恰似一江春水向东流。", author: "李煜" },
+  { text: "剪不断，理还乱，是离愁，别是一般滋味在心头。", author: "李煜" },
+  { text: "春花秋月何时了，往事知多少。", author: "李煜" },
+  { text: "无可奈何花落去，似曾相识燕归来。", author: "晏殊" },
+  { text: "一曲新词酒一杯，去年天气旧亭台。", author: "晏殊" },
+  // 古文名句
+  { text: "君子坦荡荡，小人长戚戚。", author: "孔子" },
+  { text: "学而不思则罔，思而不学则殆。", author: "孔子" },
+  { text: "三人行，必有我师焉。", author: "孔子" },
+  { text: "己所不欲，勿施于人。", author: "孔子" },
+  { text: "知之者不如好之者，好之者不如乐之者。", author: "孔子" },
+  { text: "富贵不能淫，贫贱不能移，威武不能屈。", author: "孟子" },
+  { text: "生于忧患，死于安乐。", author: "孟子" },
+  { text: "穷则独善其身，达则兼善天下。", author: "孟子" },
+  { text: "知人者智，自知者明。", author: "老子" },
+  { text: "胜人者有力，自胜者强。", author: "老子" },
+  { text: "信言不美，美言不信。", author: "老子" },
+  { text: "合抱之木，生于毫末；九层之台，起于累土。", author: "老子" },
+  // 寓言/名句
+  { text: "锲而不舍，金石可镂。", author: "荀子" },
+  { text: "青，取之于蓝，而青于蓝。", author: "荀子" },
+  { text: "不积跬步，无以至千里；不积小流，无以成江海。", author: "荀子" },
+  { text: "祸兮福之所倚，福兮祸之所伏。", author: "老子" },
+  { text: "曲则全，枉则直，洼则盈，弊则新。", author: "老子" },
+  { text: "一屋不扫，何以扫天下。", author: "陈蕃" },
+  // 现代名句
+  { text: "最好的时光，就是现在。", author: "佚名" },
+  { text: "往后余生，风雪是你，平淡是你，清醒是你，喜欢也是你。", author: "佚名" },
+  { text: "你不必成为别人，你只需要成为你自己。", author: "佚名" },
+  { text: "生活不止眼前的苟且，还有诗和远方。", author: "高晓松" },
+  { text: "每天都是人生中最年轻的一天。", author: "佚名" },
+  { text: "做自己，爱自己，不解释。", author: "佚名" },
+  { text: "成长不是变成另一个人，而是成为更好的自己。", author: "佚名" },
+  { text: "美好的事情即将发生。", author: "佚名" },
+  { text: "你所热爱的，就是你的生活。", author: "佚名" },
+  { text: "慢慢走，欣赏啊。", author: "朱光潜" },
+  { text: "活在当下，此刻即是全部。", author: "佚名" },
+  { text: "每一天都是一份礼物。", author: "佚名" },
+  { text: "善待自己，就是善待生活。", author: "佚名" },
+  { text: "喜欢就收藏，热爱就坚持。", author: "佚名" },
+  { text: "别让将来的你，后悔现在的偷懒。", author: "佚名" },
+  { text: "时间是最公平的，每个人每天都有二十四小时。", author: "佚名" },
+  { text: "一个人的成熟，是从接受不完美开始的。", author: "佚名" },
+  { text: "所谓平淡，是把惊涛骇浪活成了细水长流。", author: "佚名" },
+  { text: "治愈自己的方式，是接受不完美的自己。", author: "佚名" },
+  { text: "内心有阳光的人，走到哪里都是晴天。", author: "佚名" },
+  { text: "你值得拥有世上所有美好的事情。", author: "佚名" },
+  // 外国名言
+  { text: "幸福是一种思维习惯。", author: "伏尔泰" },
+  { text: "宁可笑着离开，也不哭着后悔。", author: "佚名" },
+  { text: "今天做别人不愿做的事，明天你才能拥有别人没有的东西。", author: "佚名" },
+  { text: "只有那些敢于冒险失败的人，才能取得伟大的成就。", author: "肯尼迪" },
+  { text: "不要等到准备好了再出发，出发本身就是一种准备。", author: "佚名" },
+  { text: "你的时间是有限的，所以不要让别人的观点淹没你自己内心的声音。", author: "乔布斯" },
+  { text: "如果你不建造自己的梦想，别人就会雇你帮他们建造梦想。", author: "佚名" },
+  { text: "无论你认为你能还是不能，你都是对的。", author: "亨利·福特" },
+  { text: "成功没有捷径，它的代名词叫做努力。", author: "佚名" },
+  { text: "生活中没有什么可怕的东西，只有需要理解的东西。", author: "居里夫人" },
+  { text: "跌倒不可怕，可怕的是一直趴在地上。", author: "佚名" },
+  { text: "改变你能改变的，接受你不能改变的。", author: "尼布尔" },
+  { text: "勇气不是没有恐惧，而是判断有比恐惧更重要的东西。", author: "安布罗斯·比尔斯" },
+  { text: "做一个对自己诚实的人。", author: "莎士比亚" },
+  { text: "你唯一做错的事情，就是什么都不做。", author: "佚名" },
+  { text: "成为自己是最好的事情，因为别人的位置都已经有人了。", author: "王尔德" },
+  { text: "走在路上，才知道下一步在哪里。", author: "佚名" },
+  { text: "把每件普通的事做好，就是不普通。", author: "佚名" },
+  { text: "好奇心本身就是一种奖励。", author: "佚名" },
+  { text: "美丽的事物，值得珍惜。", author: "济慈" },
+  { text: "世界上只有两种人：一种是快乐的，另一种是假装不快乐的。", author: "佚名" },
+  { text: "爱自己，是一生浪漫的开始。", author: "王尔德" },
+  { text: "人生最值得庆祝的事，是你仍然在前进。", author: "佚名" },
+  { text: "每一个普通的日子，都是你生命中独一无二的一天。", author: "佚名" },
+  { text: "心怀美好，世界便美好。", author: "佚名" },
+  { text: "你比你想象的更勇敢、更强大、更聪明。", author: "小熊维尼" },
+  { text: "今天的阳光，值得被记住。", author: "佚名" }
 ];
 
 // ========== 天气 ==========
@@ -4677,8 +4799,122 @@ const jokes = [
   "狗都有人遛，我连遛弯的力气都没有 🐕",
   "人生就像一盒巧克力——打开发现已经被室友吃了 🍫",
   "问：为什么我数学不好？答：因为我从不关注负面的东西（负数）➕",
-  "现在的我：想早睡但舍不得手机，想早起但舍不得床 😫"
+  "现在的我：想早睡但舍不得手机，想早起但舍不得床 😫",
+  // ===== 扩充至365条 =====
+  "今天运动了——从沙发走到冰箱，来回两次，算有氧运动 🏃",
+  "体检报告说要少吃油腻，我回去吃了顿火锅压压惊 🍲",
+  "我不是懒，我只是在给自己的人生做战略性暂停 💤",
+  "每天喝八杯水？我连八杯奶茶都做不到 🧋",
+  "努力是努力，但首先你得有开始的念头 🌱",
+  "我的拖延症发作了，连拖延症的治疗计划都没开始 📋",
+  "发现了一个减肥妙方：只要不买秤，就永远不知道胖了多少 ⚖️",
+  "今天决定认真存钱，然后手机推送了一个优惠券 💳",
+  "人生最大的谎言：设了七个闹钟，一定能起床 ⏰",
+  "我有很多计划，它们都在手机备忘录里睡得很香 📝",
+  "今天学了一个新单词，明天就会忘，这叫高效循环学习法 📚",
+  "我的自律：把零食放到够不着的地方，然后搬个凳子去拿 🪑",
+  "昨晚梦到涨工资，结果高兴醒了，然后更睡不着 😭",
+  "买了健身卡，感觉跑步的时候精气神都不一样，虽然我还没去 🏋️",
+  "下班路上看到一只流浪猫，我们都不知道要去哪里 🐾",
+  "人生就是：星期一怕上班，星期五盼下班，周末不知道干嘛 🗓️",
+  "喝了一杯茶，感觉浑身通透，再喝一杯奶茶，感觉人间值得 🍵",
+  "我的野心到处都是，行动力只在快递到货那一刻出现 📦",
+  "工位上放了一盆绿植，它比我更适应这里的环境 🌿",
+  "今天没有摸鱼，因为摸鱼也需要精力，我今天精力不够 🐟",
+  "制定了详细的学习计划，然后满怀期待地刷了两小时短视频 📱",
+  "开会的时候在记笔记，其实在记哪家店的外卖好吃 🍱",
+  "每次点外卖都说最后一次，每次都是最后一次的最后一次 🛵",
+  "减肥第一天：今天状态不对，明天再开始 ⏳",
+  "减肥第二天：今天是周二，等下周一正式开始 📅",
+  "我决定今天要早睡，然后玩手机玩到了凌晨两点 🌙",
+  "朋友说你最近变瘦了，我：对，我有一条腿很瘦 😅",
+  "我每天都在为了更好的自己而努力——努力这件事已经持续思考三年了 🧠",
+  "好消息：今天喝了两升水。坏消息：都是奶茶 🧋",
+  "最近手机快没电是唯一能让我停下来的方式 🔋",
+  "花了半小时找眼镜，找到了发现原来戴着 👓",
+  "下定决心整理房间，先坐下来喝杯茶缓缓——然后就忘了 🫖",
+  "听说保持好奇心能让人年轻，我对薪资涨幅保持了极高的好奇心 💰",
+  "上班八小时，摸鱼七小时，剩下一小时喝水上厕所 🚰",
+  "和朋友说今天好累，他说我也是，然后我们聊了两个小时 😄",
+  "今天做了一个艰难的决定：不做任何艰难的决定 🤔",
+  "我对生活充满热情，只是热情存放在被子里 🛏️",
+  "出门前确认：手机有电，钱包有钱，人有灵魂——灵魂这项还需核实 👻",
+  "家里最勤劳的是扫地机器人，第二勤劳的是路由器 🤖",
+  "最近控制了购物欲，手机加购了三十样没付款，叫做精神满足 🛒",
+  "周末计划充实，结果充实了睡眠 😴",
+  "我的年度目标：把去年的年度目标看一遍 🎯",
+  "又是搬砖的一天，砖没搬多少，腰倒是疼了 🧱",
+  "决定少吃点，然后吃了个小份，再配了个大份 🍽️",
+  "买了跑步机，它现在是最贵的晾衣架 👕",
+  "开始养成早起习惯：闹钟设了，闹钟关了，习惯没养成 ⏰",
+  "年轻人的睡眠质量：睡前焦虑，睡中做梦，睡后更累 😪",
+  "健康饮食第一天：沙拉。第二天：沙拉配薯条。第三天：放弃 🥗",
+  "每次开视频会议都要检查三遍背景，结果还是被发现在躺着 🛋️",
+  "打开书本，书签还停在三个月前的那一页 📖",
+  "我不是没有时间，是时间没有我 ⌛",
+  "存钱是什么感觉？我正在研究 💸",
+  "朋友圈晒美食，我在想他是不是也在家点的外卖 🍜",
+  "每天都在进步，至少今天比昨天多刷了五条视频 📲",
+  "想了很多道理，还是过不好这一天——但道理是真的有很多 💭",
+  "和自己谈恋爱第八百天，对方仍然不配合 💝",
+  "今日份的努力：认真上完了一节网课的开头 🎓",
+  "年纪越大，越觉得沉默是金——懒得开口 🤫",
+  "换了个漂亮的台历，但还是不知道今天是几号 📆",
+  "我的自制力：对薯片说「就吃最后一片」，已经说了二十次 🍟",
+  "心情不好吃点东西，心情好也吃点东西，这是辩证唯物主义 🍰",
+  "我最擅长的运动是翻身 🛌",
+  "把「等我瘦了」和「等我有钱了」作为两个长期目标稳步推进 📌",
+  "走路去便利店买零食，这叫边运动边生活 🚶",
+  "今晚好好睡——说了三年了 🌛",
+  "发现了一个快乐：什么都不想，什么都不做，然后继续 😌",
+  "早上七点立志，中午十二点继续睡，下午三点重新立志 🔄",
+  "我的年假规划：把请假的日期标好了，然后没请 🏖️",
+  "花时间整理桌面，整理完发现什么都找不到了 🗂️",
+  "给自己设了一个「停止刷手机」提醒，每次提醒来了我都用手机关掉它 📲",
+  "睡前明明困到不行，躺下来就精神了，这叫「夜晚的背刺」 🌚",
+  "今日待办事项：1. 写待办事项 2. 完成 ✅",
+  "上班就是：开会——讨论开会的问题——再开会解决上次开会遗留的问题 🔁",
+  "我的大脑：工作时候放空，休息时候反刍 🐄",
+  "想买的东西加进购物车，看了三天，降价了，还是没买 🛍️",
+  "周一综合症：对，就是觉得周一不应该存在的那种 😤",
+  "好友发来「在吗」，我盯着屏幕看了五分钟，然后说「刚看到」 👁️",
+  "人生就像自助餐——想全拿，装不下，最后有点浪费 🍽️",
+  "洗了个澡感觉人生重启，然后坐在床上继续发呆 🚿",
+  "存了一个「值得一看」的视频收藏夹，里面有三百个没看过的视频 🎬",
+  "今天情绪很稳定，我的情绪和心跳一样——基本静止 💓",
+  "下班后不想做饭，叫了外卖，等待的时候想做的饭到了 🛵",
+  "朋友问：你有梦想吗？我：有，今晚就要实现——睡个好觉 🌟",
+  "做了一个无比正确的决定：今天不做决定 🤝",
+  "成年人的自律：戒掉糖，戒掉奶茶，戒了两天，烫伤口了就算了 🧁",
+  "想换个发型，结果理发师只是帮我剪了个一样的 ✂️",
+  "进入超市只买一样东西的成功率为零 🛒",
+  "洗碗机是家里最努力的成员，没有之一 🍽️",
+  "有些梦想正在发酵，但需要更长时间——比如变有钱这件事 🍞",
+  "存了好多想看的书，结果用书架当装饰了 📚",
+  "手机里有一百个截图，里面是「以后要做的事」，从未打开 📁",
+  "花了三十分钟选背景音乐，然后十分钟做完了正事 🎵",
+  "每次跑步app推送「你已经三天没运动了」，我都感谢它的关心，然后关掉 🏅",
+  "我和完美主义者的区别：他们觉得不够好所以不交，我是根本就没做 🎭",
+  "问：为什么成年人睡不着？答：因为白天睡够了 😴",
+  "喝了杯咖啡提神，结果神提了，觉没了 ☕",
+  "计划赶不上变化，所以我放弃了计划，专注于变化 🌊",
+  "脑子里把邮件写了十遍，发出去的版本：「好的，收到」 📧",
+  "翻出一年前立的旗，感觉像在读一个陌生人的日记 🚩",
+  "如果焦虑能燃烧卡路里，我早就瘦了 🔥",
+  "说「在家办公效率更高」的人，你们家里没有床吗 🛌",
+  "节后综合症的最高境界：连节假日也觉得累 😵",
+  "深夜刷视频时：这个学了能用！早上起来：能用啥来着 🌄"
 ];
+
+// 笑话洗牌队列，确保每轮不重复
+let jokePool = [];
+function getNextJoke() {
+  if (jokePool.length === 0) {
+    // 重新洗牌整个笑话库
+    jokePool = [...jokes].sort(() => Math.random() - 0.5);
+  }
+  return jokePool.pop();
+}
 
 const bubbleColors = [
   'radial-gradient(circle at 30% 30%, #ff9a9e, #fad0c4)',
@@ -4877,7 +5113,7 @@ function startCatch() {
             playClawSound('pop');
             flash.classList.remove('show');
             setTimeout(async () => {
-              const joke = jokes[Math.floor(Math.random() * jokes.length)];
+              const joke = getNextJoke();
               document.getElementById('claw-machine-main').style.display = 'none';
               document.getElementById('joke-result').style.display = 'flex';
               document.getElementById('joke-text').textContent = joke;
@@ -5890,11 +6126,12 @@ function startShake() {
         };
       }
       
-      // 预加载签图，图片就绪后再显示结果页（避免先显示空白区域）
+      // 预加载签图，图片就绪后再显示结果页
       const img = new Image();
+      // 加个时间戳强制绕过缓存，解决 GitHub Pages 上 GIF 不刷新问题
       img.onload = () => showSignResult();
-      img.onerror = () => showSignResult(); // 加载失败也正常跳转
-      img.src = 'signs/' + currentSign.num + '.gif';
+      img.onerror = () => showSignResult();
+      img.src = 'signs/' + currentSign.num + '.gif?v=' + Date.now();
       
       saveSignRecord();
     }, 800);
@@ -5906,8 +6143,8 @@ function showSignResult() {
   const page = document.getElementById('sign-result-page');
   page.style.display = 'flex';
   
-  // 图片已由预加载的 Image 对象加载完毕，直接 set src 浏览器会命中缓存，立即显示
-  document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif';
+  // 直接用当前签号构建 URL（预加载的 img 对象在外部作用域，此处重新赋值确保显示）
+  document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif?v=' + Date.now();
   
   playClawSound('grab');
 }
@@ -6150,14 +6387,37 @@ function showSignHistory() {
     list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
     return;
   }
-  list.innerHTML = records.map(r => `
-    <div class="sign-history-item">
+  list.innerHTML = records.map((r, idx) => `
+    <div class="sign-history-item" onclick="openSignFromHistory(${r.num})" style="cursor:pointer;">
       <div class="sh-top">
         <span class="sh-num">第${r.num}签 · ${r.level}</span>
         <span class="sh-date">${r.date} ${r.time}</span>
       </div>
       <div class="sh-poem">${r.poem.replace(/\n/g, ' / ')}</div>
+      <div style="text-align:right;font-size:11px;color:var(--accent);margin-top:6px;">点击查看解签 ›</div>
     </div>`).join('');
+}
+
+// 从历史记录点击跳转到解签页
+function openSignFromHistory(signNum) {
+  const fullData = (typeof signFullData !== 'undefined' && signFullData[signNum]) || null;
+  if (fullData) {
+    currentSign = {
+      num: signNum,
+      level: fullData.level,
+      ancient: fullData.ancient,
+      poem: fullData.poem,
+      summary: fullData.poyi || '',
+      detail: fullData.detail || '',
+      items: fullData.items || {}
+    };
+  } else {
+    const fallback = guanyinSigns.find(s => s.num === signNum);
+    currentSign = fallback || { num: signNum, level: '中签', ancient: '观音灵签', poem: '' };
+  }
+  // 隐藏历史页，直接进解签页
+  document.getElementById('sign-history-page').style.display = 'none';
+  showInterpret();
 }
 
 // ========== Tab 导航 ==========
