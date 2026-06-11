@@ -7120,25 +7120,27 @@ async function shareAsCard() {
   const entries = getEntries();
   if (entries.length === 0) return;
   
-  // 获取详情页的卡片DOM
   const diaryPage = document.querySelector('#diary-container .diary-page');
   if (!diaryPage) return;
   
-  // 用 html2canvas 直接截图（100%还原页面渲染效果，1:1 清晰度）
+  // ★ 截图前将天气区域替换为纯文本，避免 iOS canvas 跨域污染
+  const weatherEl = document.getElementById('weather-display');
+  const weatherBak = weatherEl ? weatherEl.innerHTML : null;
+  if (weatherEl) weatherEl.innerHTML = '';
+  
   try {
     const canvas = await html2canvas(diaryPage, {
       scale: window.devicePixelRatio || 3,
       useCORS: true,
       backgroundColor: null,
       logging: false,
-      allowTaint: false,        // 不允许污染 canvas（严格模式）
+      allowTaint: false,
       foreignObjectRendering: false,
-      imageTimeout: 0,          // 跳过加载超时的图片
-      ignoreElements: (el) => {
-        // 忽略可能引入跨域的天气图标区域
-        return el.id === 'weather-display';
-      }
+      imageTimeout: 0,
     });
+    
+    // ★ 截图完立即还原天气内容
+    if (weatherEl && weatherBak !== null) weatherEl.innerHTML = weatherBak;
     
     // 在截图下方添加水印
     const finalCanvas = document.createElement('canvas');
@@ -7173,6 +7175,8 @@ async function shareAsCard() {
     }, 'image/png');
   } catch(e) {
     console.log('html2canvas failed:', e);
+    // 失败时也要还原天气内容
+    if (weatherEl && weatherBak !== null) weatherEl.innerHTML = weatherBak;
     alert('生成卡片失败：' + (e && e.message ? e.message : String(e)));
   }
 }
