@@ -3757,6 +3757,10 @@ if (currentUsername) {
         src.connect(ctx.destination);
         src.start(0);
         audioCtx = ctx;
+        // ★ AudioContext 激活后，立刻播一次风铃（闪屏期间的补播）
+        if (document.getElementById('splash-screen').style.display === 'flex') {
+          playWindChimeSound();
+        }
       } catch(e) {}
       // 尝试全屏
       try {
@@ -6906,7 +6910,19 @@ function switchTab(tab) {
   const tabs = ['laugh', 'happy', 'shred', 'luck', 'me'];
   const idx = tabs.indexOf(tab);
   document.querySelectorAll('.tab-item')[idx].classList.add('active');
-  
+
+  // 哈哈机时 tab-bar 改深棕色衔接游戏背景，其他 tab 恢复默认
+  const tabBar = document.getElementById('tab-bar');
+  if (tab === 'laugh') {
+    tabBar.style.background = '#2c1810';
+    tabBar.style.borderTopColor = 'rgba(255,215,0,0.1)';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#bcaaa4');
+    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#ffd700');
+  } else {
+    tabBar.style.background = '';
+    tabBar.style.borderTopColor = '';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '');
+  }
   // 隐藏详情页（如果在看详情页）
   document.getElementById('detail-view').style.display = 'none';
   // 显示Tab栏
