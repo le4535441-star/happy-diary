@@ -3469,6 +3469,19 @@ async function doLogin() {
   if (!email.includes('@')) { showError('请输入有效的邮箱'); return; }
   if (password.length < 4) { showError('密码至少4位'); return; }
   
+  // ★ 在用户点击登录的交互事件里立即激活 AudioContext
+  // 这是 iOS Safari 允许的唯一时机，后续所有音效都能直接使用已激活的 ctx
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    audioCtx = ctx; // 缓存已激活的 ctx 供后续所有音效使用
+  } catch(e) {}
+  
   // 显示加载状态
   const btn = document.getElementById('login-btn');
   const originalText = btn.textContent;
@@ -3713,18 +3726,30 @@ async function initCloudSyncAndRefresh() {
 if (currentUsername) {
   document.getElementById('login-screen').style.display = 'none';
   document.addEventListener('DOMContentLoaded', () => {
-    // 自动登录时也尝试全屏（需要用户首次交互触发，绑在第一次 touchstart/click 上）
-    const tryFullscreen = () => {
+    // 自动登录时绑在第一次用户交互上（触摸/点击），一次性激活 AudioContext + 全屏
+    const onFirstInteraction = async () => {
+      // 激活 AudioContext（iOS 要求必须在用户交互事件里）
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        await ctx.resume();
+        const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        audioCtx = ctx;
+      } catch(e) {}
+      // 尝试全屏
       try {
         const el = document.documentElement;
         const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
         if (req) req.call(el).catch(() => {});
       } catch(e) {}
-      document.removeEventListener('touchstart', tryFullscreen);
-      document.removeEventListener('click', tryFullscreen);
+      document.removeEventListener('touchstart', onFirstInteraction);
+      document.removeEventListener('click', onFirstInteraction);
     };
-    document.addEventListener('touchstart', tryFullscreen, { once: true });
-    document.addEventListener('click', tryFullscreen, { once: true });
+    document.addEventListener('touchstart', onFirstInteraction, { once: true });
+    document.addEventListener('click', onFirstInteraction, { once: true });
     showSplashThenApp();
   });
 }
