@@ -2573,12 +2573,23 @@ body {
       </div>
       <!-- 右上角两个圆球按钮（在游戏进行时显示，笑话弹出时被盖住） -->
       <div id="game-btns" style="position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:10px;z-index:100;">
-        <!-- 第一个球：滑动手势图标（开始接泡泡） -->
+        <!-- 第一个球：开始游戏，用 SVG 手势图案，避免 iOS 长按菜单 -->
         <button id="claw-btn" onclick="startCatch()"
           style="width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
                  background:linear-gradient(135deg,#ffd700,#ffb300);
-                 color:#2c1810;font-size:24px;display:flex;align-items:center;justify-content:center;
-                 box-shadow:0 4px 14px rgba(255,215,0,0.5);">👆</button>
+                 display:flex;align-items:center;justify-content:center;
+                 -webkit-user-select:none;user-select:none;
+                 box-shadow:0 4px 14px rgba(255,215,0,0.5);">
+          <svg width="26" height="26" viewBox="0 0 26 26" style="pointer-events:none;">
+            <!-- 手掌+手指，向右滑动图标 -->
+            <g fill="#2c1810">
+              <rect x="4" y="11" width="18" height="2.5" rx="1.2"/>
+              <polygon points="16,7 23,12.25 16,17.5"/>
+              <rect x="10" y="17" width="2" height="5" rx="1"/>
+              <rect x="14" y="17" width="2" height="5" rx="1"/>
+            </g>
+          </svg>
+        </button>
         <!-- 第二个球：泡泡池（只显示数量角标） -->
         <div onclick="toggleBubblePool()" id="bubble-pool-entry"
           style="width:52px;height:52px;border-radius:50%;cursor:pointer;position:relative;
@@ -5440,7 +5451,7 @@ function showClawGame() {
   document.getElementById('joke-result').style.display = 'none';
   document.getElementById('bubble-pool-view').style.display = 'none';
   document.getElementById('claw-btn').disabled = false;
-  document.getElementById('claw-btn').textContent = '👆';
+  document.getElementById('claw-btn').innerHTML = '<svg width="26" height="26" viewBox="0 0 26 26" style="pointer-events:none;"><g fill="#2c1810"><rect x="4" y="11" width="18" height="2.5" rx="1.2"/><polygon points="16,7 23,12.25 16,17.5"/><rect x="10" y="17" width="2" height="5" rx="1"/><rect x="14" y="17" width="2" height="5" rx="1"/></g></svg>';
   document.getElementById('catch-flash').classList.remove('show');
   document.getElementById('claw-machine-main').style.display = 'flex';
   const runner = document.getElementById('runner');
@@ -5831,7 +5842,7 @@ function replayClawGame() {
   document.getElementById('joke-result').style.display = 'none';
   document.getElementById('claw-machine-main').style.display = 'flex';
   document.getElementById('claw-btn').disabled = false;
-  document.getElementById('claw-btn').textContent = '👆';
+  document.getElementById('claw-btn').innerHTML = '<svg width="26" height="26" viewBox="0 0 26 26" style="pointer-events:none;"><g fill="#2c1810"><rect x="4" y="11" width="18" height="2.5" rx="1.2"/><polygon points="16,7 23,12.25 16,17.5"/><rect x="10" y="17" width="2" height="5" rx="1"/><rect x="14" y="17" width="2" height="5" rx="1"/></g></svg>';
   document.getElementById('catch-flash').classList.remove('show');
   const runner = document.getElementById('runner');
   runner.classList.remove('running');
