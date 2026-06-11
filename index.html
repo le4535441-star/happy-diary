@@ -4265,8 +4265,9 @@ function toggleTag(el) {
 
 // ========== 音效系统（Web Audio API）稳定版 ==========
 let audioCtx = null;
+let _audioUnlockPromise = null; // 防止并发多次 unlock
 
-// 懒初始化，只在用户交互时创建 AudioContext（避免 suspended 问题）
+// 获取或创建 AudioContext（懒初始化）
 function getAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -4274,37 +4275,45 @@ function getAudioCtx() {
   return audioCtx;
 }
 
-// 核心：确保 AudioContext 处于 running 状态，返回 Promise
+// 核心：确保 AudioContext 处于 running 状态，返回可用的 ctx
+// 如果已经在 unlock 中，等待同一个 promise 防止并发
 async function ensureAudioRunning() {
   const ctx = getAudioCtx();
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
+  if (ctx.state === 'running') return ctx;
+  
+  if (!_audioUnlockPromise) {
+    _audioUnlockPromise = (async () => {
+      try {
+        if (ctx.state === 'suspended') await ctx.resume();
+        // 播一个极短静音 buffer，彻底激活 iOS WebAudio 引擎
+        const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        await new Promise(r => setTimeout(r, 50)); // 给引擎 50ms 启动
+      } catch(e) {}
+      _audioUnlockPromise = null;
+    })();
   }
+  await _audioUnlockPromise;
   return ctx;
 }
 
-// iOS Safari 解锁：每次用户交互时都尝试 resume（不依赖 flag）
-// 原因：页面刷新后 AudioContext 重新进入 suspended，需要重新解锁
+// 每次用户交互都尝试解锁，采用防抖避免频繁调用
+let _unlockThrottle = 0;
 async function unlockAudio() {
-  try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-    // 额外播放静音 buffer 确保解锁（某些 iOS 版本需要）
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-  } catch(e) {}
+  const now = Date.now();
+  if (now - _unlockThrottle < 500) return; // 500ms 内不重复解锁
+  _unlockThrottle = now;
+  await ensureAudioRunning();
 }
 
-// 持续监听所有可能的用户交互，每次都尝试（页面刷新后必须重新解锁）
+// 监听所有可能的用户交互事件
 document.addEventListener('touchstart', unlockAudio, { passive: true });
 document.addEventListener('touchend', unlockAudio, { passive: true });
 document.addEventListener('click', unlockAudio, { passive: true });
-document.addEventListener('keydown', unlockAudio, { passive: true });
+document.addEventListener('pointerdown', unlockAudio, { passive: true });
 
 // 快乐音效：清脆的叮咚上升音
 async function playHappySound() {
@@ -4952,16 +4961,19 @@ function startFallingBubbles() {
   container.innerHTML = '';
   bubbleObjs = [];
   
-  // 创建持续下落的泡泡
-  for (let i = 0; i < 8; i++) {
-    spawnBubble(container, Math.random() * 3);
+  // 创建8个泡泡，保证至少1个是emoji球（第几个是emoji随机决定）
+  const totalBalls = 8;
+  const guaranteedEmojiIdx = Math.floor(Math.random() * totalBalls); // 随机一个位置强制为emoji
+  for (let i = 0; i < totalBalls; i++) {
+    spawnBubble(container, Math.random() * 3, i === guaranteedEmojiIdx);
   }
 }
 
-function spawnBubble(container, delay) {
+function spawnBubble(container, delay, forceEmoji = false) {
   const bubble = document.createElement('div');
   bubble.className = 'fall-bubble';
-  const isEmoji = Math.random() < 0.2;
+  // forceEmoji=true 时强制为 emoji 球，否则 20% 随机概率
+  const isEmoji = forceEmoji || Math.random() < 0.2;
   let color;
   let size;
   if (isEmoji) {
