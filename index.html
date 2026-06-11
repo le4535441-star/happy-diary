@@ -159,8 +159,8 @@ body {
 /* 日记页面容器 */
 .diary-container {
   position: absolute;
-  top: 44px;      /* detail-top-bar 高度 */
-  bottom: 76px;   /* bottom-bar 高度 */
+  top: 20px;      /* 去掉 detail-top-bar 占用，留少量上边距 */
+  bottom: 68px;   /* bottom-bar 高度 */
   left: 0;
   right: 0;
   display: flex;
@@ -353,13 +353,13 @@ body {
 }
 
 .fab {
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
   color: white;
-  font-size: 24px;
+  font-size: 20px;
   box-shadow: 0 4px 16px rgba(212,149,106,0.4);
   cursor: pointer;
   display: flex;
@@ -374,7 +374,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   box-shadow: var(--shadow);
-  font-size: 18px;
+  font-size: 16px;
 }
 
 /* ========== 新增记录弹窗 ========== */
@@ -524,7 +524,6 @@ body {
 /* 诗词选择器 */
 .quote-picker {
   margin-top: 16px;
-  border: 2px solid var(--accent-soft);
   border-radius: 12px;
   padding: 12px 14px;
   background: rgba(253,246,227,0.5);
@@ -2750,9 +2749,8 @@ body {
 
   <!-- 详情页（单条记录） -->
   <div id="detail-view" style="display:none;">
-    <div class="detail-top-bar">
-      <button class="back-btn" onclick="backToPlaza()">‹ 快乐广场</button>
-    </div>
+    <!-- detail-top-bar 留空，快乐广场按钮移到底部 -->
+    <div class="detail-top-bar" style="min-height:8px;"></div>
     <div class="diary-container" id="diary-container"></div>
     
     <div class="page-indicator" id="page-indicator"></div>
@@ -2762,6 +2760,7 @@ body {
     <div class="nav-arrow nav-arrow-right" id="nav-arrow-right">›</div>
     
     <div class="bottom-bar">
+      <button class="fab secondary" onclick="backToPlaza()" title="快乐广场" style="font-size:20px;">☀️</button>
       <button class="fab" onclick="openModal()" title="记录快乐">✍️</button>
       <button class="fab secondary" onclick="editCurrentEntry()" title="编辑">✏️</button>
       <button class="fab secondary" onclick="shareAsCard()" title="分享卡片">📤</button>
