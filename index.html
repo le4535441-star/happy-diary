@@ -1205,7 +1205,10 @@ body {
   -webkit-overflow-scrolling: touch;
   background: var(--warm-bg);
 }
-.tab-page.active { display: block; }
+#tab-laugh {
+  background: linear-gradient(180deg, #2c1810 0%, #3d2519 40%, #4a2c1a 100%);
+}
+
 
 /* 问观音留白页 */
 .luck-page {
@@ -2484,7 +2487,7 @@ body {
 <div id="app">
   <!-- Tab1: 笑一声（哈哈机） -->
   <div id="tab-laugh" class="tab-page active">
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:linear-gradient(180deg,#2c1810 0%,#3d2519 40%,#4a2c1a 100%);padding:16px;">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;background:linear-gradient(180deg,#2c1810 0%,#3d2519 40%,#4a2c1a 100%);padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));">
       <div class="claw-title">🫧 哈哈机</div>
       <div class="sky-box" id="sky-box" style="width:92%;height:70vh;max-height:500px;">
         <div class="falling-bubbles" id="falling-bubbles"></div>
