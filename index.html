@@ -7122,6 +7122,10 @@ async function shareAsCard() {
   const entry = entries[currentIndex];
   if (!entry) return;
 
+  // ★ 等 ZCOOL XiaoWei 字体加载完成，Canvas 才能正确使用它
+  try { await document.fonts.load('600 22px "ZCOOL XiaoWei"'); } catch(e) {}
+  try { await document.fonts.ready; } catch(e) {}
+
   try {
     const dpr = Math.min(window.devicePixelRatio || 2, 3);
     const diaryPage = document.querySelector('#diary-container .diary-page');
@@ -7214,8 +7218,10 @@ async function shareAsCard() {
 
     // --- page-emoji: 36px ---
     // --- page-text: 20px 600 ink line-height 1.9 inline-block left ---
+    // 使用与 CSS 完全相同的字体字符串（ZCOOL XiaoWei 已通过 document.fonts.load 确保加载）
     const textFontSize = 20;
-    ctx.font = '600 '+textFontSize+'px -apple-system,"PingFang SC",sans-serif';
+    const FONT_BODY = '600 '+textFontSize+'px "ZCOOL XiaoWei","PingFang SC",serif';
+    ctx.font = FONT_BODY;
     const textLineH = textFontSize * 1.9;
     let textLines=[],tl='';
     for(let i=0;i<(entry.text||'').length;i++){
@@ -7233,7 +7239,7 @@ async function shareAsCard() {
     ctx.fillText(entry.emoji||'\u2728', cx+W/2, bodyStartY+emojiH*0.8);
 
     ctx.fillStyle=inkColor;
-    ctx.font='600 '+textFontSize+'px -apple-system,"PingFang SC",sans-serif';
+    ctx.font=FONT_BODY;
     // 正文：inline-block 居中效果 —— 以最长行宽居中，每行从同一个 X 起始
     const lineMeasures = textLines.map(l=>ctx.measureText(l).width);
     const textBlockW = Math.min(contentW, Math.max(...lineMeasures, 1));
