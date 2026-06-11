@@ -2589,6 +2589,11 @@ body {
         <!-- 回看时光 -->
         <div id="timeline-content-area" style="display:none;">
           <div class="timeline-filter">
+            <!-- 关键词搜索 -->
+            <div class="timeline-filter-row">
+              <input type="text" id="timeline-search-input" placeholder="🔍 搜索快乐关键词..." oninput="searchTimeline(this.value)" style="flex:1;padding:10px 14px;border:2px solid var(--accent-soft);border-radius:10px;font-size:14px;outline:none;background:var(--paper);color:var(--ink);">
+              <button onclick="clearTimelineSearch()" style="padding:10px 12px;background:var(--accent-soft);color:var(--ink);border:none;border-radius:10px;font-size:13px;cursor:pointer;">清除</button>
+            </div>
             <div class="timeline-filter-row">
               <input type="date" id="timeline-date-input">
               <button onclick="jumpToTimelineDate()">跳转</button>
@@ -2643,9 +2648,9 @@ body {
   <div id="tab-luck" class="tab-page">
     <!-- 摇签界面 -->
     <div class="luck-temple" id="luck-temple">
-      <div class="temple-header">🙏 观音灵签</div>
       <div class="temple-scene">
         <div class="incense-holder">🪔</div>
+        <div class="temple-header" style="margin:8px 0 12px;">🙏 观音灵签</div>
         <div class="sign-bucket" id="sign-bucket">
           <div class="bucket-body">
             <div class="bucket-sticks" id="bucket-sticks">
@@ -2763,6 +2768,7 @@ body {
       <button class="fab secondary" onclick="backToPlaza()" title="返回广场">🏠</button>
       <button class="fab secondary" onclick="openDatePicker()" title="跳转日期">📅</button>
       <button class="fab" onclick="openModal()" title="记录快乐">✍️</button>
+      <button class="fab secondary" onclick="editCurrentEntry()" title="编辑">✏️</button>
       <button class="fab secondary" onclick="shareAsCard()" title="分享卡片">📤</button>
       <button class="fab secondary" onclick="deleteCurrentEntry()" title="删除">🗑️</button>
     </div>
@@ -2831,7 +2837,7 @@ body {
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">取消</button>
-      <button class="btn-save" onclick="saveEntry()">保存 ♡</button>
+      <button class="btn-save" id="modal-save-btn" onclick="saveEntry()">保存 ♡</button>
     </div>
   </div>
 </div>
@@ -4143,11 +4149,14 @@ function switchPlazaSubTab(tab) {
     contentTimeline.style.display = 'block';
     updateTimelineTagFilter(); // 切换时同步最新标签
     _currentTimelineTag = '';
+    _currentTimelineSearch = '';
+    const searchInput = document.getElementById('timeline-search-input');
+    if (searchInput) searchInput.value = '';
     renderTimeline();
   }
 }
 
-function renderTimeline(filterDate, filterTag) {
+function renderTimeline(filterDate, filterTag, filterKeyword) {
   const entries = getEntries();
   const list = document.getElementById('timeline-list');
   
@@ -4156,7 +4165,7 @@ function renderTimeline(filterDate, filterTag) {
     return;
   }
   
-  // 按日期和标签过滤
+  // 按日期、标签、关键词过滤
   let filtered = [...entries];
   if (filterDate) {
     filtered = filtered.filter(e => e.date === filterDate);
@@ -4164,10 +4173,14 @@ function renderTimeline(filterDate, filterTag) {
   if (filterTag) {
     filtered = filtered.filter(e => e.tag && e.tag === filterTag);
   }
+  if (filterKeyword) {
+    const kw = filterKeyword.toLowerCase();
+    filtered = filtered.filter(e => e.text && e.text.toLowerCase().includes(kw));
+  }
   
   if (filtered.length === 0) {
-    const hint = filterTag ? `「${filterTag}」` : (filterDate ? filterDate : '');
-    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-light);">📅 ${hint} 没有找到记录</div>`;
+    const hint = filterKeyword ? `"${filterKeyword}"` : (filterTag ? `「${filterTag}」` : (filterDate ? filterDate : ''));
+    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-light);">🔍 ${hint} 没有找到记录</div>`;
     return;
   }
   
@@ -4206,20 +4219,34 @@ function renderTimeline(filterDate, filterTag) {
   list.innerHTML = html;
 }
 
-let _currentTimelineTag = ''; // 记住当前选中的标签
+let _currentTimelineTag = '';
+let _currentTimelineSearch = '';
 
 function filterTimelineByTag(el) {
   document.querySelectorAll('.tl-tag-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   _currentTimelineTag = el.dataset.tag || '';
   const dateInput = document.getElementById('timeline-date-input');
-  renderTimeline(dateInput.value || '', _currentTimelineTag);
+  renderTimeline(dateInput.value || '', _currentTimelineTag, _currentTimelineSearch);
 }
 
 function jumpToTimelineDate() {
   const dateInput = document.getElementById('timeline-date-input');
-  const selectedDate = dateInput.value;
-  renderTimeline(selectedDate || '', _currentTimelineTag);
+  renderTimeline(dateInput.value || '', _currentTimelineTag, _currentTimelineSearch);
+}
+
+function searchTimeline(keyword) {
+  _currentTimelineSearch = keyword.trim();
+  const dateInput = document.getElementById('timeline-date-input');
+  renderTimeline(dateInput.value || '', _currentTimelineTag, _currentTimelineSearch);
+}
+
+function clearTimelineSearch() {
+  _currentTimelineSearch = '';
+  const input = document.getElementById('timeline-search-input');
+  if (input) input.value = '';
+  const dateInput = document.getElementById('timeline-date-input');
+  renderTimeline(dateInput.value || '', _currentTimelineTag, '');
 }
 
 function openDetail(index) {
@@ -4350,6 +4377,7 @@ document.addEventListener('touchend', e => {
 // ========== 新增记录 ==========
 let uploadedImage = null;
 let selectedTag = '';
+let _editingEntryId = null; // 编辑模式时记录正在编辑的条目id，null表示新增模式
 
 // ========== 快乐类型标签管理 ==========
 // 默认标签（首次使用时写入）
@@ -4709,19 +4737,65 @@ function openModal() {
   document.getElementById('char-num').textContent = '0';
   uploadedImage = null;
   selectedTag = '';
+  _editingEntryId = null; // 新增模式
+  document.getElementById('modal-save-btn').textContent = '保存 ♡';
   document.querySelectorAll('.quick-tag.active').forEach(t => t.classList.remove('active'));
   document.getElementById('image-preview').style.display = 'none';
-  // 渲染最新的用户标签（包含自定义标签）
   renderQuickTags();
-  // 初始化诗词选择器（每次打开随机打乱顺序）
   shuffledQuotes = shuffleArray(quotes);
   currentQuoteIndex = 0;
   renderQuotePicker();
   document.getElementById('entry-text').focus();
 }
 
+// 编辑当前条目
+function editCurrentEntry() {
+  const entries = getEntries();
+  if (entries.length === 0) return;
+  const entry = entries[currentIndex];
+  if (!entry) return;
+  
+  // 用记录现有数据填充弹窗
+  document.getElementById('modal-overlay').classList.add('active');
+  document.getElementById('entry-text').value = entry.text || '';
+  document.getElementById('char-num').textContent = (entry.text || '').length;
+  uploadedImage = entry.image || null;
+  selectedTag = entry.tag || '';
+  _editingEntryId = entry.id; // 编辑模式
+  document.getElementById('modal-save-btn').textContent = '更新 ♡';
+  
+  // 显示已有图片
+  if (entry.image) {
+    const preview = document.getElementById('image-preview');
+    preview.src = entry.image;
+    preview.style.display = 'block';
+  } else {
+    document.getElementById('image-preview').style.display = 'none';
+  }
+  
+  // 渲染标签，激活已选标签
+  renderQuickTags();
+  if (entry.tag) {
+    document.querySelectorAll('.quick-tag').forEach(t => {
+      if (t.dataset.tag === entry.tag) t.classList.add('active');
+    });
+  }
+  
+  // 配文还原
+  shuffledQuotes = shuffleArray(quotes);
+  currentQuoteIndex = 0;
+  // 尝试定位到原来的配文
+  if (entry.quote && entry.quote.text) {
+    const idx = shuffledQuotes.findIndex(q => q.text === entry.quote.text);
+    if (idx >= 0) currentQuoteIndex = idx;
+  }
+  renderQuotePicker();
+  document.getElementById('entry-text').focus();
+}
+
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
+  _editingEntryId = null;
 }
 
 document.getElementById('entry-text').addEventListener('input', e => {
@@ -4772,27 +4846,62 @@ async function saveEntry() {
     return;
   }
   
-  const now = new Date();
-  const entry = {
-    id: Date.now().toString(),
-    date: now.toISOString().split('T')[0],
-    time: now.toTimeString().slice(0, 5),
-    text: text,
-    image: uploadedImage || null,
-    emoji: getRandomHappyEmoji(),
-    tag: selectedTag || '',
-    quote: getSelectedQuote()
-  };
-  
-  await addEntry(entry);
-  playHappySound();
-  currentIndex = getEntries().length - 1;
-  closeModal();
-  // 如果在广场视图，切到详情页展示新记录
-  document.getElementById('plaza-view').style.display = 'none';
-  document.getElementById('detail-view').style.display = 'block';
-  document.getElementById('tab-bar').style.display = 'none';
-  renderPage();
+  if (_editingEntryId) {
+    // ===== 编辑模式：更新现有条目 =====
+    const entries = getEntries();
+    const idx = entries.findIndex(e => e.id === _editingEntryId);
+    if (idx >= 0) {
+      const original = entries[idx];
+      const updated = {
+        ...original,
+        text: text,
+        image: uploadedImage !== null ? uploadedImage : original.image,
+        tag: selectedTag || '',
+        quote: getSelectedQuote()
+      };
+      await dbPut(updated);
+      entriesCache = await dbGetAll();
+      // 同步更新云端
+      if (cloudReady && cloudDb) {
+        try {
+          const col = cloudDb.collection('entries');
+          const res = await col.where({ _username: currentUsername, localId: _editingEntryId }).get();
+          if (res.data && res.data.length > 0) {
+            await col.doc(res.data[0]._id).update({
+              text: updated.text,
+              image: updated.image || null,
+              tag: updated.tag,
+              quote: updated.quote
+            }).catch(() => {});
+          }
+        } catch(e) {}
+      }
+    }
+    closeModal();
+    renderPage();
+    renderPlaza();
+  } else {
+    // ===== 新增模式 =====
+    const now = new Date();
+    const entry = {
+      id: Date.now().toString(),
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().slice(0, 5),
+      text: text,
+      image: uploadedImage || null,
+      emoji: getRandomHappyEmoji(),
+      tag: selectedTag || '',
+      quote: getSelectedQuote()
+    };
+    await addEntry(entry);
+    playHappySound();
+    currentIndex = getEntries().length - 1;
+    closeModal();
+    document.getElementById('plaza-view').style.display = 'none';
+    document.getElementById('detail-view').style.display = 'block';
+    document.getElementById('tab-bar').style.display = 'none';
+    renderPage();
+  }
 }
 
 // ========== 删除 ==========
