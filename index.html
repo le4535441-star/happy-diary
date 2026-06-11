@@ -2585,19 +2585,8 @@ body {
             </div>
             <!-- 快乐类型筛选 -->
             <div class="timeline-tag-filter" id="timeline-tag-filter">
+              <!-- 由 updateTimelineTagFilter() 动态渲染，切换到回看时光时自动刷新 -->
               <div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>
-              <div class="tl-tag-btn" data-tag="☕ 好喝的" onclick="filterTimelineByTag(this)">☕ 好喝的</div>
-              <div class="tl-tag-btn" data-tag="🌤️ 天气超好" onclick="filterTimelineByTag(this)">🌤️ 天气超好</div>
-              <div class="tl-tag-btn" data-tag="🐱 遇到小可爱" onclick="filterTimelineByTag(this)">🐱 遇到小可爱</div>
-              <div class="tl-tag-btn" data-tag="🍜 美食时刻" onclick="filterTimelineByTag(this)">🍜 美食时刻</div>
-              <div class="tl-tag-btn" data-tag="💕 朋友关心" onclick="filterTimelineByTag(this)">💕 朋友关心</div>
-              <div class="tl-tag-btn" data-tag="🎵 好听的歌" onclick="filterTimelineByTag(this)">🎵 好听的歌</div>
-              <div class="tl-tag-btn" data-tag="✅ 完成任务" onclick="filterTimelineByTag(this)">✅ 完成任务</div>
-              <div class="tl-tag-btn" data-tag="💪 运动流汗" onclick="filterTimelineByTag(this)">💪 运动流汗</div>
-              <div class="tl-tag-btn" data-tag="🎬 好电影" onclick="filterTimelineByTag(this)">🎬 好电影</div>
-              <div class="tl-tag-btn" data-tag="🎁 意外惊喜" onclick="filterTimelineByTag(this)">🎁 意外惊喜</div>
-              <div class="tl-tag-btn" data-tag="🧸 茸言茸语" onclick="filterTimelineByTag(this)">🧸 茸言茸语</div>
-              <div class="tl-tag-btn" data-tag="💡 灵光一现" onclick="filterTimelineByTag(this)">💡 灵光一现</div>
             </div>
           </div>
           <div class="timeline-list" id="timeline-list"></div>
@@ -4451,6 +4440,10 @@ function getAudioCtx() {
 // 核心：确保 AudioContext 处于 running 状态，返回可用的 ctx
 // 如果已经在 unlock 中，等待同一个 promise 防止并发
 async function ensureAudioRunning() {
+  // 如果 ctx 已经 closed（极罕见），重新创建
+  if (audioCtx && audioCtx.state === 'closed') {
+    audioCtx = null;
+  }
   const ctx = getAudioCtx();
   if (ctx.state === 'running') return ctx;
   
@@ -7230,10 +7223,11 @@ async function confirmClearData() {
   const btn = document.querySelector('.my-menu-item[onclick="showClearDataModal()"] .my-menu-text');
   if (btn) btn.textContent = '清除中...';
   
-  // ★ 清除前先保留头像、空间名、主题——这些是个人设置，永远不删
+  // ★ 清除前先保留头像、空间名、主题、自定义标签——这些是个人设置，永远不删
   const savedAvatar    = localStorage.getItem('hd_avatar_' + currentUsername);
   const savedSpaceName = localStorage.getItem('hd_space_name_' + currentUsername);
   const savedTheme     = localStorage.getItem('hd_theme_' + currentUsername);
+  const savedTags      = localStorage.getItem('hd_tags_' + currentUsername);
   
   try {
     // 1. 清除本地 IndexedDB 中当前用户数据（entries）
@@ -7315,10 +7309,11 @@ async function confirmClearData() {
     // 6. 无论是否清云端，都写 justCleared 标记，防止下次打开时 loading 屏自动把数据拉回来
     localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
     
-    // ★ 清除完成后立刻还原头像、空间名、主题（这些是个人设置，不属于历史数据）
+    // ★ 清除完成后立刻还原头像、空间名、主题、自定义标签
     if (savedAvatar)    localStorage.setItem('hd_avatar_' + currentUsername, savedAvatar);
     if (savedSpaceName) localStorage.setItem('hd_space_name_' + currentUsername, savedSpaceName);
     if (savedTheme)     localStorage.setItem('hd_theme_' + currentUsername, savedTheme);
+    if (savedTags)      localStorage.setItem('hd_tags_' + currentUsername, savedTags);
     
     // 7. 刷新 UI
     await loadEntries();
