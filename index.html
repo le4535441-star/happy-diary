@@ -1213,6 +1213,27 @@ body {
 /* 固定不滚动的 tab（粉碎机首页、问观音首页） */
 #tab-shred, #tab-luck {
   overflow: hidden;
+  background: transparent; /* 背景由内部容器决定 */
+}
+/* 粉碎机背景延伸 */
+#tab-shred::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: #b0bec5;
+  z-index: 0;
+}
+/* 观音背景延伸 */
+#tab-luck::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: #3e2415;
+  z-index: 0;
 }
 
 .tab-page.active { display: block; }
