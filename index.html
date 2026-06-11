@@ -2574,13 +2574,13 @@ body {
       <!-- 右上角两个圆球按钮（在游戏进行时显示，笑话弹出时被盖住） -->
       <div id="game-btns" style="position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:10px;z-index:100;">
         <!-- 第一个球：滑动手势图标（开始接泡泡） -->
-        <button id="claw-btn" onclick="startCatch()" title="开始接泡泡"
+        <button id="claw-btn" onclick="startCatch()"
           style="width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
                  background:linear-gradient(135deg,#ffd700,#ffb300);
                  color:#2c1810;font-size:24px;display:flex;align-items:center;justify-content:center;
                  box-shadow:0 4px 14px rgba(255,215,0,0.5);">👆</button>
         <!-- 第二个球：泡泡池（只显示数量角标） -->
-        <div onclick="toggleBubblePool()" id="bubble-pool-entry" title="泡泡池"
+        <div onclick="toggleBubblePool()" id="bubble-pool-entry"
           style="width:52px;height:52px;border-radius:50%;cursor:pointer;position:relative;
                  background:rgba(255,255,255,0.18);border:1.5px solid rgba(255,215,0,0.35);
                  display:flex;align-items:center;justify-content:center;
