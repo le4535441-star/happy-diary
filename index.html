@@ -739,24 +739,42 @@ body {
 
 /* 回看时光-筛选区 */
 .timeline-filter {
-  padding: 16px 0 8px;
+  padding: 12px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* 搜索框行 */
 .timeline-filter-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.timeline-filter input[type="date"] {
+/* 标签+日期并排行 */
+.timeline-filter-dual {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.timeline-filter-dual-left {
   flex: 1;
-  padding: 10px 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.timeline-filter-dual-right {
+  flex-shrink: 0;
+}
+
+.timeline-filter input[type="date"] {
+  width: 100%;
+  padding: 8px 10px;
   border: 2px solid var(--accent-soft);
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 13px;
   outline: none;
   background: var(--paper);
   color: var(--ink);
@@ -764,25 +782,25 @@ body {
 
 .timeline-filter input:focus { border-color: var(--accent); }
 
-/* 标签筛选滚动条 */
+/* 标签筛选滚动 */
 .timeline-tag-filter {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   scrollbar-width: none;
 }
 .timeline-tag-filter::-webkit-scrollbar { display: none; }
 
 .tl-tag-btn {
   flex-shrink: 0;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 20px;
   border: 1.5px solid var(--accent-soft);
   background: var(--paper);
   color: var(--ink-light);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
@@ -792,20 +810,6 @@ body {
   color: white;
   border-color: var(--accent);
 }
-
-.timeline-filter button {
-  padding: 10px 16px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.timeline-filter button:active { transform: scale(0.95); }
 
 .timeline-list { margin-top: 8px; }
 
@@ -2585,16 +2589,18 @@ body {
             <!-- 关键词搜索 -->
             <div class="timeline-filter-row">
               <input type="text" id="timeline-search-input" placeholder="🔍 搜索快乐关键词..." oninput="searchTimeline(this.value)" style="flex:1;padding:10px 14px;border:2px solid var(--accent-soft);border-radius:10px;font-size:14px;outline:none;background:var(--paper);color:var(--ink);">
-              <button onclick="clearTimelineSearch()" style="padding:10px 12px;background:var(--accent-soft);color:var(--ink);border:none;border-radius:10px;font-size:13px;cursor:pointer;">清除</button>
+              <button onclick="clearTimelineSearch()" style="padding:10px 12px;background:var(--accent-soft);color:var(--ink);border:none;border-radius:10px;font-size:13px;cursor:pointer;flex-shrink:0;">清除</button>
             </div>
-            <div class="timeline-filter-row">
-              <input type="date" id="timeline-date-input">
-              <button onclick="jumpToTimelineDate()">跳转</button>
-            </div>
-            <!-- 快乐类型筛选 -->
-            <div class="timeline-tag-filter" id="timeline-tag-filter">
-              <!-- 由 updateTimelineTagFilter() 动态渲染，切换到回看时光时自动刷新 -->
-              <div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>
+            <!-- 标签筛选（左）+ 日期筛选（右）并排 -->
+            <div class="timeline-filter-dual">
+              <div class="timeline-filter-dual-left">
+                <div class="timeline-tag-filter" id="timeline-tag-filter">
+                  <div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>
+                </div>
+              </div>
+              <div class="timeline-filter-dual-right">
+                <input type="date" id="timeline-date-input" onchange="jumpToTimelineDate()" style="width:130px;">
+              </div>
             </div>
           </div>
           <div class="timeline-list" id="timeline-list"></div>
