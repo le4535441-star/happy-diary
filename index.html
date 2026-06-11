@@ -7186,27 +7186,35 @@ function toggleClearCloud() {
 async function confirmClearData() {
   closeClearDataModal();
   
+  // ⚠️ 安全检查：必须有登录用户才能执行清除
+  if (!currentUsername) {
+    alert('未检测到登录用户，操作已取消');
+    return;
+  }
+  // 记录本次操作针对的用户，后续所有步骤都用此变量，防止异步期间 currentUsername 意外变化
+  const targetUser = currentUsername;
+  
   // 显示进度提示
   const btn = document.querySelector('.my-menu-item[onclick="showClearDataModal()"] .my-menu-text');
   if (btn) btn.textContent = '清除中...';
   
   // ★ 清除前先保留头像、空间名、主题、自定义标签——这些是个人设置，永远不删
-  const savedAvatar    = localStorage.getItem('hd_avatar_' + currentUsername);
-  const savedSpaceName = localStorage.getItem('hd_space_name_' + currentUsername);
-  const savedTheme     = localStorage.getItem('hd_theme_' + currentUsername);
-  const savedTags      = localStorage.getItem('hd_tags_' + currentUsername);
+  const savedAvatar    = localStorage.getItem('hd_avatar_' + targetUser);
+  const savedSpaceName = localStorage.getItem('hd_space_name_' + targetUser);
+  const savedTheme     = localStorage.getItem('hd_theme_' + targetUser);
+  const savedTags      = localStorage.getItem('hd_tags_' + targetUser);
   
   try {
-    // 1. 清除本地 IndexedDB 中当前用户数据（entries）
-    const localEntries = getEntries();
+    // 1. 清除本地 IndexedDB 中当前用户数据（entries）—— 只删 targetUser 的
+    const localEntries = getEntries(); // getEntries 已按 _owner 过滤，只返回 targetUser 的数据
     for (const e of localEntries) {
       await dbDelete(e.id);
     }
     entriesCache = [];
     
-    // 2. 清除本地 IndexedDB shredded
+    // 2. 清除本地 IndexedDB shredded（只删 targetUser 的）
     if (db && db.objectStoreNames.contains(SHRED_STORE)) {
-      const localShreds = await getShredRecords();
+      const localShreds = await getShredRecords(); // 已按 _owner 过滤
       await new Promise((resolve) => {
         const tx = db.transaction(SHRED_STORE, 'readwrite');
         const store = tx.objectStore(SHRED_STORE);
@@ -7216,9 +7224,9 @@ async function confirmClearData() {
       });
     }
     
-    // 3. 清除本地 IndexedDB bubblePool
+    // 3. 清除本地 IndexedDB bubblePool（只删 targetUser 的）
     if (db && db.objectStoreNames.contains(BUBBLE_POOL_STORE)) {
-      const localBubbles = await getBubblePool();
+      const localBubbles = await getBubblePool(); // 已按 _owner 过滤
       await new Promise((resolve) => {
         const tx = db.transaction(BUBBLE_POOL_STORE, 'readwrite');
         const store = tx.objectStore(BUBBLE_POOL_STORE);
@@ -7228,59 +7236,66 @@ async function confirmClearData() {
       });
     }
     
-    // 4. 同时清除云端（如果勾选）
+    // 4. 同时清除云端（如果勾选）—— where 条件严格限定 targetUser
     if (clearCloudAlso && cloudReady && cloudDb) {
       try {
-        // 清除云端 entries
+        // 清除云端 entries（只删 targetUser 的）
         const col = cloudDb.collection('entries');
         let offset = 0;
         while (true) {
-          const res = await col.where({ _username: currentUsername }).skip(offset).limit(100).get();
+          const res = await col.where({ _username: targetUser }).skip(offset).limit(100).get();
           if (!res.data || res.data.length === 0) break;
           for (const doc of res.data) {
-            await col.doc(doc._id).remove().catch(() => {});
+            // 双重确认：文档的 _username 必须匹配 targetUser
+            if (doc._username && doc._username.toLowerCase() === targetUser.toLowerCase()) {
+              await col.doc(doc._id).remove().catch(() => {});
+            }
           }
           if (res.data.length < 100) break;
         }
-        // 清除云端 shredded
+        // 清除云端 shredded（只删 targetUser 的）
         const shredCol = cloudDb.collection('shredded');
         let shredOffset = 0;
         while (true) {
-          const res = await shredCol.where({ _username: currentUsername }).skip(shredOffset).limit(100).get();
+          const res = await shredCol.where({ _username: targetUser }).skip(shredOffset).limit(100).get();
           if (!res.data || res.data.length === 0) break;
           for (const doc of res.data) {
-            await shredCol.doc(doc._id).remove().catch(() => {});
+            if (doc._username && doc._username.toLowerCase() === targetUser.toLowerCase()) {
+              await shredCol.doc(doc._id).remove().catch(() => {});
+            }
           }
           if (res.data.length < 100) break;
         }
-        // 清除云端 bubblePool
+        // 清除云端 bubblePool（只删 targetUser 的）
         const bubbleCol = cloudDb.collection('bubblePool');
         let bubbleOffset = 0;
         while (true) {
-          const res = await bubbleCol.where({ _username: currentUsername }).skip(bubbleOffset).limit(100).get();
+          const res = await bubbleCol.where({ _username: targetUser }).skip(bubbleOffset).limit(100).get();
           if (!res.data || res.data.length === 0) break;
           for (const doc of res.data) {
-            await bubbleCol.doc(doc._id).remove().catch(() => {});
+            if (doc._username && doc._username.toLowerCase() === targetUser.toLowerCase()) {
+              await bubbleCol.doc(doc._id).remove().catch(() => {});
+            }
           }
           if (res.data.length < 100) break;
         }
-        console.log('Cloud data cleared');
+        console.log('Cloud data cleared for:', targetUser);
       } catch(e) {
         console.log('Clear cloud data failed:', e.message);
       }
     }
     
-    // 5. 清除签文历史（localStorage，按用户隔离）
-    localStorage.removeItem('hd_signs_' + currentUsername);
+    // 5. 清除签文历史（localStorage，严格按 targetUser）
+    localStorage.removeItem('hd_signs_' + targetUser);
     
-    // 6. 无论是否清云端，都写 justCleared 标记，防止下次打开时 loading 屏自动把数据拉回来
-    localStorage.setItem('hd_just_cleared_' + currentUsername, '1');
+    // 6. 写 justCleared 标记（严格按 targetUser）
+    localStorage.setItem('hd_just_cleared_' + targetUser, '1');
     
-    // ★ 清除完成后立刻还原头像、空间名、主题、自定义标签
-    if (savedAvatar)    localStorage.setItem('hd_avatar_' + currentUsername, savedAvatar);
-    if (savedSpaceName) localStorage.setItem('hd_space_name_' + currentUsername, savedSpaceName);
-    if (savedTheme)     localStorage.setItem('hd_theme_' + currentUsername, savedTheme);
-    if (savedTags)      localStorage.setItem('hd_tags_' + currentUsername, savedTags);
+    // ★ 清除完成后立刻还原头像、空间名、主题、自定义标签（严格按 targetUser）
+    if (savedAvatar)    localStorage.setItem('hd_avatar_' + targetUser, savedAvatar);
+    if (savedSpaceName) localStorage.setItem('hd_space_name_' + targetUser, savedSpaceName);
+    if (savedTheme)     localStorage.setItem('hd_theme_' + targetUser, savedTheme);
+    if (savedTags)      localStorage.setItem('hd_tags_' + targetUser, savedTags);
     
     // 7. 刷新 UI
     await loadEntries();
