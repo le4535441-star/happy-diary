@@ -2126,7 +2126,8 @@ body {
 .plaza-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
+  align-items: start;
 }
 
 .plaza-card {
@@ -3941,10 +3942,10 @@ function renderPlaza() {
     return;
   }
   
-  grid.style.display = 'block';
+  grid.style.display = '';  // 使用 CSS 的 display:grid
   empty.style.display = 'none';
   
-  // 按倒序展示（最新在前）
+  // 按倒序展示（最新在前），双列 grid 布局自动排列
   let html = '';
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
