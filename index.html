@@ -2571,8 +2571,8 @@ body {
         </div>
         <div class="catch-flash" id="catch-flash">🎉 接到了！</div>
       </div>
-      <!-- 右上角两个圆球按钮 -->
-      <div style="position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:10px;z-index:200;">
+      <!-- 右上角两个圆球按钮（在游戏进行时显示，笑话弹出时被盖住） -->
+      <div id="game-btns" style="position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:10px;z-index:100;">
         <!-- 第一个球：滑动手势图标（开始接泡泡） -->
         <button id="claw-btn" onclick="startCatch()" title="开始接泡泡"
           style="width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
@@ -2595,7 +2595,7 @@ body {
       </div>
     </div>
     <!-- 笑话展示 -->
-    <div class="joke-result" id="joke-result" style="display:none;position:absolute;inset:0;background:linear-gradient(180deg,#2c1810 0%,#3d2519 100%);z-index:50;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;">
+    <div class="joke-result" id="joke-result" style="display:none;position:absolute;inset:0;background:linear-gradient(180deg,#2c1810 0%,#3d2519 100%);z-index:150;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;">
       <div class="joke-bubble-pop">🫧💥</div>
       <div class="joke-text" id="joke-text"></div>
       <button class="joke-pool-btn" onclick="toggleBubblePool()">🫧 查看我的泡泡池</button>
