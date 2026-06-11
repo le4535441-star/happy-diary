@@ -7251,7 +7251,7 @@ async function shareAsCard() {
       useCORS: true,
       backgroundColor: null,
       logging: false,
-      allowTaint: false,
+      allowTaint: true,
       foreignObjectRendering: false,
       imageTimeout: 0,
     });
@@ -7276,19 +7276,33 @@ async function shareAsCard() {
     ctx.textAlign = 'center';
     ctx.fillText('✨ 快乐小事 · 每天都有好事花生', finalCanvas.width / 2, finalCanvas.height - 20);
 
-    finalCanvas.toBlob(async (blob) => {
-      if (!blob) { alert('生成失败，请重试'); return; }
-      if (navigator.share) {
+    // ★ 优先 toBlob，失败时（tainted canvas）降级用 toDataURL → Blob
+    const getBlob = () => new Promise((resolve) => {
+      try {
+        finalCanvas.toBlob(b => resolve(b), 'image/png');
+      } catch(e) {
         try {
-          const file = new File([blob], 'happy-card.png', { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: '快乐小事' });
-            return;
-          }
-        } catch(e) {}
+          const du = finalCanvas.toDataURL('image/png');
+          const arr = du.split(','), mime = arr[0].match(/:(.*?);/)[1];
+          const bstr = atob(arr[1]); let n = bstr.length;
+          const u8 = new Uint8Array(n); while(n--) u8[n] = bstr.charCodeAt(n);
+          resolve(new Blob([u8], { type: mime }));
+        } catch(e2) { resolve(null); }
       }
-      downloadCard(blob);
-    }, 'image/png');
+    });
+
+    const blob = await getBlob();
+    if (!blob) { alert('生成失败，请重试'); return; }
+    if (navigator.share) {
+      try {
+        const file = new File([blob], 'happy-card.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: '快乐小事' });
+          return;
+        }
+      } catch(e) {}
+    }
+    downloadCard(blob);
 
   } catch(e) {
     try { document.body.removeChild(clone); } catch(_) {}
