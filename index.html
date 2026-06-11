@@ -3599,6 +3599,8 @@ async function showSplashThenApp() {
       document.getElementById('splash-quote').innerHTML = '';
     }
     splash.style.display = 'flex';
+    // 闪屏出现时播放风铃音效
+    setTimeout(() => playWindChimeSound(), 400);
     
     // 3 秒后进入主界面，同时启动云同步
     setTimeout(async () => {
@@ -4503,6 +4505,68 @@ document.addEventListener('touchstart', unlockAudio, { passive: true });
 document.addEventListener('touchend', unlockAudio, { passive: true });
 document.addEventListener('click', unlockAudio, { passive: true });
 document.addEventListener('pointerdown', unlockAudio, { passive: true });
+
+// 闪屏风铃音效：模拟自然风吹过风铃，多个随机音高的泛音串联
+async function playWindChimeSound() {
+  try {
+    const ctx = await ensureAudioRunning();
+    if (!ctx) return;
+
+    // 风铃音高组（以 C5 为基准，自然泛音列）
+    const baseFreqs = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+    
+    // 随机选 5~7 个音，模拟风吹散落的感觉
+    const count = 5 + Math.floor(Math.random() * 3);
+    const shuffled = [...baseFreqs].sort(() => Math.random() - 0.5).slice(0, count);
+    
+    // 背景"风"噪声（很轻的白噪声，给整体加一层自然感）
+    const bufSize = ctx.sampleRate * 0.8;
+    const windBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const windData = windBuf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) windData[i] = (Math.random() * 2 - 1) * 0.015;
+    const windSrc = ctx.createBufferSource();
+    windSrc.buffer = windBuf;
+    const windGain = ctx.createGain();
+    windGain.gain.setValueAtTime(0, ctx.currentTime);
+    windGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.15);
+    windGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.5);
+    windGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
+    windSrc.connect(windGain);
+    windGain.connect(ctx.destination);
+    windSrc.start();
+    
+    // 逐个敲响铃声
+    shuffled.forEach((freq, i) => {
+      const delay = i * (0.12 + Math.random() * 0.18); // 随机间隔，更自然
+      const gain = ctx.createGain();
+      const masterGain = 0.22 + Math.random() * 0.12; // 每个铃声音量略不同
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(masterGain, ctx.currentTime + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 1.4 + Math.random() * 0.4);
+      gain.connect(ctx.destination);
+      
+      // 主音（正弦波）
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+      osc.connect(gain);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 2);
+      
+      // 泛音（第2泛音，更真实的铃声音色）
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2.756, ctx.currentTime + delay); // 非整数倍，铃声特征
+      const gain2 = ctx.createGain();
+      gain2.gain.setValueAtTime(masterGain * 0.35, ctx.currentTime + delay);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.6);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + delay);
+      osc2.stop(ctx.currentTime + delay + 0.8);
+    });
+  } catch(e) {}
+}
 
 // 快乐音效：清脆的叮咚上升音
 async function playHappySound() {
@@ -5981,6 +6045,7 @@ async function initCloudSync() {
     // 双向同步
     await syncFromCloud();
     await syncLocalToCloud();
+    await syncSignsFromCloud(); // 恢复签文历史
     await loadProfileFromCloud();
     console.log('Cloud sync completed');
   } catch(e) {
@@ -6528,22 +6593,70 @@ function stopShakeSound() {
 // 签文存储
 function saveSignRecord() {
   const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-  records.unshift({
+  const newRecord = {
     num: currentSign.num,
     level: currentSign.level,
     ancient: currentSign.ancient,
     poem: currentSign.poem,
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5)
-  });
-  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(records.slice(0, 100)));
+  };
+  records.unshift(newRecord);
+  const trimmed = records.slice(0, 100);
+  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(trimmed));
   updateSignCount();
+  
+  // 同步新签文记录到云端 signs 集合
+  if (cloudReady && cloudDb) {
+    cloudDb.collection('signs').add({
+      ...newRecord,
+      _username: currentUsername
+    }).catch(() => {});
+  }
 }
 
 function updateSignCount() {
   const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   const el = document.getElementById('sign-count');
   if (el) el.textContent = records.length;
+}
+
+// 从云端恢复签文历史（清缓存/新设备登录时）
+async function syncSignsFromCloud() {
+  if (!cloudReady || !cloudDb) return;
+  try {
+    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+    const localKeys = new Set(local.map(r => r.date + r.time + r.num));
+    
+    const col = cloudDb.collection('signs');
+    let allCloud = [];
+    let offset = 0;
+    while (true) {
+      const res = await col.where({ _username: currentUsername }).skip(offset).limit(100).get();
+      if (!res.data || res.data.length === 0) break;
+      allCloud = allCloud.concat(res.data);
+      if (res.data.length < 100) break;
+      offset += 100;
+    }
+    
+    // 把云端有、本地没有的补进来
+    let added = 0;
+    for (const r of allCloud) {
+      const key = r.date + r.time + r.num;
+      if (!localKeys.has(key)) {
+        local.push({ num: r.num, level: r.level, ancient: r.ancient, poem: r.poem, date: r.date, time: r.time });
+        added++;
+      }
+    }
+    if (added > 0) {
+      // 按时间倒序排列
+      local.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(local.slice(0, 100)));
+      updateSignCount();
+    }
+  } catch(e) {
+    console.log('syncSignsFromCloud failed:', e.message);
+  }
 }
 
 function showSignHistory() {
