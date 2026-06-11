@@ -7119,72 +7119,191 @@ async function exportData() {
 async function shareAsCard() {
   const entries = getEntries();
   if (entries.length === 0) return;
-  
   const entry = entries[currentIndex];
   if (!entry) return;
 
-  const diaryPage = document.querySelector('#diary-container .diary-page');
-  if (!diaryPage) return;
-
   try {
-    // allowTaint:true 让 html2canvas 能读取背景图+天气内容
-    // 避免 toBlob insecure：改用 toDataURL，再转 Blob
-    const canvas = await html2canvas(diaryPage, {
-      scale: window.devicePixelRatio || 3,
-      useCORS: true,
-      backgroundColor: null,
-      logging: false,
-      allowTaint: true,
-      foreignObjectRendering: false,
-      imageTimeout: 0,
-    });
+    const dpr = Math.min(window.devicePixelRatio || 2, 3);
+    // 量取卡片真实尺寸（已经去掉 top-bar，full height）
+    const diaryPage = document.querySelector('#diary-container .diary-page');
+    const rect = diaryPage ? diaryPage.getBoundingClientRect() : { width: 340, height: 540 };
+    const W = Math.round(rect.width);
+    const H = Math.round(rect.height);
+    const PAD = 36;
+    const WM_H = 44;
 
-    // 在截图下方添加水印
-    const finalCanvas = document.createElement('canvas');
-    const padding = 40;
-    const watermarkH = 50;
-    finalCanvas.width  = canvas.width  + padding * 2;
-    finalCanvas.height = canvas.height + padding * 2 + watermarkH;
-    const ctx = finalCanvas.getContext('2d');
-    
+    const canvas = document.createElement('canvas');
+    canvas.width  = (W + PAD * 2) * dpr;
+    canvas.height = (H + PAD * 2 + WM_H) * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
     const cs = getComputedStyle(document.documentElement);
-    ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
-    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-    ctx.drawImage(canvas, padding, padding);
-    
-    ctx.font = '24px "PingFang SC", sans-serif';
-    ctx.fillStyle = cs.getPropertyValue('--gold').trim() || '#c8a45c';
+    const paperColor  = cs.getPropertyValue('--paper').trim()      || '#fffef9';
+    const warmBg      = cs.getPropertyValue('--warm-bg').trim()     || '#fdf6e3';
+    const inkColor    = cs.getPropertyValue('--ink').trim()         || '#2c2016';
+    const accentColor = cs.getPropertyValue('--accent').trim()      || '#d4956a';
+    const inkLight    = cs.getPropertyValue('--ink-light').trim()   || '#8d7f74';
+    const goldColor   = cs.getPropertyValue('--gold').trim()        || '#c8a45c';
+    const accentSoft  = cs.getPropertyValue('--accent-soft').trim() || '#f0d9c4';
+
+    // 外部背景
+    ctx.fillStyle = warmBg;
+    ctx.fillRect(0, 0, W + PAD * 2, H + PAD * 2 + WM_H);
+
+    // 卡片圆角背景
+    const r = 20;
+    const cx = PAD, cy = PAD;
+    ctx.fillStyle = paperColor;
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.lineTo(cx + W - r, cy);
+    ctx.arcTo(cx + W, cy, cx + W, cy + r, r);
+    ctx.lineTo(cx + W, cy + H - r);
+    ctx.arcTo(cx + W, cy + H, cx + W - r, cy + H, r);
+    ctx.lineTo(cx + r, cy + H);
+    ctx.arcTo(cx, cy + H, cx, cy + H - r, r);
+    ctx.lineTo(cx, cy + r);
+    ctx.arcTo(cx, cy, cx + r, cy, r);
+    ctx.closePath();
+    ctx.fill();
+
+    // 裁切到卡片区域（保证背景图不溢出圆角）
+    ctx.save();
+    ctx.clip();
+
+    // 背景图（如果有）
+    if (entry.image) {
+      await new Promise((res) => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.globalAlpha = 0.2;
+          ctx.drawImage(img, cx, cy, W, H);
+          ctx.globalAlpha = 1;
+          res();
+        };
+        img.onerror = res;
+        img.src = entry.image;
+      });
+    }
+    ctx.restore();
+
+    // 内容区尺寸比例（参照 renderPage 的 HTML 结构）
+    const headerH = H * 0.22;
+    const bodyH   = H * 0.52;
+    const footerH = H - headerH - bodyH;
+
+    // ===== Header：日期 + 天气 + 序号 =====
+    const dateObj = new Date(entry.date);
+    const weekdays = ['日','一','二','三','四','五','六'];
+    const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+    const weekStr = `星期${weekdays[dateObj.getDay()]}`;
+
+    ctx.fillStyle = inkColor;
+    ctx.font = `600 ${W * 0.055}px -apple-system,"PingFang SC",sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText('✨ 快乐小事 · 每天都有好事花生', finalCanvas.width / 2, finalCanvas.height - 20);
-    
-    // ★ 用 toDataURL 替代 toBlob，绕过 iOS tainted canvas 的 SecurityError
-    let dataUrl;
-    try {
-      dataUrl = finalCanvas.toDataURL('image/png');
-    } catch(taintErr) {
-      // toDataURL 也失败（极少数情况），降级用 jpeg（压缩更宽松）
-      dataUrl = finalCanvas.toDataURL('image/jpeg', 0.92);
+    ctx.fillText(dateStr, cx + W / 2, cy + H * 0.07);
+
+    ctx.fillStyle = inkLight;
+    ctx.font = `400 ${W * 0.038}px -apple-system,"PingFang SC",sans-serif`;
+    ctx.fillText(weekStr, cx + W / 2, cy + H * 0.12);
+
+    ctx.fillStyle = accentColor;
+    ctx.font = `600 ${W * 0.038}px -apple-system,"PingFang SC",sans-serif`;
+    ctx.fillText(`这是你第 ${currentIndex + 1} 个快乐 ✨`, cx + W / 2, cy + H * 0.185);
+
+    // 分隔线
+    ctx.strokeStyle = accentSoft;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + W * 0.06, cy + headerH);
+    ctx.lineTo(cx + W * 0.94, cy + headerH);
+    ctx.stroke();
+
+    // ===== Body：emoji + 正文 =====
+    const emojiSize = W * 0.1;
+    ctx.font = `${emojiSize}px serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(entry.emoji || '✨', cx + W / 2, cy + headerH + H * 0.1);
+
+    ctx.fillStyle = inkColor;
+    const bodyFontSize = W * 0.056;
+    ctx.font = `600 ${bodyFontSize}px -apple-system,"PingFang SC",sans-serif`;
+    const maxTextW = W * 0.82;
+    const lineH = bodyFontSize * 1.75;
+    const words = entry.text; let lines = [], line = '';
+    for (let i = 0; i < words.length; i++) {
+      const t = line + words[i];
+      if (ctx.measureText(t).width > maxTextW && line) { lines.push(line); line = words[i]; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    const textStartY = cy + headerH + H * 0.2;
+    lines.forEach((l, i) => ctx.fillText(l, cx + W / 2, textStartY + i * lineH));
+
+    // 标签
+    let curY2 = textStartY + lines.length * lineH + bodyFontSize * 0.6;
+    if (entry.tag) {
+      ctx.fillStyle = accentColor;
+      ctx.font = `500 ${W * 0.038}px -apple-system,"PingFang SC",sans-serif`;
+      ctx.fillText(entry.tag, cx + W / 2, curY2);
+      curY2 += bodyFontSize;
     }
 
-    // DataURL → Blob
-    const arr = dataUrl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while(n--) u8arr[n] = bstr.charCodeAt(n);
-    const blob = new Blob([u8arr], { type: mime });
+    // 分隔线 2
+    ctx.strokeStyle = accentSoft;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + W * 0.06, cy + headerH + bodyH);
+    ctx.lineTo(cx + W * 0.94, cy + headerH + bodyH);
+    ctx.stroke();
 
-    if (navigator.share) {
-      try {
-        const file = new File([blob], 'happy-card.png', { type: mime });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: '快乐小事' });
-          return;
-        }
-      } catch(e) {}
+    // ===== Footer：金句 =====
+    const quote = entry.quote || {};
+    const qText = typeof quote === 'object' ? (quote.text || '') : String(quote);
+    const qAuthor = typeof quote === 'object' ? (quote.author || '') : '';
+    if (qText) {
+      ctx.fillStyle = inkLight;
+      const qFontSize = W * 0.036;
+      ctx.font = `italic 400 ${qFontSize}px -apple-system,"PingFang SC",Georgia,serif`;
+      const qMaxW = W * 0.82;
+      const qStr = `「${qText}」`;
+      let qLines = [], qLine = '';
+      for (let i = 0; i < qStr.length; i++) {
+        const t = qLine + qStr[i];
+        if (ctx.measureText(t).width > qMaxW && qLine) { qLines.push(qLine); qLine = qStr[i]; }
+        else qLine = t;
+      }
+      if (qLine) qLines.push(qLine);
+      const qStartY = cy + headerH + bodyH + (footerH - qLines.length * qFontSize * 1.7 - (qAuthor ? qFontSize * 1.5 : 0)) / 2 + qFontSize;
+      qLines.forEach((l, i) => ctx.fillText(l, cx + W / 2, qStartY + i * qFontSize * 1.7));
+      if (qAuthor) {
+        ctx.fillStyle = accentColor;
+        ctx.font = `500 ${qFontSize * 0.9}px -apple-system,"PingFang SC",sans-serif`;
+        ctx.fillText(`—— ${qAuthor}`, cx + W / 2, qStartY + qLines.length * qFontSize * 1.7 + qFontSize * 0.3);
+      }
     }
-    downloadCard(blob);
+
+    // 水印
+    ctx.fillStyle = goldColor;
+    ctx.font = `400 ${W * 0.032}px -apple-system,"PingFang SC",sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('✨ 快乐小事 · 每天都有好事花生', PAD + W / 2, PAD + H + PAD + WM_H * 0.7);
+
+    // 导出：canvas 是纯本地绘制，完全不受 tainted 限制
+    canvas.toBlob(async (blob) => {
+      if (!blob) { alert('生成失败，请重试'); return; }
+      if (navigator.share) {
+        try {
+          const file = new File([blob], 'happy-card.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: '快乐小事' });
+            return;
+          }
+        } catch(e) {}
+      }
+      downloadCard(blob);
+    }, 'image/png');
 
   } catch(e) {
     console.log('shareAsCard failed:', e);
