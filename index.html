@@ -2662,7 +2662,7 @@ body {
             </div>
           </div>
         </div>
-        <div class="temple-tip" id="temple-tip">专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题。</div>
+        <div class="temple-tip" id="temple-tip">专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题</div>
       </div>
       <button class="shake-btn" id="shake-btn" onclick="startShake()">🎋 开始摇签</button>
       <div class="sign-history-entry" onclick="showSignHistory()">
@@ -3661,8 +3661,9 @@ async function showSplashThenApp() {
     
     // 尝试从云端恢复数据
     try {
-      await initCloudSync();
+      await initCloudSync(); // 内部已含 syncSignsFromCloud，签文历史也会恢复
       await loadEntries();
+      updateSignCount(); // 恢复后立即刷新签文计数
       const afterSyncEntries = getEntries();
       if (afterSyncEntries && afterSyncEntries.length > 0) {
         document.getElementById('sync-status-text').textContent = `找回了 ${afterSyncEntries.length} 个快乐 🎉`;
@@ -3697,8 +3698,11 @@ async function showSplashThenApp() {
 // 云同步 + 完成后自动刷新 UI（本地有数据时使用）
 async function initCloudSyncAndRefresh() {
   const beforeCount = getEntries().length;
-  await initCloudSync();
+  await initCloudSync(); // 内部已含 syncSignsFromCloud
   const afterCount = getEntries().length;
+  
+  // 同步完成后刷新签文计数（以防 splash 显示期间签文还没到）
+  updateSignCount();
   
   // 如果云端有新数据同步下来了，静默刷新广场（不强制跳转 currentIndex）
   if (afterCount !== beforeCount) {
@@ -6562,7 +6566,7 @@ function backToTemple() {
   btn.style.background = 'linear-gradient(135deg, #ffd700, #ffb300)';
   btn.style.color = '#2d1810';
   btn.disabled = false;
-  document.getElementById('temple-tip').innerHTML = '专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题。';
+  document.getElementById('temple-tip').innerHTML = '专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题';
   
   updateSignCount();
 }
