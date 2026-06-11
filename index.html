@@ -1307,7 +1307,7 @@ body {
   position: absolute;
   inset: 0;
   background: url('signs/guanyin-bg.png') center center / contain no-repeat;
-  opacity: 0.08;
+  opacity: 0.28;
   pointer-events: none;
 }
 
@@ -1388,9 +1388,11 @@ body {
 }
 
 .temple-tip {
-  font-size: 13px;
-  color: #bcaaa4;
+  font-size: 12px;
+  color: #d4bfb0;
   text-align: center;
+  line-height: 1.9;
+  letter-spacing: 0.5px;
 }
 
 .shake-btn {
@@ -2653,7 +2655,7 @@ body {
             </div>
           </div>
         </div>
-        <div class="temple-tip" id="temple-tip">心中默念所求之事，然后摇签</div>
+        <div class="temple-tip" id="temple-tip">专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题。</div>
       </div>
       <button class="shake-btn" id="shake-btn" onclick="startShake()">🎋 开始摇签</button>
       <div class="sign-history-entry" onclick="showSignHistory()">
@@ -6435,7 +6437,7 @@ function backToTemple() {
   btn.style.background = 'linear-gradient(135deg, #ffd700, #ffb300)';
   btn.style.color = '#2d1810';
   btn.disabled = false;
-  document.getElementById('temple-tip').textContent = '心中默念所求之事，然后摇签';
+  document.getElementById('temple-tip').innerHTML = '专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题。';
   
   updateSignCount();
 }
