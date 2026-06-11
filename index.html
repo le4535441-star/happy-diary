@@ -846,8 +846,10 @@ body {
 /* 两个入口按钮 */
 .plaza-actions {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .action-btn {
@@ -2099,11 +2101,7 @@ body {
 }
 
 .plaza-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  padding: 0 4px;
+  display: none; /* 太阳已移入 plaza-actions，此区域不再需要 */
 }
 
 .happy-index {
@@ -2564,11 +2562,12 @@ body {
     <div id="plaza-view">
       <div class="plaza-top-fixed">
         <div class="plaza-header">
-          <div class="happy-index" id="happy-index" onclick="showHappyIndexTip()">
+          <!-- 太阳居中显示在记录好事按钮上方 -->
+        </div>
+        <div class="plaza-actions" style="flex-direction:column;align-items:center;gap:8px;">
+          <div class="happy-index" id="happy-index" onclick="showHappyIndexTip()" style="margin:0;">
             <svg id="happy-sun-svg" width="44" height="44" viewBox="0 0 44 44"></svg>
           </div>
-        </div>
-        <div class="plaza-actions">
           <button class="action-btn action-happy" onclick="openModal()">
             <span class="action-icon">✍️</span>
             <span class="action-label">记录好事</span>
