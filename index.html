@@ -1210,7 +1210,10 @@ body {
   box-sizing: border-box;
 }
 
-.tab-page.active { display: block; }
+/* 固定不滚动的 tab（粉碎机首页、问观音首页） */
+#tab-shred, #tab-luck {
+  overflow: hidden;
+}
 
 #tab-laugh {
   background: var(--warm-bg);
@@ -1306,10 +1309,11 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  min-height: 100vh;
+  height: 100%;
   padding: 20px 20px 40px;
   background: linear-gradient(180deg, #1a0a00 0%, #2d1810 40%, #3e2415 100%);
   position: relative;
+  overflow: hidden;
 }
 
 .luck-temple::before {
@@ -2624,7 +2628,7 @@ body {
 
   <!-- Tab3: 随Ta去（粉碎糟心事） -->
   <div id="tab-shred" class="tab-page">
-    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
       <h2 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#37474f;text-align:center;margin-bottom:20px;">💥 随Ta去</h2>
       <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
         <div class="paper-note" id="paper-note-tab" style="width:100%;">
