@@ -7126,30 +7126,19 @@ async function shareAsCard() {
   const diaryPage = document.querySelector('#diary-container .diary-page');
   if (!diaryPage) return;
 
-  // 截图前：临时隐藏天气 + 移除背景图（Base64大图也可能 taint canvas）
-  const weatherEl = document.getElementById('weather-display');
-  if (weatherEl) weatherEl.style.visibility = 'hidden';
-  
-  // 找并暂时移除 .card-bg 或 .bg-image（可能是用户上传的图片，iOS 会 taint）
-  const bgImgEl = diaryPage.querySelector('.bg-image, .card-bg');
-  const bgImgBakDisplay = bgImgEl ? bgImgEl.style.display : null;
-  if (bgImgEl) bgImgEl.style.display = 'none';
-
   try {
+    // allowTaint:true 让 html2canvas 能读取背景图+天气内容
+    // 避免 toBlob insecure：改用 toDataURL，再转 Blob
     const canvas = await html2canvas(diaryPage, {
       scale: window.devicePixelRatio || 3,
-      useCORS: false,
+      useCORS: true,
       backgroundColor: null,
       logging: false,
-      allowTaint: false,
+      allowTaint: true,
       foreignObjectRendering: false,
       imageTimeout: 0,
     });
 
-    // 还原
-    if (weatherEl) weatherEl.style.visibility = '';
-    if (bgImgEl && bgImgBakDisplay !== null) bgImgEl.style.display = bgImgBakDisplay;
-    
     // 在截图下方添加水印
     const finalCanvas = document.createElement('canvas');
     const padding = 40;
@@ -7168,23 +7157,37 @@ async function shareAsCard() {
     ctx.textAlign = 'center';
     ctx.fillText('✨ 快乐小事 · 每天都有好事花生', finalCanvas.width / 2, finalCanvas.height - 20);
     
-    finalCanvas.toBlob(async (blob) => {
-      if (!blob) { alert('生成失败，请重试'); return; }
-      if (navigator.share) {
-        try {
-          const file = new File([blob], 'happy-card.png', { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: '快乐小事' });
-            return;
-          }
-        } catch(e) {}
-      }
-      downloadCard(blob);
-    }, 'image/png');
+    // ★ 用 toDataURL 替代 toBlob，绕过 iOS tainted canvas 的 SecurityError
+    let dataUrl;
+    try {
+      dataUrl = finalCanvas.toDataURL('image/png');
+    } catch(taintErr) {
+      // toDataURL 也失败（极少数情况），降级用 jpeg（压缩更宽松）
+      dataUrl = finalCanvas.toDataURL('image/jpeg', 0.92);
+    }
+
+    // DataURL → Blob
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--) u8arr[n] = bstr.charCodeAt(n);
+    const blob = new Blob([u8arr], { type: mime });
+
+    if (navigator.share) {
+      try {
+        const file = new File([blob], 'happy-card.png', { type: mime });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: '快乐小事' });
+          return;
+        }
+      } catch(e) {}
+    }
+    downloadCard(blob);
+
   } catch(e) {
-    console.log('html2canvas failed:', e);
-    if (weatherEl) weatherEl.style.visibility = '';
-    if (bgImgEl && bgImgBakDisplay !== null) bgImgEl.style.display = bgImgBakDisplay;
+    console.log('shareAsCard failed:', e);
     alert('生成卡片失败：' + (e && e.message ? e.message : String(e)));
   }
 }
