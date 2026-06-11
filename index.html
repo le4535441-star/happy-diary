@@ -4411,9 +4411,20 @@ function addCustomTag() {
 function updateTimelineTagFilter() {
   const filterEl = document.getElementById('timeline-tag-filter');
   if (!filterEl) return;
-  const tags = getUserTags();
+  
+  // 当前选项列表
+  const userTags = getUserTags();
+  
+  // 扫描历史记录，找出曾经用过但现在已被删除的标签
+  const allEntries = getEntries();
+  const usedTags = new Set(allEntries.map(e => e.tag).filter(t => t && !userTags.includes(t)));
+  
+  // 合并：当前标签 + 历史孤儿标签（用•标注表示已删除）
+  const allTags = [...userTags, ...usedTags];
+  
   filterEl.innerHTML = `<div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>` +
-    tags.map(t => `<div class="tl-tag-btn" data-tag="${t}" onclick="filterTimelineByTag(this)">${t}</div>`).join('');
+    userTags.map(t => `<div class="tl-tag-btn" data-tag="${t}" onclick="filterTimelineByTag(this)">${t}</div>`).join('') +
+    [...usedTags].map(t => `<div class="tl-tag-btn" data-tag="${t}" onclick="filterTimelineByTag(this)" style="opacity:0.6;border-style:dashed;" title="已删除的类型">${t}</div>`).join('');
 }
 
 function toggleTag(el) {
