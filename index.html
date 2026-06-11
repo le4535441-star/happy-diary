@@ -2527,8 +2527,12 @@ body {
   <!-- Tab1: 笑一声（哈哈机） -->
   <div id="tab-laugh" class="tab-page active">
     <!-- 游戏框：上/左/右直接贴屏幕边，按钮在下方 -->
-    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-      <div class="sky-box" id="sky-box" style="width:100%;flex:1;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
+    <!-- 游戏框下方到tab-bar之间填充暖棕色，和游戏框内背景一致 -->
+    <style>
+      #tab-laugh { background: linear-gradient(180deg, #4a2c1a 0%, #6b3d24 40%, #7d4a2e 100%); }
+    </style>
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(180deg,#4a2c1a 0%,#6b3d24 40%,#7d4a2e 100%);">
+      <div class="sky-box" id="sky-box" style="width:100%;flex:1;border-radius:0;border:none;">
         <div class="falling-bubbles" id="falling-bubbles"></div>
         <!-- SVG小女孩角色 -->
         <div class="runner" id="runner">
