@@ -3430,18 +3430,26 @@ async function removeEntry(id) {
   await dbDelete(id);
   entriesCache = await dbGetAll();
   
-  // ★ 把删除记录到本地"墓碑"列表，防止 syncFromCloud 再把它拉回来
+  // 本地墓碑（辅助缓存，清缓存后会没，但云端才是真正的持久化来源）
   const tombstoneKey = 'hd_deleted_' + currentUsername;
   const tombstones = JSON.parse(localStorage.getItem(tombstoneKey) || '[]');
   if (!tombstones.includes(id)) {
     tombstones.push(id);
-    // 最多保留500条墓碑（防止 localStorage 膨胀）
     localStorage.setItem(tombstoneKey, JSON.stringify(tombstones.slice(-500)));
   }
   
-  // 同步删除云端对应记录（如果已连接云端）
+  // ★ 把删除记录写入云端 deletedEntries 集合（这才是真正持久的墓碑）
+  // syncFromCloud 时会从这里读取，即使 localStorage 被清也不会复活
   if (cloudReady && cloudDb) {
     try {
+      // 1. 在 deletedEntries 集合写入墓碑
+      cloudDb.collection('deletedEntries').add({
+        _username: currentUsername,
+        localId: id,
+        deletedAt: new Date().toISOString()
+      }).catch(() => {});
+      
+      // 2. 同时删除 entries 集合里的记录
       const col = cloudDb.collection('entries');
       const res = await col.where({ _username: currentUsername, localId: id }).get();
       if (res.data && res.data.length > 0) {
@@ -3450,7 +3458,7 @@ async function removeEntry(id) {
         }
       }
     } catch(e) {
-      console.log('Cloud delete failed (will retry next sync):', e.message);
+      console.log('Cloud delete failed:', e.message);
     }
   }
 }
@@ -6224,16 +6232,37 @@ async function syncFromCloud() {
       const localEntries = getEntries();
       const localIds = new Set(localEntries.map(e => e.id));
       
-      // 读取"墓碑"列表，已删除的条目不重新写入
+      // ★ 从云端 deletedEntries 集合读取永久墓碑（清缓存后仍然有效）
+      let cloudTombstones = new Set();
+      try {
+        let tombOffset = 0;
+        while (true) {
+          const tr = await cloudDb.collection('deletedEntries')
+            .where({ _username: currentUsername }).skip(tombOffset).limit(100).get();
+          if (!tr.data || tr.data.length === 0) break;
+          tr.data.forEach(d => cloudTombstones.add(d.localId));
+          if (tr.data.length < 100) break;
+          tombOffset += 100;
+        }
+      } catch(e) {}
+      
+      // 同时读取本地墓碑（合并两个来源）
       const tombstoneKey = 'hd_deleted_' + currentUsername;
-      const tombstones = new Set(JSON.parse(localStorage.getItem(tombstoneKey) || '[]'));
+      const localTombstones = new Set(JSON.parse(localStorage.getItem(tombstoneKey) || '[]'));
+      const tombstones = new Set([...cloudTombstones, ...localTombstones]);
+      
+      // 把云端墓碑同步回本地（下次离线时也能用）
+      if (cloudTombstones.size > 0) {
+        const merged = [...tombstones];
+        localStorage.setItem(tombstoneKey, JSON.stringify(merged.slice(-500)));
+      }
       
       // 把云端有而本地没有、且未被用户删除过的数据写入本地 IndexedDB
       let newCount = 0;
       for (const cloudEntry of allCloudEntries) {
         const localId = cloudEntry.localId || cloudEntry.id;
         if (localIds.has(localId)) continue;      // 本地已有，跳过
-        if (tombstones.has(localId)) {             // 用户已删除，云端也删一下（延迟补删）
+        if (tombstones.has(localId)) {             // 已删除，再删一遍云端确保彻底
           try { await cloudDb.collection('entries').doc(cloudEntry._id).remove().catch(() => {}); } catch(e) {}
           continue;
         }
