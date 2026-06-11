@@ -2358,6 +2358,21 @@ body {
   </div>
 </div>
 
+<!-- 快乐类型管理弹窗 -->
+<div id="tag-manager-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);">
+  <div style="background:var(--paper);border-radius:24px;padding:28px 20px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.25);max-height:80vh;overflow-y:auto;">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:19px;color:var(--ink);margin-bottom:4px;text-align:center;">⚙️ 管理快乐类型</h3>
+    <p style="font-size:12px;color:var(--ink-light);text-align:center;margin-bottom:16px;">点 — 删除，点 + 添加自定义</p>
+    <div id="tag-manager-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;"></div>
+    <!-- 添加区 -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <input id="new-tag-input" type="text" maxlength="12" placeholder="输入新标签（含emoji）" style="flex:1;padding:10px 14px;border:2px solid var(--accent-soft);border-radius:10px;font-size:14px;outline:none;background:var(--paper);color:var(--ink);">
+      <button onclick="addCustomTag()" style="padding:10px 16px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:18px;font-weight:700;cursor:pointer;">+</button>
+    </div>
+    <button onclick="closeTagManager()" style="width:100%;padding:13px;background:var(--accent-soft);color:var(--ink);border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">完成</button>
+  </div>
+</div>
+
 <!-- 每月数据备份提醒弹窗 -->
 <div id="backup-remind-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
   <div style="background:#fffef9;border-radius:24px;padding:36px 28px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(61,48,40,0.2);text-align:center;">
@@ -2798,20 +2813,12 @@ body {
       </div>
     </div>
     <div class="quick-tags">
-      <div class="quick-tags-label">💛 点一下快速标记：</div>
+      <div class="quick-tags-label">
+        💛 点一下快速标记：
+        <span onclick="showTagManager()" style="float:right;font-size:13px;color:var(--accent);cursor:pointer;font-weight:600;padding:2px 8px;border-radius:8px;border:1px solid var(--accent-soft);">⚙️ 管理</span>
+      </div>
       <div class="quick-tags-list" id="quick-tags-list">
-        <span class="quick-tag" data-tag="☕ 好喝的" onclick="toggleTag(this)">☕ 好喝的</span>
-        <span class="quick-tag" data-tag="🌤️ 天气超好" onclick="toggleTag(this)">🌤️ 天气超好</span>
-        <span class="quick-tag" data-tag="🐱 遇到小可爱" onclick="toggleTag(this)">🐱 遇到小可爱</span>
-        <span class="quick-tag" data-tag="🍜 美食时刻" onclick="toggleTag(this)">🍜 美食时刻</span>
-        <span class="quick-tag" data-tag="💕 朋友关心" onclick="toggleTag(this)">💕 朋友关心</span>
-        <span class="quick-tag" data-tag="🎵 好听的歌" onclick="toggleTag(this)">🎵 好听的歌</span>
-        <span class="quick-tag" data-tag="✅ 完成任务" onclick="toggleTag(this)">✅ 完成任务</span>
-        <span class="quick-tag" data-tag="💪 运动流汗" onclick="toggleTag(this)">💪 运动流汗</span>
-        <span class="quick-tag" data-tag="🎬 好电影" onclick="toggleTag(this)">🎬 好电影</span>
-        <span class="quick-tag" data-tag="🎁 意外惊喜" onclick="toggleTag(this)">🎁 意外惊喜</span>
-        <span class="quick-tag" data-tag="🧸 茸言茸语" onclick="toggleTag(this)">🧸 茸言茸语</span>
-        <span class="quick-tag" data-tag="💡 灵光一现" onclick="toggleTag(this)">💡 灵光一现</span>
+        <!-- 由 renderQuickTags() 动态渲染 -->
       </div>
     </div>
     <div class="quote-picker">
@@ -4109,6 +4116,8 @@ function switchPlazaSubTab(tab) {
     tabTimeline.classList.add('active');
     contentPlaza.style.display = 'none';
     contentTimeline.style.display = 'block';
+    updateTimelineTagFilter(); // 切换时同步最新标签
+    _currentTimelineTag = '';
     renderTimeline();
   }
 }
@@ -4317,6 +4326,96 @@ document.addEventListener('touchend', e => {
 let uploadedImage = null;
 let selectedTag = '';
 
+// ========== 快乐类型标签管理 ==========
+// 默认标签（首次使用时写入）
+const DEFAULT_TAGS = [
+  '☕ 好喝的', '🌤️ 天气超好', '🐱 遇到小可爱', '🍜 美食时刻',
+  '💕 朋友关心', '🎵 好听的歌', '✅ 完成任务', '💪 运动流汗',
+  '🎬 好电影', '🎁 意外惊喜', '🧸 茸言茸语', '💡 灵光一现'
+];
+
+// 获取当前用户的标签列表
+function getUserTags() {
+  const saved = localStorage.getItem('hd_tags_' + currentUsername);
+  if (saved) return JSON.parse(saved);
+  // 首次使用，写入默认值
+  localStorage.setItem('hd_tags_' + currentUsername, JSON.stringify(DEFAULT_TAGS));
+  return [...DEFAULT_TAGS];
+}
+
+// 保存标签列表（本地 + 云端）
+function saveUserTags(tags) {
+  localStorage.setItem('hd_tags_' + currentUsername, JSON.stringify(tags));
+  // 同步到云端 profile
+  if (cloudReady && cloudDb) {
+    cloudDb.collection('entries')
+      .where({ _username: currentUsername, _type: 'profile' })
+      .get().then(res => {
+        const data = { tags };
+        if (res.data && res.data.length > 0) {
+          cloudDb.collection('entries').doc(res.data[0]._id).update(data).catch(() => {});
+        }
+      }).catch(() => {});
+  }
+}
+
+// 渲染记录弹窗中的标签列表
+function renderQuickTags() {
+  const tags = getUserTags();
+  const list = document.getElementById('quick-tags-list');
+  if (!list) return;
+  list.innerHTML = tags.map(t =>
+    `<span class="quick-tag" data-tag="${t}" onclick="toggleTag(this)">${t}</span>`
+  ).join('');
+}
+
+// 标签管理弹窗
+function showTagManager() {
+  const tags = getUserTags();
+  const listEl = document.getElementById('tag-manager-list');
+  listEl.innerHTML = tags.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:6px;background:var(--accent-soft);border-radius:20px;padding:6px 12px;">
+      <span style="font-size:14px;color:var(--ink);">${t}</span>
+      <span onclick="removeTag(${i})" style="color:#c0392b;font-size:18px;font-weight:700;cursor:pointer;line-height:1;">−</span>
+    </div>`).join('');
+  document.getElementById('new-tag-input').value = '';
+  document.getElementById('tag-manager-overlay').style.display = 'flex';
+}
+
+function closeTagManager() {
+  document.getElementById('tag-manager-overlay').style.display = 'none';
+  renderQuickTags(); // 关闭后刷新记录弹窗中的标签
+  updateTimelineTagFilter(); // 同步更新回看时光筛选条
+}
+
+function removeTag(idx) {
+  const tags = getUserTags();
+  tags.splice(idx, 1);
+  saveUserTags(tags);
+  showTagManager(); // 刷新弹窗列表
+}
+
+function addCustomTag() {
+  const input = document.getElementById('new-tag-input');
+  const val = input.value.trim();
+  if (!val) return;
+  const tags = getUserTags();
+  if (tags.includes(val)) { input.value = ''; return; }
+  tags.push(val);
+  saveUserTags(tags);
+  input.value = '';
+  showTagManager();
+}
+
+// 同步更新回看时光的标签筛选栏
+function updateTimelineTagFilter() {
+  const filterEl = document.getElementById('timeline-tag-filter');
+  if (!filterEl) return;
+  const tags = getUserTags();
+  filterEl.innerHTML = `<div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>` +
+    tags.map(t => `<div class="tl-tag-btn" data-tag="${t}" onclick="filterTimelineByTag(this)">${t}</div>`).join('');
+}
+
 function toggleTag(el) {
   // 取消其他已选
   document.querySelectorAll('.quick-tag.active').forEach(t => {
@@ -4510,6 +4609,8 @@ function openModal() {
   selectedTag = '';
   document.querySelectorAll('.quick-tag.active').forEach(t => t.classList.remove('active'));
   document.getElementById('image-preview').style.display = 'none';
+  // 渲染最新的用户标签（包含自定义标签）
+  renderQuickTags();
   // 初始化诗词选择器（每次打开随机打乱顺序）
   shuffledQuotes = shuffleArray(quotes);
   currentQuoteIndex = 0;
@@ -7024,15 +7125,17 @@ async function saveProfileToCloud() {
     const avatar = localStorage.getItem('hd_avatar_' + currentUsername) || '';
     const spaceName = localStorage.getItem('hd_space_name_' + currentUsername) || '';
     const theme = localStorage.getItem('hd_theme_' + currentUsername) || 'warm';
+    const tagsRaw = localStorage.getItem('hd_tags_' + currentUsername);
+    const tags = tagsRaw ? JSON.parse(tagsRaw) : DEFAULT_TAGS;
     
     // 查询是否已有profile记录
     const existing = await col.where({ _username: currentUsername, _type: 'profile' }).get();
     if (existing.data && existing.data.length > 0) {
       // 更新
-      await col.doc(existing.data[0]._id).update({ avatar, spaceName, theme });
+      await col.doc(existing.data[0]._id).update({ avatar, spaceName, theme, tags });
     } else {
       // 新建
-      await col.add({ _username: currentUsername, _type: 'profile', avatar, spaceName, theme });
+      await col.add({ _username: currentUsername, _type: 'profile', avatar, spaceName, theme, tags });
     }
   } catch(e) {
     console.log('Save profile to cloud failed:', e.message);
@@ -7057,6 +7160,10 @@ async function loadProfileFromCloud() {
       if (profile.theme && !localStorage.getItem('hd_theme_' + currentUsername)) {
         localStorage.setItem('hd_theme_' + currentUsername, profile.theme);
         loadTheme();
+      }
+      // 云端标签列表同步到本地（本地没有自定义时才覆写）
+      if (profile.tags && Array.isArray(profile.tags) && !localStorage.getItem('hd_tags_' + currentUsername)) {
+        localStorage.setItem('hd_tags_' + currentUsername, JSON.stringify(profile.tags));
       }
     }
     // 无论云端是否有数据，都刷新显示（使用本地数据）
