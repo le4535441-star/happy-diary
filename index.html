@@ -7167,7 +7167,7 @@ async function shareAsCard() {
     }, 'image/png');
   } catch(e) {
     console.log('html2canvas failed:', e);
-    alert('生成卡片失败，请重试');
+    alert('生成卡片失败：' + (e && e.message ? e.message : String(e)));
   }
 }
 
