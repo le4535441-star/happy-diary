@@ -740,9 +740,15 @@ body {
   padding: 0 16px 20px;
 }
 
-/* 回看时光-日期筛选 */
+/* 回看时光-筛选区 */
 .timeline-filter {
-  padding: 16px 0;
+  padding: 16px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline-filter-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -760,6 +766,35 @@ body {
 }
 
 .timeline-filter input:focus { border-color: var(--accent); }
+
+/* 标签筛选滚动条 */
+.timeline-tag-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.timeline-tag-filter::-webkit-scrollbar { display: none; }
+
+.tl-tag-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--accent-soft);
+  background: var(--paper);
+  color: var(--ink-light);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.tl-tag-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
 
 .timeline-filter button {
   padding: 10px 16px;
@@ -2529,8 +2564,26 @@ body {
         <!-- 回看时光 -->
         <div id="timeline-content-area" style="display:none;">
           <div class="timeline-filter">
-            <input type="date" id="timeline-date-input">
-            <button onclick="jumpToTimelineDate()">跳转</button>
+            <div class="timeline-filter-row">
+              <input type="date" id="timeline-date-input">
+              <button onclick="jumpToTimelineDate()">跳转</button>
+            </div>
+            <!-- 快乐类型筛选 -->
+            <div class="timeline-tag-filter" id="timeline-tag-filter">
+              <div class="tl-tag-btn active" data-tag="" onclick="filterTimelineByTag(this)">全部</div>
+              <div class="tl-tag-btn" data-tag="☕ 好喝的" onclick="filterTimelineByTag(this)">☕ 好喝的</div>
+              <div class="tl-tag-btn" data-tag="🌤️ 天气超好" onclick="filterTimelineByTag(this)">🌤️ 天气超好</div>
+              <div class="tl-tag-btn" data-tag="🐱 遇到小可爱" onclick="filterTimelineByTag(this)">🐱 遇到小可爱</div>
+              <div class="tl-tag-btn" data-tag="🍜 美食时刻" onclick="filterTimelineByTag(this)">🍜 美食时刻</div>
+              <div class="tl-tag-btn" data-tag="💕 朋友关心" onclick="filterTimelineByTag(this)">💕 朋友关心</div>
+              <div class="tl-tag-btn" data-tag="🎵 好听的歌" onclick="filterTimelineByTag(this)">🎵 好听的歌</div>
+              <div class="tl-tag-btn" data-tag="✅ 完成任务" onclick="filterTimelineByTag(this)">✅ 完成任务</div>
+              <div class="tl-tag-btn" data-tag="💪 运动流汗" onclick="filterTimelineByTag(this)">💪 运动流汗</div>
+              <div class="tl-tag-btn" data-tag="🎬 好电影" onclick="filterTimelineByTag(this)">🎬 好电影</div>
+              <div class="tl-tag-btn" data-tag="🎁 意外惊喜" onclick="filterTimelineByTag(this)">🎁 意外惊喜</div>
+              <div class="tl-tag-btn" data-tag="🧸 茸言茸语" onclick="filterTimelineByTag(this)">🧸 茸言茸语</div>
+              <div class="tl-tag-btn" data-tag="💡 灵光一现" onclick="filterTimelineByTag(this)">💡 灵光一现</div>
+            </div>
           </div>
           <div class="timeline-list" id="timeline-list"></div>
         </div>
@@ -4060,7 +4113,7 @@ function switchPlazaSubTab(tab) {
   }
 }
 
-function renderTimeline(filterDate) {
+function renderTimeline(filterDate, filterTag) {
   const entries = getEntries();
   const list = document.getElementById('timeline-list');
   
@@ -4069,14 +4122,18 @@ function renderTimeline(filterDate) {
     return;
   }
   
-  // 按日期分组，倒序排列
+  // 按日期和标签过滤
   let filtered = [...entries];
   if (filterDate) {
     filtered = filtered.filter(e => e.date === filterDate);
   }
+  if (filterTag) {
+    filtered = filtered.filter(e => e.tag && e.tag === filterTag);
+  }
   
   if (filtered.length === 0) {
-    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-light);">📅 ${filterDate || ''} 没有找到记录</div>`;
+    const hint = filterTag ? `「${filterTag}」` : (filterDate ? filterDate : '');
+    list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--ink-light);">📅 ${hint} 没有找到记录</div>`;
     return;
   }
   
@@ -4103,9 +4160,10 @@ function renderTimeline(filterDate) {
     
     for (const entry of groups[date]) {
       const idx = entries.indexOf(entry);
+      const tagHtml = entry.tag ? `<span style="font-size:11px;color:var(--accent);margin-left:6px;">${entry.tag}</span>` : '';
       html += `
         <div class="timeline-item" onclick="openDetail(${idx})">
-          <div class="tl-date">${entry.time || ''} ${entry.emoji || '✨'}</div>
+          <div class="tl-date">${entry.time || ''} ${entry.emoji || '✨'}${tagHtml}</div>
           <div class="tl-text">${entry.text}</div>
         </div>`;
     }
@@ -4114,15 +4172,20 @@ function renderTimeline(filterDate) {
   list.innerHTML = html;
 }
 
+let _currentTimelineTag = ''; // 记住当前选中的标签
+
+function filterTimelineByTag(el) {
+  document.querySelectorAll('.tl-tag-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  _currentTimelineTag = el.dataset.tag || '';
+  const dateInput = document.getElementById('timeline-date-input');
+  renderTimeline(dateInput.value || '', _currentTimelineTag);
+}
+
 function jumpToTimelineDate() {
   const dateInput = document.getElementById('timeline-date-input');
   const selectedDate = dateInput.value;
-  if (!selectedDate) {
-    // 没选日期时显示全部
-    renderTimeline();
-    return;
-  }
-  renderTimeline(selectedDate);
+  renderTimeline(selectedDate || '', _currentTimelineTag);
 }
 
 function openDetail(index) {
