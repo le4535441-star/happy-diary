@@ -7234,8 +7234,10 @@ async function shareAsCard() {
 
     ctx.fillStyle=inkColor;
     ctx.font='600 '+textFontSize+'px -apple-system,"PingFang SC",sans-serif';
-    const textBlockW = Math.min(contentW, Math.max(...textLines.map(l=>ctx.measureText(l).width)));
-    const textBlockX = cx+(W-textBlockW)/2;
+    // 正文：inline-block 居中效果 —— 以最长行宽居中，每行从同一个 X 起始
+    const lineMeasures = textLines.map(l=>ctx.measureText(l).width);
+    const textBlockW = Math.min(contentW, Math.max(...lineMeasures, 1));
+    const textBlockX = cx + (W - textBlockW) / 2;
     let tY = bodyStartY+emojiH+gap+textFontSize;
     textLines.forEach((l,i)=>{ ctx.textAlign='left'; ctx.fillText(l,textBlockX,tY+i*textLineH); });
     tY += textLines.length*textLineH+gap;
@@ -7266,14 +7268,14 @@ async function shareAsCard() {
     ctx.beginPath(); ctx.moveTo(cx+INNER_PX,drawY); ctx.lineTo(cx+W-INNER_PX,drawY); ctx.stroke();
     drawY += 16;
 
-    // --- page-quote: 14px italic 600 ink-light; .author 12px normal red 600 ---
+    // --- page-quote: 14px italic 400(非粗) ink-light; .author 12px normal red 600 ---
     const quote=entry.quote||{};
     const qText=typeof quote==='object'?(quote.text||''):String(quote);
     const qAuthor=typeof quote==='object'?(quote.author||''):'';
     if (qText) {
       ctx.fillStyle=inkLight;
       const qFS=14;
-      ctx.font='600 italic '+qFS+'px -apple-system,"PingFang SC",Georgia,serif';
+      ctx.font='400 italic '+qFS+'px -apple-system,"PingFang SC",Georgia,serif';
       const qStr='\u300c'+qText+'\u300d';
       let qLines=[],ql='';
       for(let i=0;i<qStr.length;i++){const t=ql+qStr[i];if(ctx.measureText(t).width>contentW&&ql){qLines.push(ql);ql=qStr[i];}else ql=t;}
