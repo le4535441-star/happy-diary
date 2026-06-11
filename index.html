@@ -159,7 +159,10 @@ body {
 /* 日记页面容器 */
 .diary-container {
   position: absolute;
-  inset: 0;
+  top: 44px;      /* detail-top-bar 高度 */
+  bottom: 80px;   /* bottom-bar 高度 + 间距 */
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -350,7 +353,7 @@ body {
 /* 底部操作栏 */
 .bottom-bar {
   position: fixed;
-  bottom: 44px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -2765,8 +2768,6 @@ body {
     <div class="page-indicator" id="page-indicator"></div>
     
     <div class="bottom-bar">
-      <button class="fab secondary" onclick="backToPlaza()" title="返回广场">🏠</button>
-      <button class="fab secondary" onclick="openDatePicker()" title="跳转日期">📅</button>
       <button class="fab" onclick="openModal()" title="记录快乐">✍️</button>
       <button class="fab secondary" onclick="editCurrentEntry()" title="编辑">✏️</button>
       <button class="fab secondary" onclick="shareAsCard()" title="分享卡片">📤</button>
