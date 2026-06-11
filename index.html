@@ -2501,9 +2501,9 @@ body {
 <div id="app">
   <!-- Tab1: 笑一声（哈哈机） -->
   <div id="tab-laugh" class="tab-page active">
-    <!-- 游戏框：上/左/右直接贴屏幕边，底部保留圆角 -->
-    <div style="display:flex;flex-direction:column;align-items:stretch;min-height:100%;background:var(--warm-bg);">
-      <div class="sky-box" id="sky-box" style="width:100%;height:75vh;max-height:680px;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
+    <!-- 游戏框：上/左/右直接贴屏幕边 -->
+    <div style="display:flex;flex-direction:column;align-items:stretch;background:var(--warm-bg);">
+      <div class="sky-box" id="sky-box" style="width:100%;height:calc(100vh - 64px - env(safe-area-inset-bottom,0px) - 70px);max-height:800px;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
         <div class="falling-bubbles" id="falling-bubbles"></div>
         <!-- SVG小女孩角色 -->
         <div class="runner" id="runner">
