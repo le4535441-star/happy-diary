@@ -1199,11 +1199,14 @@ body {
   display: none;
   position: fixed;
   top: 0; left: 0; right: 0;
-  /* bottom 自动适配 tab-bar 高度 + 全面屏安全区，防止内容被遮 */
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  /* 延伸到屏幕底部，内容自己用 padding-bottom 避开 tab-bar */
+  bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--warm-bg);
+  /* 内容底部留出 tab-bar + 安全区高度，防止被遮 */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .tab-page.active { display: block; }
