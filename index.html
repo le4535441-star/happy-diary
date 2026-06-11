@@ -267,7 +267,10 @@ body {
   font-size: 20px;
   line-height: 1.9;
   color: var(--ink);
-  text-align: center;
+  /* 整体居中，多行时内部左对齐 */
+  display: inline-block;
+  text-align: left;
+  max-width: 100%;
   word-break: break-word;
   font-weight: 600;
 }
@@ -3424,6 +3427,21 @@ async function addEntry(entry) {
 async function removeEntry(id) {
   await dbDelete(id);
   entriesCache = await dbGetAll();
+  // 同步删除云端对应记录（如果已连接云端）
+  if (cloudReady && cloudDb) {
+    try {
+      const col = cloudDb.collection('entries');
+      // localId 字段存的就是本地 id
+      const res = await col.where({ _username: currentUsername, localId: id }).get();
+      if (res.data && res.data.length > 0) {
+        for (const doc of res.data) {
+          await col.doc(doc._id).remove().catch(() => {});
+        }
+      }
+    } catch(e) {
+      console.log('Cloud delete failed:', e.message);
+    }
+  }
 }
 
 function getRandomQuote() {
