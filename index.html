@@ -2501,9 +2501,9 @@ body {
 <div id="app">
   <!-- Tab1: 笑一声（哈哈机） -->
   <div id="tab-laugh" class="tab-page active">
-    <!-- 游戏框：上/左/右直接贴屏幕边 -->
+    <!-- 游戏框：上/左/右直接贴屏幕边，高度精确填满到按钮区上方 -->
     <div style="display:flex;flex-direction:column;align-items:stretch;background:var(--warm-bg);">
-      <div class="sky-box" id="sky-box" style="width:100%;height:calc(100vh - 64px - env(safe-area-inset-bottom,0px) - 70px);max-height:800px;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
+      <div class="sky-box" id="sky-box" style="width:100%;flex:1;height:calc(100vh - 64px - env(safe-area-inset-bottom,0px) - 60px);max-height:800px;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
         <div class="falling-bubbles" id="falling-bubbles"></div>
         <!-- SVG小女孩角色 -->
         <div class="runner" id="runner">
@@ -2546,8 +2546,8 @@ body {
         </div>
         <div class="catch-flash" id="catch-flash">🎉 接到了！</div>
       </div>
-      <!-- 两个并列按钮 -->
-      <div style="display:flex;gap:12px;padding:20px 16px 16px;width:100%;box-sizing:border-box;">
+      <!-- 两个并列按钮，紧贴游戏框底部，z-index 高于 tab-bar -->
+      <div style="display:flex;gap:12px;padding:10px 16px 10px;width:100%;box-sizing:border-box;background:var(--warm-bg);position:relative;z-index:300;">
         <button class="claw-btn" id="claw-btn" onclick="startCatch()" style="flex:1;margin-top:0;padding:13px 0;font-size:15px;">🫧 开始接泡泡</button>
         <div class="bubble-pool-entry" id="bubble-pool-entry" onclick="toggleBubblePool()" style="flex:0.7;margin-top:0;margin-bottom:0;justify-content:center;">
           <span>🫧 泡泡池</span>
