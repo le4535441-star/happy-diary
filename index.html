@@ -3643,11 +3643,8 @@ async function showSplashThenApp() {
       document.getElementById('splash-quote').innerHTML = '';
     }
     splash.style.display = 'flex';
-    // 闪屏出现时播放风铃音效（等 400ms 给 AudioContext 解锁时间）
-    setTimeout(async () => {
-      await ensureAudioRunning();
-      playWindChimeSound();
-    }, 400);
+    // 闪屏出现时播放风铃（手动登录已激活 AudioContext，直接播）
+    playWindChimeSound();
     
     // 3 秒后进入主界面，同时启动云同步
     setTimeout(async () => {
@@ -3757,9 +3754,9 @@ if (currentUsername) {
         src.connect(ctx.destination);
         src.start(0);
         audioCtx = ctx;
-        // ★ AudioContext 激活后，立刻播一次风铃（闪屏期间的补播）
+        // ★ AudioContext 激活后立刻播风铃（无延迟，闪屏期间补播）
         if (document.getElementById('splash-screen').style.display === 'flex') {
-          playWindChimeSound();
+          playWindChimeSound(); // 立刻响，不 setTimeout
         }
       } catch(e) {}
       // 尝试全屏
