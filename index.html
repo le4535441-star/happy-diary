@@ -7160,16 +7160,23 @@ async function fetchSignsFromCloud() {
 async function syncSignsFromCloud() {
   const cloud = await fetchSignsFromCloud();
   if (!cloud || cloud.length === 0) return;
-  // 合并本地新记录（刚摇还没同步的）
-  const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  // 合并本地 IndexedDB 里的新记录（刚摇还没同步的）
+  const localIDB = await dbSignGetAll();
   const cloudKeys = new Set(cloud.map(r => r.date + r.time + r.num));
-  const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
-  const merged = [...cloud, ...onlyLocal]
+  const onlyLocal = localIDB.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+  
+  const merged = [...cloud.map(r => ({
+    id: currentUsername + '_' + r.date + r.time + r.num,
+    _owner: currentUsername, ...r
+  })), ...onlyLocal]
     .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
     .slice(0, 100);
+
+  // ★ 同时写入 IndexedDB（持久化）和 localStorage（快速读）
+  for (const r of merged) await dbSignPut(r).catch(()=>{});
   localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
   updateSignCount().catch(()=>{});
-  console.log(`syncSignsFromCloud: ${merged.length} records`);
+  console.log(`syncSignsFromCloud: ${merged.length} records → IndexedDB + localStorage`);
 }
 
 async function showSignHistory() {
