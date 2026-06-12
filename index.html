@@ -1903,7 +1903,7 @@ body {
   border-radius: 4px;
   box-shadow: 2px 3px 12px rgba(0,0,0,0.12);
   transform: rotate(-1deg);
-  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.0s ease-in 0.5s, clip-path 1.5s ease-in;
+  transition: transform 1.0s cubic-bezier(0.4, 0, 0.8, 1), opacity 0.8s ease-in 0.3s, clip-path 0.9s ease-in;
   position: relative;
   clip-path: inset(0 0 0 0);
 }
@@ -1933,10 +1933,11 @@ body {
 }
 
 .paper-note.shredding {
-  /* 纸张向下移动塞进粉碎机：先整体下移，再从底部开始被"吃进去" */
-  transform: translateY(120px) scaleY(0.6) rotate(0deg);
-  opacity: 0.3;
-  clip-path: inset(0 0 100% 0);
+  /* 纸张自上而下被吃进粉碎机：向下移动，从顶部开始消失 */
+  transform: translateY(140px) scaleY(0.5) rotate(1deg);
+  opacity: 0;
+  clip-path: inset(0 0 0 0);  /* 从顶部夹紧消失 */
+  transition: transform 1.0s cubic-bezier(0.4, 0, 0.8, 1), opacity 0.8s ease-in 0.3s, clip-path 0.9s ease-in;
 }
 
 /* 粉碎机 */
@@ -7367,42 +7368,62 @@ async function shareAsCard() {
     const dpr = window.devicePixelRatio || 3;
     const cW = canvas.width, cH = canvas.height;
     const wmH = Math.round(36 * dpr);
-    const RADIUS = Math.round(20 * dpr); // 卡片圆角（与 .diary-page border-radius:20px 一致）
+    const PAD = Math.round(24 * dpr);  // 卡片四周留白（暖白背景）
+    const RADIUS = Math.round(20 * dpr); // 卡片圆角
 
     const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = cW;
-    finalCanvas.height = cH + wmH;
+    finalCanvas.width = cW + PAD * 2;
+    finalCanvas.height = cH + PAD * 2 + wmH;
     const ctx = finalCanvas.getContext('2d');
     const cs = getComputedStyle(document.documentElement);
 
-    // 先铺暖白底色（整张图）
+    // 铺暖白底色
     ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
-    ctx.fillRect(0, 0, cW, finalCanvas.height);
+    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-    // 用圆角路径裁剪卡片区域
+    // 先画一个带圆角的阴影（卡片感）
     ctx.save();
+    ctx.shadowColor = 'rgba(44,32,22,0.18)';
+    ctx.shadowBlur = Math.round(20 * dpr);
+    ctx.shadowOffsetY = Math.round(4 * dpr);
+    ctx.fillStyle = '#fffef9';
     ctx.beginPath();
-    ctx.moveTo(RADIUS, 0);
-    ctx.lineTo(cW - RADIUS, 0);
-    ctx.arcTo(cW, 0, cW, RADIUS, RADIUS);
-    ctx.lineTo(cW, cH - RADIUS);
-    ctx.arcTo(cW, cH, cW - RADIUS, cH, RADIUS);
-    ctx.lineTo(RADIUS, cH);
-    ctx.arcTo(0, cH, 0, cH - RADIUS, RADIUS);
-    ctx.lineTo(0, RADIUS);
-    ctx.arcTo(0, 0, RADIUS, 0, RADIUS);
+    const x = PAD, y = PAD;
+    ctx.moveTo(x + RADIUS, y);
+    ctx.lineTo(x + cW - RADIUS, y);
+    ctx.arcTo(x + cW, y, x + cW, y + RADIUS, RADIUS);
+    ctx.lineTo(x + cW, y + cH - RADIUS);
+    ctx.arcTo(x + cW, y + cH, x + cW - RADIUS, y + cH, RADIUS);
+    ctx.lineTo(x + RADIUS, y + cH);
+    ctx.arcTo(x, y + cH, x, y + cH - RADIUS, RADIUS);
+    ctx.lineTo(x, y + RADIUS);
+    ctx.arcTo(x, y, x + RADIUS, y, RADIUS);
     ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(canvas, 0, 0);
+    ctx.fill();
     ctx.restore();
 
-    // 水印条（在圆角之外，紧贴底部）
-    ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
-    ctx.fillRect(0, cH, cW, wmH);
-    ctx.font = Math.round(13 * dpr) + 'px "PingFang SC", sans-serif';
+    // 用圆角路径 clip 画卡片内容
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x + RADIUS, y);
+    ctx.lineTo(x + cW - RADIUS, y);
+    ctx.arcTo(x + cW, y, x + cW, y + RADIUS, RADIUS);
+    ctx.lineTo(x + cW, y + cH - RADIUS);
+    ctx.arcTo(x + cW, y + cH, x + cW - RADIUS, y + cH, RADIUS);
+    ctx.lineTo(x + RADIUS, y + cH);
+    ctx.arcTo(x, y + cH, x, y + cH - RADIUS, RADIUS);
+    ctx.lineTo(x, y + RADIUS);
+    ctx.arcTo(x, y, x + RADIUS, y, RADIUS);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(canvas, x, y);
+    ctx.restore();
+
+    // 水印条
+    ctx.font = Math.round(12 * dpr) + 'px "PingFang SC", sans-serif';
     ctx.fillStyle = cs.getPropertyValue('--gold').trim() || '#c8a45c';
     ctx.textAlign = 'center';
-    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f', cW / 2, cH + wmH * 0.68);
+    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f', finalCanvas.width / 2, cH + PAD * 2 + wmH * 0.6);
 
     // 导出：先 toDataURL（iOS tainted canvas 可用），手动转 Blob
     let dataUrl;
