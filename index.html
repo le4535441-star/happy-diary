@@ -3818,8 +3818,7 @@ async function showSplashThenApp() {
     try {
       await initCloudSync(); // 内部已含 syncSignsFromCloud，签文历史也会恢复
       await loadEntries();
-      updateSignCount().catch(()=>{}); // 恢复后立即刷新签文计数
-      const afterSyncEntries = getEntries();
+      updateSignCount(); // 恢复后立即刷新签文计数      const afterSyncEntries = getEntries();
       if (afterSyncEntries && afterSyncEntries.length > 0) {
         document.getElementById('sync-status-text').textContent = `找回了 ${afterSyncEntries.length} 个快乐 🎉`;
         document.getElementById('sync-sub-text').textContent = '马上带你回去看看~';
@@ -3857,7 +3856,7 @@ async function initCloudSyncAndRefresh() {
   const afterCount = getEntries().length;
   
   // 同步完成后刷新签文计数（以防 splash 显示期间签文还没到）
-  updateSignCount().catch(()=>{});
+  updateSignCount();
   
   // 如果云端有新数据同步下来了，静默刷新广场（不强制跳转 currentIndex）
   if (afterCount !== beforeCount) {
@@ -6958,7 +6957,7 @@ function backToTemple() {
   btn.disabled = false;
   document.getElementById('temple-tip').innerHTML = '专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题';
   
-  updateSignCount().catch(()=>{});
+  updateSignCount();
 }
 
 // 摇签音效
@@ -7112,10 +7111,9 @@ function stopShakeSound() {
   }); // ensureAudioRunning end
 }
 
-// 签文存储：IndexedDB（持久化，清缓存不丢失）+ 云端双写
-// ========== 签文历史 - 完全照抄粉碎记录架构 ==========
+// 签文存储：IndexedDB（主存储）+ 云端（跨设备恢复）
+// ========== 完全照抄粉碎记录 saveShredRecord/getShredRecords 架构 ==========
 
-// IndexedDB 读（按 _owner 忽略大小写）
 async function dbSignGetAll() {
   return new Promise((resolve) => {
     if (!db || !db.objectStoreNames.contains('signs')) { resolve([]); return; }
@@ -7135,7 +7133,6 @@ async function dbSignGetAll() {
   });
 }
 
-// 摇签时保存记录（照抄 saveShredRecord）
 async function saveSignRecord() {
   if (!db || !db.objectStoreNames.contains('signs')) return;
   return new Promise((resolve) => {
@@ -7155,7 +7152,11 @@ async function saveSignRecord() {
     tx.oncomplete = () => {
       if (cloudReady && cloudDb) {
         cloudDb.collection('signs').add({
-          ...record,
+          num: record.num,
+          level: record.level,
+          poem: record.poem,
+          date: record.date,
+          time: record.time,
           localId: record.id,
           _username: currentUsername.toLowerCase()
         }).catch(() => {});
@@ -7167,10 +7168,16 @@ async function saveSignRecord() {
   });
 }
 
-async function updateSignCount() {
-  const records = await dbSignGetAll();
-  const el = document.getElementById('sign-count');
-  if (el) el.textContent = records.length;
+function updateSignCount() {
+  if (!db || !db.objectStoreNames.contains('signs')) return;
+  const tx = db.transaction('signs', 'readonly');
+  const req = tx.objectStore('signs').getAll();
+  req.onsuccess = () => {
+    const lowerUser = currentUsername ? currentUsername.toLowerCase() : '';
+    const cnt = (req.result || []).filter(r => !r._owner || r._owner.toLowerCase() === lowerUser).length;
+    const el = document.getElementById('sign-count');
+    if (el) el.textContent = cnt;
+  };
 }
 
 async function showSignHistory() {
@@ -7178,24 +7185,26 @@ async function showSignHistory() {
   document.getElementById('sign-history-page').style.display = 'block';
 
   const list = document.getElementById('sign-history-list');
-  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">\u{1F4FF} \u6b63\u5728\u52a0\u8f7d\u7b7e\u6587\u8bb0\u5f55\u2026</div>';
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">&#128255; &#27491;&#22312;&#21152;&#36733;&#31614;&#25991;&#35760;&#24405;&#8230;</div>';
 
   const records = await dbSignGetAll();
 
   if (records.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">\u8fd8\u6ca1\u6709\u6447\u8fc7\u7b7e</div>';
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">&#36824;&#27809;&#26377;&#25187;&#36807;&#31614;</div>';
     return;
   }
 
-  list.innerHTML = records.map(r => `
-    <div class="sign-history-item" onclick="openSignFromHistory(${r.num})" style="cursor:pointer;">
-      <div class="sh-top">
-        <span class="sh-num">\u7b2c${r.num}\u7b7e \u00b7 ${r.level}</span>
-        <span class="sh-date">${r.date} ${r.time}</span>
-      </div>
-      <div class="sh-poem">${(r.poem || '').replace(/\n/g, ' / ')}</div>
-      <div style="text-align:right;font-size:11px;color:var(--accent);margin-top:6px;">\u70b9\u51fb\u67e5\u770b\u89e3\u7b7e \u203a</div>
-    </div>`).join('');
+  list.innerHTML = records.map(function(r) {
+    var poem = (r.poem || '').replace(/\n/g, ' / ');
+    return '<div class="sign-history-item" onclick="openSignFromHistory(' + r.num + ')" style="cursor:pointer;">' +
+      '<div class="sh-top">' +
+        '<span class="sh-num">&#31532;' + r.num + '&#31614; &middot; ' + r.level + '</span>' +
+        '<span class="sh-date">' + r.date + ' ' + r.time + '</span>' +
+      '</div>' +
+      '<div class="sh-poem">' + poem + '</div>' +
+      '<div style="text-align:right;font-size:11px;color:var(--accent);margin-top:6px;">&#28857;&#20987;&#26597;&#30475;&#35299;&#31614; &rsaquo;</div>' +
+    '</div>';
+  }).join('');
 }
 
 function openSignFromHistory(signNum) {
@@ -7271,7 +7280,7 @@ function switchTab(tab) {
   }
   if (tab === 'shred') { updateShredCountTab(); }
   if (tab === 'luck') {
-    updateSignCount().catch(()=>{});
+    updateSignCount();
     backToTemple();
   }
   if (tab === 'me') { loadMyProfile(); }
@@ -8182,7 +8191,7 @@ async function confirmClearData() {
     await loadEntries();
     renderPlaza();
     updatePoolCount();
-    updateSignCount().catch(()=>{});
+    updateSignCount();
     
     // 恢复按钮文字
     if (btn) btn.textContent = '一键清除历史数据';
