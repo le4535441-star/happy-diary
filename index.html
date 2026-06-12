@@ -7250,6 +7250,10 @@ async function shareAsCard() {
   clone.style.zIndex = '-1';
   clone.style.width = diaryPage.offsetWidth + 'px';
   clone.style.height = diaryPage.offsetHeight + 'px';
+  // 确保卡片圆角和边框线在截图中可见（两种情况统一）
+  clone.style.borderRadius = '20px';
+  clone.style.overflow = 'hidden';
+  clone.style.boxShadow = '0 2px 16px rgba(0,0,0,0.10)';
   // 主动禁用 ::before 伪元素（避免 SVG filter taint canvas）
   clone.style.setProperty('--disable-before', 'none');
 
