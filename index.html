@@ -1936,9 +1936,9 @@ body {
 .paper-note.shredding {
   /* 纸张由上至下消失：clip-path从顶部往下夹紧（inset top增大），同时整体下移 */
   transform: translateY(100px);
-  clip-path: inset(100% 0 0 0);  /* 100%顶部裁剪 = 从上往下完全消失 */
-  transition: transform 1.1s cubic-bezier(0.3, 0, 0.6, 1),
-              clip-path 0.9s cubic-bezier(0.4, 0, 0.8, 1);
+  clip-path: inset(100% 0 0 0);
+  transition: transform 1.65s cubic-bezier(0.3, 0, 0.6, 1),
+              clip-path 1.35s cubic-bezier(0.4, 0, 0.8, 1);
 }
 
 /* 粉碎机 */
@@ -4808,8 +4808,9 @@ async function playShredSound() {
     const ctx = await ensureAudioRunning();
     const now = ctx.currentTime;
     
-    // 撕裂声（白噪音 + 滤波器下扫，3秒长版）
-    const bufferSize = ctx.sampleRate * 3;
+    // 撕裂声（白噪音 + 滤波器下扫，延长到 4.5 秒）
+    const TOTAL = 4.5;
+    const bufferSize = Math.ceil(ctx.sampleRate * TOTAL);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -4822,35 +4823,35 @@ async function playShredSound() {
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(5000, now);
-    filter.frequency.exponentialRampToValueAtTime(100, now + 2.5);
+    filter.frequency.exponentialRampToValueAtTime(100, now + TOTAL - 0.5);
     filter.Q.value = 1.5;
     
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.5, now);
-    gain.gain.linearRampToValueAtTime(0.6, now + 0.15);
-    gain.gain.setValueAtTime(0.5, now + 1.0);
-    gain.gain.setValueAtTime(0.35, now + 2.0);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+    gain.gain.linearRampToValueAtTime(0.65, now + 0.2);
+    gain.gain.setValueAtTime(0.55, now + 1.5);
+    gain.gain.setValueAtTime(0.4, now + 3.0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + TOTAL);
     
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
     noise.start(now);
-    noise.stop(now + 3.0);
+    noise.stop(now + TOTAL);
     
-    // 碎片落地的咕噜敲击声（更多更密集）
-    [0.4, 0.6, 0.75, 0.9, 1.05, 1.2, 1.35, 1.5, 1.65, 1.8, 1.95, 2.1, 2.25, 2.4, 2.55, 2.7, 2.85].forEach(t => {
+    // 碎片落地的敲击声（加密加长，配合4.5秒）
+    [0.4, 0.55, 0.7, 0.85, 1.0, 1.15, 1.3, 1.5, 1.65, 1.8, 2.0, 2.15, 2.3, 2.5, 2.65, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2].forEach(t => {
       const click = ctx.createOscillator();
       const cGain = ctx.createGain();
       click.connect(cGain);
       cGain.connect(ctx.destination);
       click.type = 'sine';
-      click.frequency.value = 120 + Math.random() * 400;
+      click.frequency.value = 100 + Math.random() * 450;
       cGain.gain.setValueAtTime(0, now + t);
-      cGain.gain.linearRampToValueAtTime(0.1 * (1 - t/3), now + t + 0.01);
-      cGain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.12);
+      cGain.gain.linearRampToValueAtTime(0.12 * (1 - t / TOTAL), now + t + 0.01);
+      cGain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.14);
       click.start(now + t);
-      click.stop(now + t + 0.15);
+      click.stop(now + t + 0.16);
     });
   } catch(e) {}
 }
@@ -7144,40 +7145,40 @@ async function doShredTab() {
   btn.disabled = true;
   btn.textContent = '正在送入粉碎机...';
   
-  // 1. 纸条开始被吸入动画（CSS transition 1.5秒）
+  // 1. 纸条开始被吸入动画（CSS transition 1.5倍时长）
   const note = document.getElementById('paper-note-tab');
   note.classList.add('shredding');
   
-  // 2. 触发震动
-  if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 80, 30, 100, 30, 150]);
+  // 2. 触发震动（更长振动模式）
+  if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 80, 30, 100, 30, 150, 50, 100]);
   
-  // 3. 播放粉碎音效（音效本身3秒）
+  // 3. 播放粉碎音效（音效本身4.5秒）
   setTimeout(() => {
     playShredSound();
     btn.textContent = '粉碎中...🔥';
   }, 800);
   
-  // 4. 纸条完全进入后，生成碎片飞散（1.5秒后）
+  // 4. 纸条完全进入后，生成碎片飞散（2.3秒后）
   setTimeout(() => {
     createShredPiecesTab();
     note.style.display = 'none';
     btn.style.display = 'none';
     document.getElementById('shredder-machine-tab').style.opacity = '0.5';
-  }, 1500);
+  }, 2300);
   
   // 5. 碎片飘落过程持续（3.5秒后再触发更多碎片）
   setTimeout(() => {
     createShredPiecesTab();
-  }, 2500);
+  }, 3800);
   
-  // 6. 显示结果（5秒后）
+  // 6. 显示结果（7秒后，配合4.5秒音效）
   setTimeout(() => {
     document.getElementById('shredder-machine-tab').style.display = 'none';
     document.getElementById('shredder-machine-tab').style.opacity = '1';
     document.getElementById('shred-result-tab').style.display = 'flex';
     document.getElementById('result-text-tab').textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
     updateShredCountTab();
-  }, 5000);
+  }, 7000);
 }
 
 function createShredPiecesTab() {
