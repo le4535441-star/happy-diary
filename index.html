@@ -6444,6 +6444,7 @@ async function initCloudSync() {
     await syncFromCloud();
     await syncLocalToCloud();
     await syncSignsFromCloud(); // 恢复签文历史
+    await flushPendingSigns();  // 推送离线时摇的签
     await loadProfileFromCloud();
     console.log('Cloud sync completed');
   } catch(e) {
@@ -7017,9 +7018,8 @@ function stopShakeSound() {
   }); // ensureAudioRunning end
 }
 
-// 签文存储
+// 签文存储：localStorage缓存 + 同步到云端
 function saveSignRecord() {
-  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   const newRecord = {
     num: currentSign.num,
     level: currentSign.level,
@@ -7028,17 +7028,19 @@ function saveSignRecord() {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5)
   };
+  // 1. 写本地缓存
+  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   records.unshift(newRecord);
-  const trimmed = records.slice(0, 100);
-  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(trimmed));
+  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(records.slice(0, 100)));
   updateSignCount();
-  
-  // 同步新签文记录到云端 signs 集合
+  // 2. 写云端（立即写，不等待）
   if (cloudReady && cloudDb) {
-    cloudDb.collection('signs').add({
-      ...newRecord,
-      _username: currentUsername
-    }).catch(() => {});
+    cloudDb.collection('signs').add({ ...newRecord, _username: currentUsername }).catch(() => {});
+  } else {
+    // 云端还没就绪，标记待推
+    const pending = JSON.parse(localStorage.getItem('hd_signs_pending_' + currentUsername) || '[]');
+    pending.push(newRecord);
+    localStorage.setItem('hd_signs_pending_' + currentUsername, JSON.stringify(pending));
   }
 }
 
@@ -7048,9 +7050,23 @@ function updateSignCount() {
   if (el) el.textContent = records.length;
 }
 
-// 从云端恢复签文历史（清缓存/新设备登录时）
-async function syncSignsFromCloud() {
+// 推送待写的签文到云端
+async function flushPendingSigns() {
   if (!cloudReady || !cloudDb) return;
+  const key = 'hd_signs_pending_' + currentUsername;
+  const pending = JSON.parse(localStorage.getItem(key) || '[]');
+  if (pending.length === 0) return;
+  for (const r of pending) {
+    try {
+      await cloudDb.collection('signs').add({ ...r, _username: currentUsername });
+    } catch(e) {}
+  }
+  localStorage.removeItem(key);
+}
+
+// 直接从云端读取签文（不依赖本地缓存）
+async function fetchSignsFromCloud() {
+  if (!cloudReady || !cloudDb) return null;
   try {
     const col = cloudDb.collection('signs');
     let allCloud = [];
@@ -7062,62 +7078,71 @@ async function syncSignsFromCloud() {
       if (res.data.length < 100) break;
       offset += 100;
     }
-    
-    if (allCloud.length === 0) return; // 云端真的没有，不动本地
-    
-    // 用云端数据重建本地（云端是权威数据源）
-    const cloudRecords = allCloud.map(r => ({
-      num: r.num,
-      level: r.level,
-      ancient: r.ancient || '',
-      poem: r.poem || '',
-      date: r.date,
-      time: r.time
-    }));
-    
-    // 合并：本地有但云端没有的也保留（新摇的还没同步）
-    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-    const cloudKeys = new Set(cloudRecords.map(r => r.date + r.time + r.num));
-    const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
-    
-    const merged = [...cloudRecords, ...onlyLocal];
-    merged.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-    const final = merged.slice(0, 100);
-    
-    localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(final));
-    updateSignCount();
-    console.log(`syncSignsFromCloud: restored ${final.length} records`);
+    return allCloud.map(r => ({
+      num: r.num, level: r.level, ancient: r.ancient || '',
+      poem: r.poem || '', date: r.date, time: r.time
+    })).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   } catch(e) {
-    console.log('syncSignsFromCloud failed:', e.message);
+    console.log('fetchSignsFromCloud failed:', e.message);
+    return null;
   }
+}
+
+// 从云端同步到本地缓存（后台使用）
+async function syncSignsFromCloud() {
+  const cloud = await fetchSignsFromCloud();
+  if (!cloud || cloud.length === 0) return;
+  // 合并本地新记录（刚摇还没同步的）
+  const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  const cloudKeys = new Set(cloud.map(r => r.date + r.time + r.num));
+  const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+  const merged = [...cloud, ...onlyLocal]
+    .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
+    .slice(0, 100);
+  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
+  updateSignCount();
+  console.log(`syncSignsFromCloud: ${merged.length} records`);
 }
 
 async function showSignHistory() {
   document.getElementById('luck-temple').style.display = 'none';
   document.getElementById('sign-history-page').style.display = 'block';
-  
+
   const list = document.getElementById('sign-history-list');
-  let records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-  
-  // 本地没数据时，先显示"恢复中"，等云端同步完再渲染
-  if (records.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在从云端恢复历史签文…</div>';
-    // 等待云端就绪（最多 8 秒）
-    for (let i = 0; i < 16; i++) {
-      await new Promise(r => setTimeout(r, 500));
-      if (cloudReady && cloudDb) {
-        await syncSignsFromCloud();
-        records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-        if (records.length > 0) break;
-      }
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在加载签文记录…</div>';
+
+  // 优先直接从云端读取（绕过本地缓存）
+  let records = null;
+
+  // 等待云端就绪（最多10秒）
+  for (let i = 0; i < 20; i++) {
+    if (cloudReady && cloudDb) {
+      records = await fetchSignsFromCloud();
+      break;
     }
+    await new Promise(r => setTimeout(r, 500));
   }
-  
-  if (records.length === 0) {
+
+  // 云端读到了就更新本地缓存
+  if (records && records.length > 0) {
+    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+    const cloudKeys = new Set(records.map(r => r.date + r.time + r.num));
+    const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+    const merged = [...records, ...onlyLocal].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,100);
+    localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
+    updateSignCount();
+    records = merged;
+  } else {
+    // 云端没数据或网络异常，回退到本地缓存
+    records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  }
+
+  if (!records || records.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
     return;
   }
-  list.innerHTML = records.map((r, idx) => `
+
+  list.innerHTML = records.map((r) => `
     <div class="sign-history-item" onclick="openSignFromHistory(${r.num})" style="cursor:pointer;">
       <div class="sh-top">
         <span class="sh-num">第${r.num}签 · ${r.level}</span>
