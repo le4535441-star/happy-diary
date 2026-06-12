@@ -2511,11 +2511,11 @@ body {
   </div>
 </div>
 
-<!-- 月度快乐报告弹窗 -->
+<!-- 周度快乐报告弹窗 -->
 <div id="monthly-report-overlay" style="display:none;position:fixed;inset:0;z-index:99997;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);">
   <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;max-height:80vh;overflow-y:auto;">
-    <div style="font-size:48px;margin-bottom:12px;">📊</div>
-    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:var(--ink);margin-bottom:6px;">月度快乐报告</h3>
+    <div style="font-size:48px;margin-bottom:12px;">🌈</div>
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:var(--ink);margin-bottom:6px;">每周快乐报告</h3>
     <p style="font-size:12px;color:var(--ink-light);margin-bottom:20px;" id="report-month-label"></p>
     <div id="monthly-report-content" style="text-align:left;"></div>
     <button onclick="closeMonthlyReport()" style="margin-top:20px;padding:12px 32px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">知道了 ✨</button>
@@ -7832,57 +7832,74 @@ function loadTheme() {
 // ========== 月度快乐报告 ==========
 function checkMonthlyReport() {
   const today = new Date();
-  const day = today.getDate();
+  const dayOfWeek = today.getDay();    // 0=日 1=一 ... 1=周一
   const hour = today.getHours();
   
-  // 每月1-3号 且 晚上8点之后 才触发
-  if (day > 3) return;
-  if (day === 1 && hour < 20) return; // 1号要到20点后
+  // 只在周一 10:00-23:59 触发
+  if (dayOfWeek !== 1) return;
+  if (hour < 10) return;
   
-  const yearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  // 以"年+周数"为 key，同一周只推一次
+  const weekNum = getISOWeek(today);
+  const weekKey = `${today.getFullYear()}-W${weekNum}`;
   const lastReport = localStorage.getItem('hd_report_' + currentUsername);
-  if (lastReport === yearMonth) return;
+  if (lastReport === weekKey) return;
   
-  // 延迟3秒显示（在备份提醒之后）
+  // 延迟5秒显示（让用户先看到快乐广场）
   setTimeout(() => {
-    generateMonthlyReport(yearMonth);
+    generateWeeklyReport(weekKey);
   }, 5000);
 }
 
-function generateMonthlyReport(yearMonth) {
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function generateWeeklyReport(weekKey) {
   const entries = getEntries();
   
-  // 统计上个月的数据
+  // 统计上一周（周一至周日）的数据
   const today = new Date();
-  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-  const lastMonthName = `${lastMonth.getFullYear()}年${lastMonth.getMonth() + 1}月`;
-  
-  const monthEntries = entries.filter(e => e.date && e.date.startsWith(lastMonthStr));
-  
-  if (monthEntries.length === 0) {
-    // 上个月没有记录，不显示报告
-    localStorage.setItem('hd_report_' + currentUsername, yearMonth);
+  const dayOfWeek = today.getDay() || 7; // 1-7，周一=1
+  // 上周一
+  const lastMonStart = new Date(today);
+  lastMonStart.setDate(today.getDate() - dayOfWeek - 6);
+  lastMonStart.setHours(0, 0, 0, 0);
+  // 上周日
+  const lastSunEnd = new Date(today);
+  lastSunEnd.setDate(today.getDate() - dayOfWeek);
+  lastSunEnd.setHours(23, 59, 59, 999);
+
+  const weekEntries = entries.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d >= lastMonStart && d <= lastSunEnd;
+  });
+
+  const weekLabel = `${lastMonStart.getMonth()+1}月${lastMonStart.getDate()}日 - ${lastSunEnd.getMonth()+1}月${lastSunEnd.getDate()}日`;
+
+  if (weekEntries.length === 0) {
+    // 上周没有记录，静默跳过
+    localStorage.setItem('hd_report_' + currentUsername, weekKey);
     return;
   }
-  
-  // 统计数据
-  const totalDays = new Set(monthEntries.map(e => e.date)).size;
-  const totalEntries = monthEntries.length;
+
+  const totalDays = new Set(weekEntries.map(e => e.date)).size;
+  const totalEntries = weekEntries.length;
   const tags = {};
-  monthEntries.forEach(e => {
+  weekEntries.forEach(e => {
     if (e.tag) tags[e.tag] = (tags[e.tag] || 0) + 1;
   });
   const topTags = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  
-  // 找到最长的一条记录
-  const longest = monthEntries.reduce((a, b) => (a.text || '').length > (b.text || '').length ? a : b);
-  
-  // 生成报告内容
+  const longest = weekEntries.reduce((a, b) => (a.text || '').length > (b.text || '').length ? a : b);
+
   let html = `
     <div style="background:var(--accent-soft);border-radius:14px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:32px;text-align:center;margin-bottom:8px;">🎉</div>
-      <div style="font-size:16px;color:var(--ink);font-weight:700;text-align:center;">上月快乐指数</div>
+      <div style="font-size:32px;text-align:center;margin-bottom:8px;">🌟</div>
+      <div style="font-size:16px;color:var(--ink);font-weight:700;text-align:center;">上周快乐指数</div>
       <div style="display:flex;justify-content:space-around;margin-top:12px;">
         <div style="text-align:center;">
           <div style="font-size:24px;font-weight:800;color:var(--accent);">${totalEntries}</div>
@@ -7893,20 +7910,20 @@ function generateMonthlyReport(yearMonth) {
           <div style="font-size:11px;color:var(--ink-light);">天记录</div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--accent);">${(totalEntries / totalDays).toFixed(1)}</div>
+          <div style="font-size:24px;font-weight:800;color:var(--accent);">${(totalEntries / Math.max(totalDays,1)).toFixed(1)}</div>
           <div style="font-size:11px;color:var(--ink-light);">条/天</div>
         </div>
       </div>
     </div>`;
-  
+
   if (topTags.length > 0) {
-    html += `<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">🏷️ 快乐来源 TOP3</div>`;
+    html += `<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">🏷️ 快乐来源 TOP${topTags.length}</div>`;
     topTags.forEach(([tag, count], i) => {
       html += `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px;">${i+1}. ${tag}（${count}次）</div>`;
     });
     html += `</div>`;
   }
-  
+
   html += `
     <div style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">📝 最走心的一条</div>
@@ -7916,14 +7933,15 @@ function generateMonthlyReport(yearMonth) {
       </div>
     </div>
     <div style="font-size:12px;color:var(--ink-light);text-align:center;line-height:1.6;">
-      ✨ 新的一个月，继续收集快乐吧！
+      ✨ 新的一周，继续收集快乐吧！
     </div>`;
-  
-  document.getElementById('report-month-label').textContent = lastMonthName + ' 快乐小结';
+
+  document.getElementById('report-month-label').textContent = weekLabel + ' 快乐小结';
   document.getElementById('monthly-report-content').innerHTML = html;
   document.getElementById('monthly-report-overlay').style.display = 'flex';
   
-  localStorage.setItem('hd_report_' + currentUsername, yearMonth);
+  // 标记本周已读（阅读即消费，关闭后不再出现）
+  localStorage.setItem('hd_report_' + currentUsername, weekKey);
 }
 
 function closeMonthlyReport() {
