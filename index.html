@@ -737,7 +737,8 @@ body {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 16px 20px;
+  /* 底部留出足够空间，确保最后一行卡片完全可见（tab-bar高度 + 安全区 + 额外间距） */
+  padding: 0 16px calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
 /* 回看时光-筛选区 */
