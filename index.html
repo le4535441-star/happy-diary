@@ -3732,7 +3732,32 @@ function enterApp() {
     if (req) req.call(el).catch(() => {});
   } catch(e) {}
   document.getElementById('login-screen').style.display = 'none';
+
+  // ★ 第一次注册的用户，显示欢迎全屏图（只出现一次）
+  const welcomeKey = 'hd_welcomed_' + currentUsername;
+  if (!localStorage.getItem(welcomeKey)) {
+    localStorage.setItem(welcomeKey, '1');
+    showWelcomeSplash();
+    return;
+  }
+
   showSplashThenApp();
+}
+
+function showWelcomeSplash() {
+  const overlay = document.createElement('div');
+  overlay.id = 'welcome-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  overlay.innerHTML = '<img src="welcome.png" style="width:100%;height:100%;object-fit:cover;" />';
+  // 点击或3秒后自动消失进入主界面
+  const dismiss = () => {
+    overlay.remove();
+    playWindChimeSound();
+    showSplashThenApp();
+  };
+  overlay.addEventListener('click', dismiss);
+  setTimeout(dismiss, 4000);
+  document.body.appendChild(overlay);
 }
 
 async function showSplashThenApp() {
