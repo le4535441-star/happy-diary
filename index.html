@@ -4452,7 +4452,9 @@ function renderPage() {
   }
   
   const entry = entries[currentIndex];
-  const quote = entry.quote || getRandomQuote();
+  // quote 为 null 表示用户选择了"不要配文"
+  const quote = (entry.quote === null || entry.quote === undefined) ? getRandomQuote() : entry.quote;
+  const hasQuote = entry.quote !== null && entry.quote !== undefined;
   const dateObj = new Date(entry.date);
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   
@@ -4478,10 +4480,10 @@ function renderPage() {
         </div>
         ${entry.tag ? `<div class="page-tag">${entry.tag}</div>` : ''}
         <div class="page-footer">
-          <div class="page-quote">
+          ${hasQuote ? `<div class="page-quote">
             「${quote.text}」
             <span class="author">—— ${quote.author}</span>
-          </div>
+          </div>` : ''}
         </div>
       </div>
     </div>`;
@@ -7695,10 +7697,10 @@ function saveSoundSettings() {
     soundSettings[o.key] = document.getElementById('snd_' + o.key).checked;
   });
   localStorage.setItem(getSoundSettingsKey(), JSON.stringify(soundSettings));
+  // ★ 立即生效，不需要重新登录
   hideSoundSettings();
-  // 显示保存成功提示
   const toast = document.createElement('div');
-  toast.textContent = '✅ 音效设置已保存';
+  toast.textContent = '✅ 音效设置已保存并生效';
   toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2c2016;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:99999;opacity:1;transition:opacity 0.5s';
   document.body.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
