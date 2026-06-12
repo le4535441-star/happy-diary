@@ -2841,10 +2841,6 @@ body {
 
   <!-- 底部Tab栏 -->
   <div class="tab-bar" id="tab-bar">
-    <div class="tab-item active" onclick="switchTab('laugh')">
-      <span class="tab-icon">😆</span>
-      <span class="tab-label">笑一声</span>
-    </div>
     <div class="tab-item" onclick="switchTab('happy')">
       <span class="tab-icon">📖</span>
       <span class="tab-label">记好事</span>
@@ -2856,6 +2852,10 @@ body {
     <div class="tab-item" onclick="switchTab('luck')">
       <span class="tab-icon">🍀</span>
       <span class="tab-label">问观音</span>
+    </div>
+    <div class="tab-item active" onclick="switchTab('laugh')">
+      <span class="tab-icon">😆</span>
+      <span class="tab-label">笑一声</span>
     </div>
     <div class="tab-item" onclick="switchTab('me')">
       <span class="tab-icon">👤</span>
@@ -6986,7 +6986,7 @@ function switchTab(tab) {
   // 显示目标tab
   document.getElementById('tab-' + tab).classList.add('active');
   // 高亮对应tab按钮
-  const tabs = ['laugh', 'happy', 'shred', 'luck', 'me'];
+  const tabs = ['happy', 'shred', 'luck', 'laugh', 'me'];
   const idx = tabs.indexOf(tab);
   document.querySelectorAll('.tab-item')[idx].classList.add('active');
 
