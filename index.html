@@ -3730,6 +3730,9 @@ async function showSplashThenApp() {
     // 闪屏出现时播放风铃（手动登录已激活 AudioContext，直接播）
     playWindChimeSound();
     
+    // ★ 闪屏期间立刻在后台同步签文（不等10秒），确保进入主界面后签文历史已恢复
+    initCloudSync().catch(e => console.log('Early sign sync error:', e));
+    
     // 10 秒后进入主界面，同时启动云同步
     setTimeout(async () => {
       splash.style.display = 'none';
@@ -6263,7 +6266,14 @@ let cloudReady = false;
 let isSyncing = false; // 防重入锁，避免快速登录触发多次并发同步
 
 async function initCloudSync() {
-  if (isSyncing) return; // 已有同步在进行中，直接返回
+  if (isSyncing) {
+    // 已有同步，等 3 秒后判断是否 cloudReady，直接拉签文
+    await new Promise(r => setTimeout(r, 3000));
+    if (cloudReady && cloudDb) {
+      await syncSignsFromCloud();
+    }
+    return;
+  }
   isSyncing = true;
   try {
     if (typeof cloudbase === 'undefined') { console.log('cloudbase SDK not loaded'); return; }
