@@ -3745,52 +3745,48 @@ function enterApp() {
 }
 
 function showWelcomeSplash() {
-  // 进入页面立刻尝试激活音效（用户刚完成注册点击，有交互事件）
+  // 进入即播风铃（注册完成有交互事件，AudioContext 已激活）
   playWindChimeSound();
 
   const overlay = document.createElement('div');
   overlay.id = 'welcome-overlay';
-  overlay.style.cssText = [
-    'position:fixed;inset:0;z-index:99999;background:#1a0f05;',
-    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
-    'cursor:pointer;overflow:hidden;'
-  ].join('');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;';
 
-  overlay.innerHTML = [
-    // 全屏背景图
-    '<img src="welcome.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />',
-    // 底部提示条（半透明遮罩上的文字）
-    '<div style="position:absolute;bottom:0;left:0;right:0;',
-      'background:linear-gradient(transparent,rgba(26,15,5,0.7));',
-      'padding:40px 24px 48px;',
-      'display:flex;flex-direction:column;align-items:center;gap:10px;">',
-      // 摇摆铃铛
-      '<div style="font-size:28px;animation:bellPulse 2s ease-in-out infinite;">🔔</div>',
-      '<span style="font-size:13px;color:rgba(255,240,200,0.85);letter-spacing:2px;',
-        'text-shadow:0 1px 4px rgba(0,0,0,0.5);">轻触有惊喜</span>',
-    '</div>'
-  ].join('');
+  // 视频元素（iOS 要求 muted + playsinline 才能自动播放）
+  overlay.innerHTML =
+    '<video id="welcome-video" src="welcome.mp4" autoplay muted playsinline' +
+    ' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>' +
+    // 底部轻提示（透明度较低，不显眼）
+    '<div style="position:absolute;bottom:0;left:0;right:0;' +
+      'background:linear-gradient(transparent,rgba(0,0,0,0.35));' +
+      'padding:32px 24px 44px;' +
+      'display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">' +
+      '<div style="font-size:22px;opacity:0.55;animation:bellPulse 2.5s ease-in-out infinite;">🔔</div>' +
+      '<span style="font-size:11px;color:rgba(255,245,220,0.5);letter-spacing:2px;">轻触跳过</span>' +
+    '</div>';
 
-  // 点击时播放风铃再进入
-  let dismissed = false;
-  const dismiss = () => {
+  document.body.appendChild(overlay);
+
+  // 进入主流程（淡出动画）
+  var dismissed = false;
+  var dismiss = function() {
     if (dismissed) return;
     dismissed = true;
     playWindChimeSound();
-    // 淡出动画
     overlay.style.transition = 'opacity 0.6s ease';
     overlay.style.opacity = '0';
-    setTimeout(() => {
-      overlay.remove();
-      showSplashThenApp();
-    }, 600);
+    setTimeout(function() { overlay.remove(); showSplashThenApp(); }, 600);
   };
 
+  // 视频播完自动进入
+  var video = overlay.querySelector('#welcome-video');
+  video.addEventListener('ended', dismiss);
+  // 视频加载失败时降级直接进入
+  video.addEventListener('error', function() { overlay.remove(); showSplashThenApp(); });
+
+  // 点击/触摸跳过
   overlay.addEventListener('click', dismiss);
   overlay.addEventListener('touchstart', dismiss, { passive: true });
-  // 8秒后自动消失（给用户足够时间欣赏图）
-  setTimeout(dismiss, 8000);
-  document.body.appendChild(overlay);
 }
 
 async function showSplashThenApp() {
