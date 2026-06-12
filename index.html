@@ -6649,14 +6649,31 @@ async function syncFromCloud() {
     try {
       const signsCol = cloudDb.collection('signs');
       let allCloudSigns = [];
-      let signsOffset = 0;
-      while (true) {
-        const signsResult = await signsCol.where({ _username: currentUsername.toLowerCase() }).skip(signsOffset).limit(100).get();
-        if (!signsResult.data || signsResult.data.length === 0) break;
-        allCloudSigns = allCloudSigns.concat(signsResult.data);
-        if (signsResult.data.length < 100) break;
-        signsOffset += 100;
+
+      // 同时查原始大小写和小写两种格式，兼容历史数据
+      const usernamesToQuery = [currentUsername.toLowerCase()];
+      if (currentUsername !== currentUsername.toLowerCase()) {
+        usernamesToQuery.push(currentUsername);
       }
+
+      for (const uname of usernamesToQuery) {
+        let signsOffset = 0;
+        while (true) {
+          const signsResult = await signsCol.where({ _username: uname }).skip(signsOffset).limit(100).get();
+          if (!signsResult.data || signsResult.data.length === 0) break;
+          allCloudSigns = allCloudSigns.concat(signsResult.data);
+          if (signsResult.data.length < 100) break;
+          signsOffset += 100;
+        }
+      }
+      // 去重（防止两次查询有重复）
+      const seenIds = new Set();
+      allCloudSigns = allCloudSigns.filter(item => {
+        const key = item.localId || item.id;
+        if (seenIds.has(key)) return false;
+        seenIds.add(key);
+        return true;
+      });
 
       if (allCloudSigns.length > 0) {
         const localSigns = await dbSignGetAll();
