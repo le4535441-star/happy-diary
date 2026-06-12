@@ -1222,10 +1222,10 @@ body {
   /* 与游戏框渐变末尾色一致 */
   background: #7d4a2e !important;
 }
-/* 粉碎机：固定不滚动，背景色与内部渐变末尾一致 */
+/* 粉碎机 tab 背景颜色同步 */
 #tab-shred {
   overflow: hidden;
-  background: #b0bec5 !important;
+  background: #263238 !important;
 }
 /* 观音：允许滚动（解签页需要），背景和 luck-temple 底色一致 */
 #tab-luck {
@@ -2678,30 +2678,45 @@ body {
 
   <!-- Tab3: 随Ta去（粉碎糟心事） -->
   <div id="tab-shred" class="tab-page">
-    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow:hidden;padding-bottom:calc(24px + 64px + env(safe-area-inset-bottom,0px));padding-top:40px;">
-      <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
-        <div class="paper-note" id="paper-note-tab" style="width:100%;">
-          <textarea id="shred-text-tab" placeholder="把让你不爽的事写在这里...&#10;写完就随Ta去。" maxlength="500" style="min-height:350px;"></textarea>
+    <div style="width:100%;height:100%;background:linear-gradient(170deg,#263238 0%,#37474f 50%,#455a64 100%);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;position:relative;overflow:hidden;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px));">
+      
+      <!-- 顶部装饰：模拟室内光源 -->
+      <div style="position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:120px;background:radial-gradient(ellipse,rgba(255,255,255,0.06) 0%,transparent 70%);pointer-events:none;"></div>
+      
+      <div id="shred-input-tab" style="width:100%;display:flex;flex-direction:column;align-items:center;flex:1;padding:24px 20px 0;">
+        
+        <!-- 纸条（占主区域，沉浸感） -->
+        <div class="paper-note" id="paper-note-tab" style="width:100%;max-width:360px;flex:1;display:flex;flex-direction:column;margin-bottom:0;transform:rotate(-0.5deg);">
+          <textarea id="shred-text-tab" placeholder="写下让你不爽的事…&#10;字迹可以潦草，情绪可以奔放。&#10;写完一键粉碎。" maxlength="500" style="flex:1;min-height:320px;font-size:18px;line-height:1.9;padding:24px 20px;"></textarea>
         </div>
-        <!-- 粉碎机图形 -->
-        <div class="shredder-machine" id="shredder-machine-tab" style="margin-top:28px;">
-          <div class="machine-slot"></div>
-          <div class="machine-body">
-            <div class="machine-label">粉碎机</div>
+
+        <!-- 粉碎机：底部吞入口 -->
+        <div id="shredder-machine-tab" class="shredder-machine" style="margin-top:0;width:100%;max-width:360px;">
+          <div class="machine-slot" style="width:100%;height:10px;border-radius:5px 5px 0 0;"></div>
+          <div class="machine-body" style="width:100%;height:52px;border-radius:0 0 16px 16px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,#37474f 0%,#263238 100%);">
+            <span style="font-size:16px;">⚙️</span>
+            <span class="machine-label" style="color:#b0bec5;font-size:14px;letter-spacing:3px;">粉 碎 机</span>
+            <span style="font-size:16px;">⚙️</span>
           </div>
         </div>
-        <button class="shred-btn" id="shred-btn-tab" onclick="doShredTab()" style="margin-top:32px;">🗑️ 随Ta去！</button>
-        <div class="shred-result" id="shred-result-tab" style="display:none;text-align:center;margin-top:24px;">
+
+        <!-- 按钮行 -->
+        <button class="shred-btn" id="shred-btn-tab" onclick="doShredTab()" style="margin-top:20px;width:100%;max-width:360px;font-size:17px;padding:16px 0;letter-spacing:2px;">💥 随Ta去！</button>
+
+        <!-- 结果 -->
+        <div class="shred-result" id="shred-result-tab" style="display:none;text-align:center;margin-top:20px;width:100%;max-width:360px;">
           <div class="result-emoji">🎉</div>
           <div class="result-text" id="result-text-tab"></div>
           <button class="shred-again-btn" onclick="resetShredTab()">再来一次</button>
         </div>
       </div>
-      <div class="shred-stats" id="shred-stats-tab" onclick="toggleShredHistory()" style="width:100%;max-width:340px;margin-top:28px;">
-        <span>🗑️ 烦恼垃圾桶（<strong id="shred-count-tab">0</strong> 条）</span>
+
+      <!-- 底部：烦恼垃圾桶统计 -->
+      <div class="shred-stats" id="shred-stats-tab" onclick="toggleShredHistory()" style="width:calc(100% - 40px);max-width:360px;margin:16px 20px 0;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:#b0bec5;">
+        <span>🗑️ 烦恼垃圾桶（<strong id="shred-count-tab" style="color:#ef9a9a;">0</strong> 条）</span>
         <span class="stats-arrow" id="stats-arrow-tab">查看记录 ›</span>
       </div>
-      <div id="shred-history-tab" style="display:none;width:100%;max-width:340px;margin-top:12px;">
+      <div id="shred-history-tab" style="display:none;width:calc(100% - 40px);max-width:360px;margin:8px 20px 0;">
         <div class="history-list" id="history-list-tab"></div>
       </div>
       <!-- 碎片容器 -->
@@ -7002,11 +7017,11 @@ function switchTab(tab) {
     document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#bcaaa4');
     document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#ffd700');
   } else if (tab === 'shred') {
-    // 粉碎机：tab-bar 与粉碎机底色一致
-    tabBar.style.background = '#b0bec5';
-    tabBar.style.borderTopColor = 'rgba(0,0,0,0.06)';
-    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#546e7a');
-    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#1a237e');
+    // 粉碎机：tab-bar 与深灰背景一致
+    tabBar.style.background = '#263238';
+    tabBar.style.borderTopColor = 'rgba(255,255,255,0.06)';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#78909c');
+    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#ef9a9a');
   } else if (tab === 'laugh') {
     // 哈哈机：tab-bar 与暖棕底色一致
     tabBar.style.background = '#7d4a2e';
@@ -7046,7 +7061,7 @@ async function updateShredCountTab() {
 
 async function toggleShredHistory() {
   if (shredHistoryVisibleTab) {
-    document.getElementById('shred-input-tab').style.display = 'block';
+    document.getElementById('shred-input-tab').style.display = 'flex';
     document.getElementById('shred-history-tab').style.display = 'none';
     document.getElementById('stats-arrow-tab').textContent = '查看记录 ›';
     shredHistoryVisibleTab = false;
