@@ -6416,11 +6416,12 @@ let isSyncing = false; // 防重入锁，避免快速登录触发多次并发同
 
 async function initCloudSync() {
   if (isSyncing) {
-    // 已有同步，等它完成（最多8秒）
-    for (let i = 0; i < 16; i++) {
+    // 已有同步在进行，等它完成（最多10秒），完成后 cloudReady 会变为 true
+    for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 500));
       if (!isSyncing) break;
     }
+    // 不 return，让调用方继续用 cloudReady 判断
     return;
   }
   isSyncing = true;
@@ -7198,10 +7199,14 @@ async function showSignHistory() {
 
   // 本地 IndexedDB 为空（全新设备/清除所有数据），从云端拉
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在从云端恢复签文…</div>';
-  if (!cloudReady) initCloudSync().catch(()=>{});
-
+  
+  // 主动触发云端连接（不管有没有在运行）
+  initCloudSync().catch(()=>{});
+  
+  // 以 100ms 间隔等待 cloudReady，最多等 20 秒
+  // 注意：不能只等 isSyncing，因为 initCloudSync 可能已经在跑了
   let waited = 0;
-  while ((!cloudReady || !cloudDb) && waited < 150) {
+  while ((!cloudReady || !cloudDb) && waited < 200) {
     await new Promise(r => setTimeout(r, 100));
     waited++;
   }
