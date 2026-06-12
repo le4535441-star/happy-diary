@@ -7306,16 +7306,40 @@ async function shareAsCard() {
 
     document.body.removeChild(clone);
 
-    // 水印条
+    // 水印条 + 圆角裁剪
     const dpr = window.devicePixelRatio || 3;
     const cW = canvas.width, cH = canvas.height;
     const wmH = Math.round(36 * dpr);
+    const RADIUS = Math.round(20 * dpr); // 卡片圆角（与 .diary-page border-radius:20px 一致）
+
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = cW;
     finalCanvas.height = cH + wmH;
     const ctx = finalCanvas.getContext('2d');
-    ctx.drawImage(canvas, 0, 0);
     const cs = getComputedStyle(document.documentElement);
+
+    // 先铺暖白底色（整张图）
+    ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
+    ctx.fillRect(0, 0, cW, finalCanvas.height);
+
+    // 用圆角路径裁剪卡片区域
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(RADIUS, 0);
+    ctx.lineTo(cW - RADIUS, 0);
+    ctx.arcTo(cW, 0, cW, RADIUS, RADIUS);
+    ctx.lineTo(cW, cH - RADIUS);
+    ctx.arcTo(cW, cH, cW - RADIUS, cH, RADIUS);
+    ctx.lineTo(RADIUS, cH);
+    ctx.arcTo(0, cH, 0, cH - RADIUS, RADIUS);
+    ctx.lineTo(0, RADIUS);
+    ctx.arcTo(0, 0, RADIUS, 0, RADIUS);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+
+    // 水印条（在圆角之外，紧贴底部）
     ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
     ctx.fillRect(0, cH, cW, wmH);
     ctx.font = Math.round(13 * dpr) + 'px "PingFang SC", sans-serif';
