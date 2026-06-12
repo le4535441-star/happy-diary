@@ -6940,9 +6940,6 @@ function updateSignCount() {
 async function syncSignsFromCloud() {
   if (!cloudReady || !cloudDb) return;
   try {
-    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-    const localKeys = new Set(local.map(r => r.date + r.time + r.num));
-    
     const col = cloudDb.collection('signs');
     let allCloud = [];
     let offset = 0;
@@ -6954,32 +6951,56 @@ async function syncSignsFromCloud() {
       offset += 100;
     }
     
-    // 把云端有、本地没有的补进来
-    let added = 0;
-    for (const r of allCloud) {
-      const key = r.date + r.time + r.num;
-      if (!localKeys.has(key)) {
-        local.push({ num: r.num, level: r.level, ancient: r.ancient, poem: r.poem, date: r.date, time: r.time });
-        added++;
-      }
-    }
-    if (added > 0) {
-      // 按时间倒序排列
-      local.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-      localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(local.slice(0, 100)));
-      updateSignCount();
-    }
+    if (allCloud.length === 0) return; // 云端真的没有，不动本地
+    
+    // 用云端数据重建本地（云端是权威数据源）
+    const cloudRecords = allCloud.map(r => ({
+      num: r.num,
+      level: r.level,
+      ancient: r.ancient || '',
+      poem: r.poem || '',
+      date: r.date,
+      time: r.time
+    }));
+    
+    // 合并：本地有但云端没有的也保留（新摇的还没同步）
+    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+    const cloudKeys = new Set(cloudRecords.map(r => r.date + r.time + r.num));
+    const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+    
+    const merged = [...cloudRecords, ...onlyLocal];
+    merged.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    const final = merged.slice(0, 100);
+    
+    localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(final));
+    updateSignCount();
+    console.log(`syncSignsFromCloud: restored ${final.length} records`);
   } catch(e) {
     console.log('syncSignsFromCloud failed:', e.message);
   }
 }
 
-function showSignHistory() {
+async function showSignHistory() {
   document.getElementById('luck-temple').style.display = 'none';
   document.getElementById('sign-history-page').style.display = 'block';
   
-  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   const list = document.getElementById('sign-history-list');
+  let records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  
+  // 本地没数据时，先显示"恢复中"，等云端同步完再渲染
+  if (records.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在从云端恢复历史签文…</div>';
+    // 等待云端就绪（最多 8 秒）
+    for (let i = 0; i < 16; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (cloudReady && cloudDb) {
+        await syncSignsFromCloud();
+        records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+        if (records.length > 0) break;
+      }
+    }
+  }
+  
   if (records.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
     return;
