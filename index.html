@@ -8177,6 +8177,18 @@ async function confirmClearData() {
         tx.onerror = resolve;
       });
     }
+
+    // 3b. 清除本地 IndexedDB signs（只删 targetUser 的）
+    if (db && db.objectStoreNames.contains('signs')) {
+      const localSigns = await dbSignGetAll();
+      await new Promise((resolve) => {
+        const tx = db.transaction('signs', 'readwrite');
+        const store = tx.objectStore('signs');
+        localSigns.forEach(s => store.delete(s.id));
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      });
+    }
     
     // 4. 同时清除云端（如果勾选）—— where 条件严格限定 targetUser
     if (clearCloudAlso && cloudReady && cloudDb) {
