@@ -7400,18 +7400,16 @@ async function doShredTab() {
   btn.disabled = true;
   btn.textContent = '正在送入粉碎机...';
   
-  // 1. 纸条开始被吸入动画（CSS transition 1.5倍时长）
+  // 1. 纸条开始被吸入动画 + 音效同步启动
   const note = document.getElementById('paper-note-tab');
   note.classList.add('shredding');
   
-  // 2. 触发震动（更长振动模式）
+  // 2. 触发震动
   if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50, 80, 30, 100, 30, 150, 50, 100]);
   
-  // 3. 播放粉碎音效（音效本身4.5秒）
-  setTimeout(() => {
-    playShredSound();
-    btn.textContent = '粉碎中...🔥';
-  }, 800);
+  // 3. 音效和纸张动画同步：立刻播放（不再延迟800ms）
+  playShredSound();
+  btn.textContent = '粉碎中...🔥';
   
   // 4. 纸条完全进入后，生成碎片飞散（2.3秒后）
   setTimeout(() => {
