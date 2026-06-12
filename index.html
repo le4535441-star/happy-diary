@@ -2518,7 +2518,7 @@ body {
 <!-- 主应用 -->
 <div id="app">
   <!-- Tab1: 笑一声（哈哈机） -->
-  <div id="tab-laugh" class="tab-page active">
+  <div id="tab-laugh" class="tab-page">
     <!-- 游戏框：上/左/右直接贴屏幕边，按钮在下方 -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div class="sky-box" id="sky-box" style="width:100%;flex:1;border-radius:0;border-top:none;border-left:none;border-right:none;border-bottom:2px solid rgba(212,149,106,0.3);">
@@ -2616,7 +2616,7 @@ body {
   </div>
 
   <!-- Tab2: 记好事（快乐广场） -->
-  <div id="tab-happy" class="tab-page">
+  <div id="tab-happy" class="tab-page active">
     <div id="plaza-view">
       <div class="plaza-top-fixed">
         <div class="plaza-header">
@@ -2841,7 +2841,7 @@ body {
 
   <!-- 底部Tab栏 -->
   <div class="tab-bar" id="tab-bar">
-    <div class="tab-item" onclick="switchTab('happy')">
+    <div class="tab-item active" onclick="switchTab('happy')">
       <span class="tab-icon">📖</span>
       <span class="tab-label">记好事</span>
     </div>
@@ -2853,7 +2853,7 @@ body {
       <span class="tab-icon">🍀</span>
       <span class="tab-label">问观音</span>
     </div>
-    <div class="tab-item active" onclick="switchTab('laugh')">
+    <div class="tab-item" onclick="switchTab('laugh')">
       <span class="tab-icon">😆</span>
       <span class="tab-label">笑一声</span>
     </div>
@@ -3709,7 +3709,7 @@ async function showSplashThenApp() {
       document.getElementById('app').style.display = 'block';
       currentIndex = entries.length - 1;
       renderPlaza();
-      switchTab('laugh');
+      switchTab('happy');
       startFallingBubbles();
       ensureBubblePoolStore().then(() => updatePoolCount());
       loadTheme();
@@ -3730,7 +3730,7 @@ async function showSplashThenApp() {
       document.getElementById('app').style.display = 'block';
       currentIndex = 0;
       renderPlaza();
-      switchTab('laugh');
+      switchTab('happy');
       startFallingBubbles();
       ensureBubblePoolStore().then(() => updatePoolCount());
       loadTheme();
@@ -3770,7 +3770,7 @@ async function showSplashThenApp() {
     const finalEntries = getEntries();
     currentIndex = finalEntries.length > 0 ? finalEntries.length - 1 : 0;
     renderPlaza();
-    switchTab('laugh');
+    switchTab('happy');
     startFallingBubbles();
     ensureBubblePoolStore().then(() => updatePoolCount());
     loadTheme();
