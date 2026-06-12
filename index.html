@@ -2532,7 +2532,7 @@ body {
 
 <!-- 主应用 -->
 <div id="app">
-  <!-- Tab1: 笑一声（哈哈机） -->
+  <!-- Tab1: 笑一下（哈哈机） -->
   <div id="tab-laugh" class="tab-page">
     <!-- 游戏框：上/左/右直接贴屏幕边，按钮在下方 -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
@@ -2884,7 +2884,7 @@ body {
     </div>
     <div class="tab-item" onclick="switchTab('laugh')">
       <span class="tab-icon">😆</span>
-      <span class="tab-label">笑一声</span>
+      <span class="tab-label">笑一下</span>
     </div>
     <div class="tab-item" onclick="switchTab('me')">
       <span class="tab-icon">👤</span>
@@ -5416,9 +5416,24 @@ const jokes = [
 ];
 
 // 笑话洗牌队列，确保每轮不重复
-let jokePool = [];
-let jokeUsedThisWeek = [];
+// ========== 泡泡内容分类 + 智能抽取 ==========
+// 三类分区：知识(K) > 笑话(J) > 寓言(F)，避免连续同类
+// 判断依据：知识类含特征词，寓言类含教训短语，其余为笑话
+const JOKE_KNOWLEDGE_KW = ['公里','时区','万年','万亿','发现','哺乳','年前','建造','发明','皇宫','世纪','历史','大学','帝国','骨骼','脖子','颈椎','眼睛','膀胱','尿液','角盔','牙齿','心脏','血液','传播','感知','时速','飞行','火药','冰淇淋','纸币','时差','横跨','最深','最长','最大','面积','海拔','不可见','拍摄','曝光'];
+const JOKE_FABLE_KW = ['教训','行动比','目标清','做好自己','根深','角色','包容','结束是','见识','指引','值得去找','脊梁','方向比','智慧','当下','恐惧','边界','各有各','出发点','机会自然来','未知未必','阻碍也是'];
+
+function classifyJoke(text) {
+  if (JOKE_KNOWLEDGE_KW.some(k => text.includes(k))) return 'K';
+  if (JOKE_FABLE_KW.some(k => text.includes(k))) return 'F';
+  return 'J';
+}
+
+const jokesByType = { K: [], J: [], F: [] };
+jokes.forEach((j, i) => jokesByType[classifyJoke(j)].push(i));
+
+let jokeUsedThisWeek = { K: [], J: [], F: [] };
 let jokeWeekKey = '';
+let lastJokeType = '';   // 上一次抽到的类型
 
 function getJokeWeekKey() {
   const d = new Date();
@@ -5431,26 +5446,53 @@ function getNextJoke() {
   const thisWeek = getJokeWeekKey();
   if (jokeWeekKey !== thisWeek) {
     jokeWeekKey = thisWeek;
-    jokeUsedThisWeek = [];
+    jokeUsedThisWeek = { K: [], J: [], F: [] };
+    lastJokeType = '';
     try {
       const saved = localStorage.getItem('hd_used_jokes_' + (currentUsername||''));
       const parsed = JSON.parse(saved || '{}');
-      if (parsed.week === thisWeek) jokeUsedThisWeek = parsed.used || [];
+      if (parsed.week === thisWeek) {
+        jokeUsedThisWeek = parsed.used || { K: [], J: [], F: [] };
+        lastJokeType = parsed.last || '';
+      }
     } catch(e) {}
   }
 
-  // 从未用过的里随机取
-  const available = jokes.filter((_, i) => !jokeUsedThisWeek.includes(i));
-  let pool = available.length > 0 ? available : jokes; // 全用完了就重置
-  if (available.length === 0) jokeUsedThisWeek = [];
+  // 知识50%、笑话35%、寓言15%；但不连续同类（上次是K这次降权）
+  let weights = { K: 50, J: 35, F: 15 };
+  if (lastJokeType) weights[lastJokeType] = Math.max(5, weights[lastJokeType] - 35);
 
-  const idx = jokes.indexOf(pool[Math.floor(Math.random() * pool.length)]);
-  jokeUsedThisWeek.push(idx);
+  // 归一化权重，按可用内容调整
+  const types = ['K', 'J', 'F'];
+  const available = {};
+  types.forEach(t => {
+    const all = jokesByType[t];
+    const used = jokeUsedThisWeek[t] || [];
+    available[t] = all.filter(i => !used.includes(i));
+    if (available[t].length === 0) { jokeUsedThisWeek[t] = []; available[t] = [...all]; }
+  });
 
-  // 持久化本周已用
+  // 加权随机选类型
+  let total = types.reduce((s, t) => s + (available[t].length > 0 ? weights[t] : 0), 0);
+  let rand = Math.random() * total;
+  let chosenType = 'K';
+  for (const t of types) {
+    if (available[t].length === 0) continue;
+    rand -= weights[t];
+    if (rand <= 0) { chosenType = t; break; }
+    chosenType = t;
+  }
+
+  // 从该类未用的里随机取一条
+  const pool = available[chosenType];
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  jokeUsedThisWeek[chosenType].push(idx);
+  lastJokeType = chosenType;
+
+  // 持久化
   try {
     localStorage.setItem('hd_used_jokes_' + (currentUsername||''),
-      JSON.stringify({ week: jokeWeekKey, used: jokeUsedThisWeek.slice(-jokes.length) }));
+      JSON.stringify({ week: jokeWeekKey, used: jokeUsedThisWeek, last: lastJokeType }));
   } catch(e) {}
 
   return jokes[idx];
@@ -7234,7 +7276,7 @@ function resetShredTab() {
   document.getElementById('shred-pieces-tab').innerHTML = '';
 }
 
-// showClawGame 改为切换到笑一声tab
+// showClawGame 改为切换到笑一下tab
 function showClawGame() {
   switchTab('laugh');
   startFallingBubbles();
