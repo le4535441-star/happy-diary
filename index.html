@@ -1202,41 +1202,36 @@ body {
   display: none;
   position: fixed;
   top: 0; left: 0; right: 0;
-  /* 延伸到屏幕底部，内容自己用 padding-bottom 避开 tab-bar */
   bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: var(--warm-bg);
-  /* 内容底部留出 tab-bar + 安全区高度，防止被遮 */
+  /* 背景透明，由各子页面容器自控制背景色 */
+  background: transparent;
+  /* 内容底部留出 tab-bar + 安全区高度 */
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 
-/* 哈哈机固定不滚动，粉碎机/观音也不滚动 */
+/* 哈哈机固定不滚动 */
 #tab-laugh {
   overflow: hidden;
   display: flex !important;
   flex-direction: column;
+  background: transparent;
 }
-#tab-shred, #tab-luck {
+/* 粉碎机/观音首页固定不滚动（内部弹出页仍可滚） */
+#tab-shred {
   overflow: hidden;
 }
-/* 粉碎机底部颜色延伸到tab-bar */
-#tab-shred::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: #b0bec5;
-  pointer-events: none;
-  z-index: 0;
+#tab-luck {
+  /* 允许滚动（解签结果页需要） */
+  overflow-y: auto;
 }
 
 .tab-page.active { display: block; }
 
-#tab-laugh {
-  background: var(--warm-bg);
-}
+/* 哈哈机 tab-page 背景沿用游戏框暖棕色 */
+#tab-laugh { background: linear-gradient(180deg, #4a2c1a 0%, #6b3d24 40%, #7d4a2e 100%) !important; }
 
 
 /* 问观音留白页 */
@@ -1328,22 +1323,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  /* 固定高度，不随背景延伸 */
-  height: 100%;
+  /* 撑满 tab-page 全部高度（含padding-bottom区域）*/
+  min-height: 100%;
   padding: 20px 20px 40px;
   background: linear-gradient(180deg, #1a0a00 0%, #2d1810 40%, #3e2415 100%);
   position: relative;
   overflow: hidden;
-}
-/* 背景图延伸到 tab-bar 以下，用 padding-bottom 更大的伪元素覆盖 */
-.luck-temple::after {
-  content: '';
-  position: absolute;
-  bottom: calc(-64px - env(safe-area-inset-bottom, 0px));
-  left: 0; right: 0;
-  height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: #3e2415;
-  pointer-events: none;
 }
 
 .luck-temple::before {
@@ -2683,7 +2668,7 @@ body {
 
   <!-- Tab3: 随Ta去（粉碎糟心事） -->
   <div id="tab-shred" class="tab-page">
-    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
       <h2 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#37474f;text-align:center;margin-bottom:20px;">💥 随Ta去</h2>
       <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
         <div class="paper-note" id="paper-note-tab" style="width:100%;">
