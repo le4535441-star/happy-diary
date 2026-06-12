@@ -1934,11 +1934,11 @@ body {
 }
 
 .paper-note.shredding {
-  /* 纸张自上而下被吃进粉碎机：向下移动，从顶部开始消失 */
-  transform: translateY(140px) scaleY(0.5) rotate(1deg);
-  opacity: 0;
-  clip-path: inset(0 0 0 0);  /* 从顶部夹紧消失 */
-  transition: transform 1.0s cubic-bezier(0.4, 0, 0.8, 1), opacity 0.8s ease-in 0.3s, clip-path 0.9s ease-in;
+  /* 纸张由上至下消失：clip-path从顶部往下夹紧（inset top增大），同时整体下移 */
+  transform: translateY(100px);
+  clip-path: inset(100% 0 0 0);  /* 100%顶部裁剪 = 从上往下完全消失 */
+  transition: transform 1.1s cubic-bezier(0.3, 0, 0.6, 1),
+              clip-path 0.9s cubic-bezier(0.4, 0, 0.8, 1);
 }
 
 /* 粉碎机 */
