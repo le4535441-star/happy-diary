@@ -1933,8 +1933,9 @@ body {
 }
 
 .paper-note.shredding {
-  transform: translateY(80px) scale(0.7) rotate(0deg);
-  opacity: 0;
+  /* 纸张向下移动塞进粉碎机：先整体下移，再从底部开始被"吃进去" */
+  transform: translateY(120px) scaleY(0.6) rotate(0deg);
+  opacity: 0.3;
   clip-path: inset(0 0 100% 0);
 }
 
@@ -2021,12 +2022,18 @@ body {
 .shred-result {
   text-align: center;
   margin-top: 32px;
+  /* 深色背景下居中展示 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .result-emoji {
-  font-size: 56px;
-  margin-bottom: 16px;
-  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 72px;
+  margin-bottom: 20px;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes popIn {
@@ -2035,11 +2042,13 @@ body {
 }
 
 .result-text {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  color: #37474f;
-  margin-bottom: 24px;
-  line-height: 1.7;
+  color: #ffd54f;  /* 明亮暖黄，深灰背景下清晰可见 */
+  margin-bottom: 28px;
+  line-height: 1.8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  max-width: 280px;
 }
 
 .shred-again-btn {
@@ -2703,9 +2712,9 @@ body {
         <!-- 按钮行 -->
         <button class="shred-btn" id="shred-btn-tab" onclick="doShredTab()" style="margin-top:20px;width:100%;max-width:360px;font-size:17px;padding:16px 0;letter-spacing:2px;">💥 随Ta去！</button>
 
-        <!-- 结果 -->
-        <div class="shred-result" id="shred-result-tab" style="display:none;text-align:center;margin-top:20px;width:100%;max-width:360px;">
-          <div class="result-emoji">🎉</div>
+        <!-- 结果：居中铺满 -->
+        <div class="shred-result" id="shred-result-tab" style="display:none;position:absolute;inset:0;top:0;left:0;right:0;bottom:0;z-index:10;background:linear-gradient(170deg,#263238 0%,#37474f 100%);flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;">
+          <div class="result-emoji" style="font-size:80px;">🎊</div>
           <div class="result-text" id="result-text-tab"></div>
           <button class="shred-again-btn" onclick="resetShredTab()">再来一次</button>
         </div>
@@ -7130,7 +7139,7 @@ async function doShredTab() {
   setTimeout(() => {
     document.getElementById('shredder-machine-tab').style.display = 'none';
     document.getElementById('shredder-machine-tab').style.opacity = '1';
-    document.getElementById('shred-result-tab').style.display = 'block';
+    document.getElementById('shred-result-tab').style.display = 'flex';
     document.getElementById('result-text-tab').textContent = shredQuotes[Math.floor(Math.random() * shredQuotes.length)];
     updateShredCountTab();
   }, 5000);
