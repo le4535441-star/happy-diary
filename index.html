@@ -1205,34 +1205,34 @@ body {
   bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* 背景透明，由各子页面容器自控制背景色 */
-  background: transparent;
-  /* 内容底部留出 tab-bar + 安全区高度 */
+  /* 默认暖白色（快乐广场/我的/记事本等页面） */
+  background: var(--warm-bg);
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 
-/* 哈哈机固定不滚动 */
+/* 哈哈机固定不滚动，背景暖棕色与游戏框一致 */
 #tab-laugh {
   overflow: hidden;
   display: flex !important;
   flex-direction: column;
-  background: transparent;
+  background: linear-gradient(180deg, #4a2c1a 0%, #6b3d24 40%, #7d4a2e 100%) !important;
 }
-/* 粉碎机/观音首页固定不滚动（内部弹出页仍可滚） */
+/* 粉碎机：固定不滚动，背景和内部容器一致（灰蓝色） */
 #tab-shred {
   overflow: hidden;
+  background: #b0bec5 !important;
 }
+/* 观音：允许滚动（解签页需要），背景和 luck-temple 底色一致 */
 #tab-luck {
-  /* 允许滚动（解签结果页需要） */
   overflow-y: auto;
+  background: #3e2415 !important;
 }
 
 .tab-page.active { display: block; }
 
-/* 哈哈机 tab-page 背景沿用游戏框暖棕色 */
-#tab-laugh { background: linear-gradient(180deg, #4a2c1a 0%, #6b3d24 40%, #7d4a2e 100%) !important; }
-
+/* 哈哈机内层 div 同色背景 */
+#tab-laugh > div:first-child { background: linear-gradient(180deg, #4a2c1a 0%, #6b3d24 40%, #7d4a2e 100%) !important; }
 
 /* 问观音留白页 */
 .luck-page {
@@ -1446,6 +1446,12 @@ body {
   color: #bcaaa4;
   font-size: 13px;
   cursor: pointer;
+}
+
+/* 签文历史页 */
+.sign-history-page {
+  min-height: 100%;
+  background: var(--warm-bg);
 }
 
 /* 签文图片展示 */
@@ -5580,9 +5586,10 @@ function startCatch() {
     const container = document.getElementById('falling-bubbles');
     // 实时获取 sky-box 实际高度，用于自适应碰撞区
     const skyBoxH = skyBox.getBoundingClientRect().height || 420;
-    // 网兜接球区：小人在 bottom:10px, 高80px → 顶部约 bottom + height = 90px → y ≈ skyBoxH - 90
-    const catchZoneTop = skyBoxH - 95;
-    const catchZoneBottom = skyBoxH - 30;
+    // 网兜接球区：小人 bottom:50px, 高120px → 顶部约 bottom + height = 170px → y ≈ skyBoxH - 170
+    // 网兜在上半部分（约顶部30%），再留些余量
+    const catchZoneTop = skyBoxH - 175;
+    const catchZoneBottom = skyBoxH - 55;
     
     bubbleObjs.forEach(obj => {
       if (obj.caught) return;
@@ -5593,9 +5600,9 @@ function startCatch() {
       obj.el.style.top = obj.y + 'px';
       obj.el.style.left = obj.x + '%';
       
-      // 碰撞检测：泡泡进入网兜高度区间，且水平距离够近（收紧到9%，减少误触）
+      // 碰撞检测：泡泡进入网兜高度区间，且水平距离够近（收紧到12%覆盖更大网兜）
       const runnerLeft = parseFloat(runner.style.left) || 50;
-      if (obj.y >= catchZoneTop && obj.y <= catchZoneBottom && Math.abs(obj.x - runnerLeft) < 9) {
+      if (obj.y >= catchZoneTop && obj.y <= catchZoneBottom && Math.abs(obj.x - runnerLeft) < 12) {
         obj.caught = true;
         obj.el.style.transition = 'transform 0.2s, opacity 0.2s';
         obj.el.style.transform = 'scale(1.5)';
