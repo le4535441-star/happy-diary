@@ -192,6 +192,8 @@ body {
   inset: 0;
   /* 移除含SVG filter的纹理背景——iOS html2canvas会因此taint canvas导致SecurityError */
   /* background: url("data:image/svg+xml,..."); */
+  /* 允许通过 CSS 变量完全禁用（截图时使用） */
+  display: var(--disable-before, block);
   pointer-events: none;
   border-radius: 20px;
 }
@@ -7248,6 +7250,8 @@ async function shareAsCard() {
   clone.style.zIndex = '-1';
   clone.style.width = diaryPage.offsetWidth + 'px';
   clone.style.height = diaryPage.offsetHeight + 'px';
+  // 主动禁用 ::before 伪元素（避免 SVG filter taint canvas）
+  clone.style.setProperty('--disable-before', 'none');
 
   // 2. 删掉天气（外部 API，必须去掉）
   const cloneWeather = clone.querySelector('#weather-display, .page-weather');
