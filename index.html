@@ -7065,7 +7065,30 @@ function switchTab(tab) {
     renderPlaza(); 
   }
   if (tab === 'shred') { updateShredCountTab(); }
-  if (tab === 'luck') { updateSignCount(); backToTemple(); }
+  if (tab === 'luck') {
+    updateSignCount();
+    backToTemple();
+    // ★ 每次切换到观音页，主动从云端拉签文（确保清缓存后也能看到）
+    if (cloudReady && cloudDb) {
+      syncSignsFromCloud().then(() => updateSignCount());
+    } else {
+      // 云端未就绪时，等待最多5秒再尝试一次
+      const trySync = async () => {
+        await new Promise(r => setTimeout(r, 2000));
+        if (cloudReady && cloudDb) {
+          await syncSignsFromCloud();
+          updateSignCount();
+        } else {
+          await new Promise(r => setTimeout(r, 3000));
+          if (cloudReady && cloudDb) {
+            await syncSignsFromCloud();
+            updateSignCount();
+          }
+        }
+      };
+      trySync().catch(() => {});
+    }
+  }
   if (tab === 'me') { loadMyProfile(); }
 }
 
