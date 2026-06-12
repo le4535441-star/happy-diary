@@ -6381,10 +6381,10 @@ let isSyncing = false; // 防重入锁，避免快速登录触发多次并发同
 
 async function initCloudSync() {
   if (isSyncing) {
-    // 已有同步，等 3 秒后判断是否 cloudReady，直接拉签文
-    await new Promise(r => setTimeout(r, 3000));
-    if (cloudReady && cloudDb) {
-      await syncSignsFromCloud();
+    // 已有同步，等它完成（最多8秒）
+    for (let i = 0; i < 16; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (!isSyncing) break;
     }
     return;
   }
@@ -7111,16 +7111,21 @@ async function showSignHistory() {
   const list = document.getElementById('sign-history-list');
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在加载签文记录…</div>';
 
-  // 优先直接从云端读取（绕过本地缓存）
-  let records = null;
+  // 确保云端连接：如果还没就绪，先触发初始化
+  if (!cloudReady || !cloudDb) {
+    initCloudSync().catch(()=>{});
+  }
 
-  // 等待云端就绪（最多10秒）
-  for (let i = 0; i < 20; i++) {
-    if (cloudReady && cloudDb) {
-      records = await fetchSignsFromCloud();
-      break;
-    }
-    await new Promise(r => setTimeout(r, 500));
+  // 等待云端就绪，最多等 12 秒（每 400ms 检查）
+  for (let i = 0; i < 30; i++) {
+    if (cloudReady && cloudDb) break;
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  // 直接从云端读签文
+  let records = null;
+  if (cloudReady && cloudDb) {
+    records = await fetchSignsFromCloud();
   }
 
   // 云端读到了就更新本地缓存
