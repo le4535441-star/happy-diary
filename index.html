@@ -931,11 +931,13 @@ body {
 /* SVG 小女孩 */
 .runner {
   position: absolute;
-  bottom: 10px;
+  /* 上移约一个球大小（约40px球直径）→ bottom 增大 */
+  bottom: 50px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90px;
-  height: 80px;
+  /* 原来 90×80，放大150% → 135×120 */
+  width: 135px;
+  height: 120px;
   z-index: 10;
   transition: left 0.06s linear;
   will-change: left;
@@ -7255,20 +7257,26 @@ async function shareAsCard() {
 
     document.body.removeChild(clone);
 
-    // 水印 canvas
+    // 下方加细水印条，不加边框——1:1保留卡片视觉
+    const dpr2 = window.devicePixelRatio || 3;
+    const cW = canvas.width, cH = canvas.height;
+    const wmH = Math.round(36 * dpr2);  // 水印高度（设备像素）
     const finalCanvas = document.createElement('canvas');
-    const padding = 40, watermarkH = 50;
-    finalCanvas.width  = canvas.width  + padding * 2;
-    finalCanvas.height = canvas.height + padding * 2 + watermarkH;
+    finalCanvas.width  = cW;
+    finalCanvas.height = cH + wmH;
     const ctx = finalCanvas.getContext('2d');
+
+    // 卡片原样贴上
+    ctx.drawImage(canvas, 0, 0);
+
+    // 水印条：暖色背景
     const cs = getComputedStyle(document.documentElement);
     ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
-    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-    ctx.drawImage(canvas, padding, padding);
-    ctx.font = '24px "PingFang SC", sans-serif';
+    ctx.fillRect(0, cH, cW, wmH);
+    ctx.font = Math.round(13 * dpr2) + 'px "PingFang SC", sans-serif';
     ctx.fillStyle = cs.getPropertyValue('--gold').trim() || '#c8a45c';
     ctx.textAlign = 'center';
-    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f', finalCanvas.width / 2, finalCanvas.height - 20);
+    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f', cW / 2, cH + wmH * 0.68);
 
     // ★ 用 toDataURL 代替 toBlob，绕过 tainted canvas SecurityError
     let dataUrl;
