@@ -2675,7 +2675,7 @@ body {
 
   <!-- Tab3: 随Ta去（粉碎糟心事） -->
   <div id="tab-shred" class="tab-page">
-    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+    <div style="padding:24px 20px;background:linear-gradient(160deg,#eceff1 0%,#cfd8dc 50%,#b0bec5 100%);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;padding-bottom:calc(24px + 64px + env(safe-area-inset-bottom,0px));">
       <h2 style="font-family:'ZCOOL XiaoWei',serif;font-size:20px;color:#37474f;text-align:center;margin-bottom:20px;">💥 随Ta去</h2>
       <div id="shred-input-tab" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
         <div class="paper-note" id="paper-note-tab" style="width:100%;">
@@ -6991,11 +6991,31 @@ function switchTab(tab) {
   const idx = tabs.indexOf(tab);
   document.querySelectorAll('.tab-item')[idx].classList.add('active');
 
-  // tab-bar 始终保持默认颜色（不随 tab 变色）
+  // tab-bar 颜色跟随当前 tab
   const tabBar = document.getElementById('tab-bar');
-  tabBar.style.background = '';
-  tabBar.style.borderTopColor = '';
-  document.querySelectorAll('.tab-label').forEach(el => el.style.color = '');
+  if (tab === 'luck') {
+    // 观音：tab-bar 与观音背景底色一致
+    tabBar.style.background = '#3e2415';
+    tabBar.style.borderTopColor = 'rgba(255,215,0,0.1)';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#bcaaa4');
+    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#ffd700');
+  } else if (tab === 'shred') {
+    // 粉碎机：tab-bar 与粉碎机底色一致
+    tabBar.style.background = '#b0bec5';
+    tabBar.style.borderTopColor = 'rgba(0,0,0,0.06)';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#546e7a');
+    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#1a237e');
+  } else if (tab === 'laugh') {
+    // 哈哈机：tab-bar 与暖棕底色一致
+    tabBar.style.background = '#7d4a2e';
+    tabBar.style.borderTopColor = 'rgba(255,215,0,0.1)';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '#bcaaa4');
+    document.querySelectorAll('.tab-item.active .tab-label').forEach(el => el.style.color = '#ffd700');
+  } else {
+    tabBar.style.background = '';
+    tabBar.style.borderTopColor = '';
+    document.querySelectorAll('.tab-label').forEach(el => el.style.color = '');
+  }
   // 隐藏详情页（如果在看详情页）
   document.getElementById('detail-view').style.display = 'none';
   // 显示Tab栏
@@ -7217,87 +7237,185 @@ async function shareAsCard() {
   const entry = entries[currentIndex];
   if (!entry) return;
 
-  const diaryPage = document.querySelector('#diary-container .diary-page');
-  if (!diaryPage) return;
-
-  // 克隆到屏幕外
-  const clone = diaryPage.cloneNode(true);
-  clone.style.position = 'fixed';
-  clone.style.left = '-9999px';
-  clone.style.top = '0';
-  clone.style.zIndex = '-1';
-  clone.style.width = diaryPage.offsetWidth + 'px';
-  clone.style.height = diaryPage.offsetHeight + 'px';
-
-  // 删掉天气（跨域来源）
-  const cloneWeather = clone.querySelector('#weather-display, .page-weather');
-  if (cloneWeather) cloneWeather.remove();
-
-  document.body.appendChild(clone);
-
   try {
-    await document.fonts.ready;
+    const dpr = Math.min(window.devicePixelRatio || 2, 3);
+    const diaryPage = document.querySelector('#diary-container .diary-page');
+    const rect = diaryPage ? diaryPage.getBoundingClientRect() : { width: 340, height: 540 };
+    const W = Math.round(rect.width);
+    const H = Math.round(rect.height);
+    const PAD = 36;
+    const WM_H = 44;
+    const INNER_PX = 24;
+    const INNER_PT = 28;
 
-    const canvas = await html2canvas(clone, {
-      scale: window.devicePixelRatio || 3,
-      useCORS: true,
-      backgroundColor: null,
-      logging: false,
-      allowTaint: true,        // 允许背景图
-      foreignObjectRendering: false,
-      imageTimeout: 0,
-    });
+    const canvas = document.createElement('canvas');
+    canvas.width  = (W + PAD * 2) * dpr;
+    canvas.height = (H + PAD * 2 + WM_H) * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
 
-    document.body.removeChild(clone);
-
-    // 下方加细水印条，不加边框——1:1保留卡片视觉
-    const dpr2 = window.devicePixelRatio || 3;
-    const cW = canvas.width, cH = canvas.height;
-    const wmH = Math.round(36 * dpr2);  // 水印高度（设备像素）
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width  = cW;
-    finalCanvas.height = cH + wmH;
-    const ctx = finalCanvas.getContext('2d');
-
-    // 卡片原样贴上
-    ctx.drawImage(canvas, 0, 0);
-
-    // 水印条：暖色背景
     const cs = getComputedStyle(document.documentElement);
-    ctx.fillStyle = cs.getPropertyValue('--warm-bg').trim() || '#fdf6e3';
-    ctx.fillRect(0, cH, cW, wmH);
-    ctx.font = Math.round(13 * dpr2) + 'px "PingFang SC", sans-serif';
-    ctx.fillStyle = cs.getPropertyValue('--gold').trim() || '#c8a45c';
-    ctx.textAlign = 'center';
-    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f', cW / 2, cH + wmH * 0.68);
+    const paperColor  = cs.getPropertyValue('--paper').trim()      || '#fffef9';
+    const warmBg      = cs.getPropertyValue('--warm-bg').trim()     || '#fdf6e3';
+    const inkColor    = cs.getPropertyValue('--ink').trim()         || '#2c2016';
+    const inkLight    = cs.getPropertyValue('--ink-light').trim()   || '#8d7f74';
+    const goldColor   = cs.getPropertyValue('--gold').trim()        || '#c8a45c';
+    const DIVIDER     = 'rgba(61,48,40,0.08)';
+    const RED_ACCENT  = '#c0392b';
+    const TAG_BG1     = '#fff3e0';
+    const TAG_BG2     = '#ffe0b2';
+    const TAG_COLOR   = '#e65100';
 
-    // ★ 用 toDataURL 代替 toBlob，绕过 tainted canvas SecurityError
-    let dataUrl;
-    try {
-      dataUrl = finalCanvas.toDataURL('image/png');
-    } catch(e) {
-      dataUrl = finalCanvas.toDataURL('image/jpeg', 0.92);
-    }
-    const arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]); let n = bstr.length;
-    const u8 = new Uint8Array(n); while(n--) u8[n] = bstr.charCodeAt(n);
-    const blob = new Blob([u8], { type: mime });
+    ctx.fillStyle = warmBg;
+    ctx.fillRect(0, 0, W + PAD*2, H + PAD*2 + WM_H);
 
-    if (navigator.share) {
+    const r = 20, cx = PAD, cy = PAD;
+    ctx.fillStyle = paperColor;
+    ctx.beginPath();
+    ctx.moveTo(cx+r,cy); ctx.lineTo(cx+W-r,cy);
+    ctx.arcTo(cx+W,cy,cx+W,cy+r,r); ctx.lineTo(cx+W,cy+H-r);
+    ctx.arcTo(cx+W,cy+H,cx+W-r,cy+H,r); ctx.lineTo(cx+r,cy+H);
+    ctx.arcTo(cx,cy+H,cx,cy+H-r,r); ctx.lineTo(cx,cy+r);
+    ctx.arcTo(cx,cy,cx+r,cy,r); ctx.closePath(); ctx.fill();
+
+    if (entry.image) {
       try {
-        const file = new File([blob], 'happy-card.png', { type: mime });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: '\u5feb\u4e50\u5c0f\u4e8b' });
-          return;
-        }
-      } catch(e) {}
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx+r,cy); ctx.lineTo(cx+W-r,cy);
+        ctx.arcTo(cx+W,cy,cx+W,cy+r,r); ctx.lineTo(cx+W,cy+H-r);
+        ctx.arcTo(cx+W,cy+H,cx+W-r,cy+H,r); ctx.lineTo(cx+r,cy+H);
+        ctx.arcTo(cx,cy+H,cx,cy+H-r,r); ctx.lineTo(cx,cy+r);
+        ctx.arcTo(cx,cy,cx+r,cy,r); ctx.closePath(); ctx.clip();
+        await new Promise((res) => {
+          const img = new Image();
+          img.onload = () => { ctx.globalAlpha=0.2; ctx.drawImage(img,cx,cy,W,H); ctx.globalAlpha=1; res(); };
+          img.onerror = res;
+          img.src = entry.image;
+        });
+        ctx.restore();
+      } catch(imgErr) { ctx.restore(); }
     }
-    downloadCard(blob);
+
+    const contentW = W - INNER_PX*2;
+    let drawY = cy + INNER_PT;
+
+    const dateObj = new Date(entry.date);
+    const weekdays = ['\u65e5','\u4e00','\u4e8c','\u4e09','\u56db','\u4e94','\u516d'];
+    ctx.fillStyle = inkColor;
+    ctx.font = '600 22px "ZCOOL XiaoWei","PingFang SC",serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(dateObj.getFullYear()+'\u5e74'+(dateObj.getMonth()+1)+'\u6708'+dateObj.getDate()+'\u65e5', cx+W/2, drawY+22);
+    drawY += 22 + 4;
+
+    ctx.fillStyle = inkLight;
+    ctx.font = '400 13px -apple-system,"PingFang SC",sans-serif';
+    ctx.fillText('\u661f\u671f'+weekdays[dateObj.getDay()], cx+W/2, drawY+13);
+    drawY += 13 + 6;
+
+    ctx.fillStyle = RED_ACCENT;
+    ctx.font = '600 14px -apple-system,"PingFang SC",sans-serif';
+    ctx.fillText('\u8fd9\u662f\u4f60\u7b2c '+(currentIndex+1)+' \u4e2a\u5feb\u4e50 \u2728', cx+W/2, drawY+14);
+    drawY += 14 + 16;
+
+    ctx.strokeStyle = DIVIDER; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx+INNER_PX,drawY); ctx.lineTo(cx+W-INNER_PX,drawY); ctx.stroke();
+    drawY += 1 + 16;
+
+    const footerEstH = 90;
+    const bodyAvailH = H - (drawY - cy) - footerEstH - 20;
+
+    const textFontSize = 20;
+    ctx.font = '600 '+textFontSize+'px -apple-system,"PingFang SC",sans-serif';
+    const textLineH = textFontSize * 1.9;
+    let textLines=[],tl='';
+    for(let i=0;i<(entry.text||'').length;i++){
+      const t=tl+entry.text[i];
+      if(ctx.measureText(t).width>contentW&&tl){textLines.push(tl);tl=entry.text[i];}else tl=t;
+    }
+    if(tl)textLines.push(tl);
+
+    const tagH = entry.tag ? 38 : 0;
+    const emojiH = 36, gap = 12;
+    const totalBodyH = emojiH + gap + textLines.length*textLineH + (entry.tag ? gap+tagH : 0);
+    const bodyStartY = drawY + Math.max(0,(bodyAvailH-totalBodyH)/2);
+
+    ctx.font = '36px serif'; ctx.textAlign='center';
+    ctx.fillText(entry.emoji||'\u2728', cx+W/2, bodyStartY+emojiH*0.8);
+
+    ctx.fillStyle=inkColor;
+    ctx.font='600 '+textFontSize+'px -apple-system,"PingFang SC",sans-serif';
+    const textBlockW = Math.min(contentW, Math.max(...textLines.map(l=>ctx.measureText(l).width)));
+    const textBlockX = cx+(W-textBlockW)/2;
+    let tY = bodyStartY+emojiH+gap+textFontSize;
+    textLines.forEach((l,i)=>{ ctx.textAlign='left'; ctx.fillText(l,textBlockX,tY+i*textLineH); });
+    tY += textLines.length*textLineH+gap;
+
+    if (entry.tag) {
+      const tf=14;
+      ctx.font='700 '+tf+'px -apple-system,"PingFang SC",sans-serif';
+      const tw=ctx.measureText(entry.tag).width;
+      const tpH=6,tpW=16,tagW=tw+tpW*2,tagHeight=tf+tpH*2;
+      const tagX=cx+(W-tagW)/2,tagY2=tY;
+      const grad=ctx.createLinearGradient(tagX,tagY2,tagX+tagW,tagY2+tagHeight);
+      grad.addColorStop(0,TAG_BG1); grad.addColorStop(1,TAG_BG2);
+      const tr2=10;
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.moveTo(tagX+tr2,tagY2); ctx.lineTo(tagX+tagW-tr2,tagY2);
+      ctx.arcTo(tagX+tagW,tagY2,tagX+tagW,tagY2+tr2,tr2); ctx.lineTo(tagX+tagW,tagY2+tagHeight-tr2);
+      ctx.arcTo(tagX+tagW,tagY2+tagHeight,tagX+tagW-tr2,tagY2+tagHeight,tr2); ctx.lineTo(tagX+tr2,tagY2+tagHeight);
+      ctx.arcTo(tagX,tagY2+tagHeight,tagX,tagY2+tagHeight-tr2,tr2); ctx.lineTo(tagX,tagY2+tr2);
+      ctx.arcTo(tagX,tagY2,tagX+tr2,tagY2,tr2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=TAG_COLOR; ctx.textAlign='center';
+      ctx.fillText(entry.tag,cx+W/2,tagY2+tpH+tf*0.85);
+    }
+
+    drawY = cy+H-footerEstH;
+    ctx.strokeStyle=DIVIDER; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx+INNER_PX,drawY); ctx.lineTo(cx+W-INNER_PX,drawY); ctx.stroke();
+    drawY += 16;
+
+    const quote=entry.quote||{};
+    const qText=typeof quote==='object'?(quote.text||''):String(quote);
+    const qAuthor=typeof quote==='object'?(quote.author||''):'';
+    if (qText) {
+      ctx.fillStyle=inkLight;
+      const qFS=14;
+      ctx.font='600 italic '+qFS+'px -apple-system,"PingFang SC",Georgia,serif';
+      const qStr='\u300c'+qText+'\u300d';
+      let qLines=[],ql='';
+      for(let i=0;i<qStr.length;i++){const t=ql+qStr[i];if(ctx.measureText(t).width>contentW&&ql){qLines.push(ql);ql=qStr[i];}else ql=t;}
+      if(ql)qLines.push(ql);
+      const qLH=qFS*1.7;
+      ctx.textAlign='center';
+      qLines.forEach((l,i)=>ctx.fillText(l,cx+W/2,drawY+qFS+(i*qLH)));
+      if(qAuthor){
+        ctx.fillStyle=RED_ACCENT;
+        ctx.font='600 12px -apple-system,"PingFang SC",sans-serif';
+        ctx.fillText('\u2014\u2014 '+qAuthor,cx+W/2,drawY+qFS+qLines.length*qLH+6+12);
+      }
+    }
+
+    ctx.fillStyle=goldColor;
+    ctx.font='400 13px -apple-system,"PingFang SC",sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('\u2728 \u5feb\u4e50\u5c0f\u4e8b \u00b7 \u6bcf\u5929\u90fd\u6709\u597d\u4e8b\u82b1\u751f',PAD+W/2,PAD+H+PAD+WM_H*0.65);
+
+    canvas.toBlob(async(blob)=>{
+      if(!blob){alert('\u751f\u6210\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');return;}
+      if(navigator.share){
+        try{
+          const file=new File([blob],'happy-card.png',{type:'image/png'});
+          if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'\u5feb\u4e50\u5c0f\u4e8b'});return;}
+        }catch(e){}
+      }
+      downloadCard(blob);
+    },'image/png');
 
   } catch(e) {
-    try { document.body.removeChild(clone); } catch(_) {}
     console.log('shareAsCard failed:', e);
-    alert('\u751f\u6210\u5361\u7247\u5931\u8d25\uff1a' + (e && e.message ? e.message : String(e)));
+    alert('\u751f\u6210\u5361\u7247\u5931\u8d25\uff1a'+(e&&e.message?e.message:String(e)));
   }
 }
 // 加载图片的Promise封装
