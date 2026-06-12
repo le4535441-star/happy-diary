@@ -2043,7 +2043,13 @@ body {
   100% { transform: scale(1); }
 }
 
-.result-text {
+@keyframes bellPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+  20% { transform: scale(1.15) rotate(-12deg); opacity: 1; }
+  40% { transform: scale(1.15) rotate(12deg); opacity: 1; }
+  60% { transform: scale(1.05) rotate(-6deg); opacity: 0.9; }
+  80% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+}.result-text {
   font-size: 17px;
   font-weight: 600;
   color: #ffd54f;  /* 明亮暖黄，深灰背景下清晰可见 */
@@ -2528,7 +2534,12 @@ body {
     <!-- 配文：让文字自然撑到宽度上限，不提前换行 -->
     <div id="splash-quote" style="margin-top:20px;font-size:14px;color:#6b5744;font-style:italic;line-height:1.8;text-align:center;word-break:keep-all;overflow-wrap:break-word;"></div>
   </div>
-  <p style="font-size:12px;color:#c8a45c;margin-top:32px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
+  <!-- 小铃铛：引导用户触摸激活音效 -->
+  <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="font-size:28px;animation:bellPulse 2s ease-in-out infinite;">🔔</div>
+    <span style="font-size:11px;color:#c8a45c;opacity:0.7;letter-spacing:1px;">轻触有惊喜</span>
+  </div>
+  <p style="font-size:12px;color:#c8a45c;margin-top:20px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
 </div>
 
 <!-- 数据同步 loading 屏（与闪屏同风格） -->
