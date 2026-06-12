@@ -7111,34 +7111,33 @@ async function showSignHistory() {
   const list = document.getElementById('sign-history-list');
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在加载签文记录…</div>';
 
-  // 确保云端连接：如果还没就绪，先触发初始化
-  if (!cloudReady || !cloudDb) {
-    initCloudSync().catch(()=>{});
+  // 确保云端连接
+  if (!cloudReady) initCloudSync().catch(()=>{});
+
+  // 以 100ms 间隔轮询 cloudReady，最多等 15 秒（确保不因 isSyncing 锁拖慢）
+  let waited = 0;
+  while ((!cloudReady || !cloudDb) && waited < 150) {
+    await new Promise(r => setTimeout(r, 100));
+    waited++;
   }
 
-  // 等待云端就绪，最多等 12 秒（每 400ms 检查）
-  for (let i = 0; i < 30; i++) {
-    if (cloudReady && cloudDb) break;
-    await new Promise(r => setTimeout(r, 400));
-  }
-
-  // 直接从云端读签文
   let records = null;
   if (cloudReady && cloudDb) {
     records = await fetchSignsFromCloud();
+    if (records && records.length > 0) {
+      const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+      const cloudKeys = new Set(records.map(r => r.date + r.time + r.num));
+      const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+      const merged = [...records, ...onlyLocal]
+        .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time))
+        .slice(0, 100);
+      localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
+      updateSignCount();
+      records = merged;
+    }
   }
 
-  // 云端读到了就更新本地缓存
-  if (records && records.length > 0) {
-    const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-    const cloudKeys = new Set(records.map(r => r.date + r.time + r.num));
-    const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
-    const merged = [...records, ...onlyLocal].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,100);
-    localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
-    updateSignCount();
-    records = merged;
-  } else {
-    // 云端没数据或网络异常，回退到本地缓存
+  if (!records || records.length === 0) {
     records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   }
 
