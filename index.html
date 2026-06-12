@@ -4816,26 +4816,47 @@ async function playSwipeSound() {
     const ctx = await ensureAudioRunning();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const bufferSize = Math.ceil(ctx.sampleRate * 0.1);
+    const DURATION = 0.45; // 更长，模拟翻书的缓慢感
+    const bufferSize = Math.ceil(ctx.sampleRate * DURATION);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
+
+    // 翻书声：先有一段轻微的纸张摩擦（低频噪音），再过渡到尾音消散
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) * 0.3;
+      const t = i / bufferSize;
+      // 包络：快速起，缓慢衰减（0→0.3s主体，0.3→0.45淡出）
+      const env = t < 0.1 ? t / 0.1 : Math.pow(1 - (t - 0.1) / 0.9, 1.8);
+      data[i] = (Math.random() * 2 - 1) * env * 0.22;
     }
+
     const noise = ctx.createBufferSource();
     noise.buffer = buffer;
+
+    // 低频滤波：模拟纸张的厚重质感（800-1200Hz 区间）
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = 2000;
-    filter.Q.value = 0.8;
+    filter.frequency.setValueAtTime(1200, now);
+    filter.frequency.exponentialRampToValueAtTime(600, now + DURATION);
+    filter.Q.value = 1.2;
+
+    // 高频补充：纸张边缘摩擦的"沙沙"感
+    const filter2 = ctx.createBiquadFilter();
+    filter2.type = 'highshelf';
+    filter2.frequency.value = 3000;
+    filter2.gain.value = 6;
+
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.04);
+    gain.gain.setValueAtTime(0.28, now + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + DURATION);
+
     noise.connect(filter);
-    filter.connect(gain);
+    filter.connect(filter2);
+    filter2.connect(gain);
     gain.connect(ctx.destination);
     noise.start(now);
-    noise.stop(now + 0.1);
+    noise.stop(now + DURATION);
   } catch(e) {}
 }
 
