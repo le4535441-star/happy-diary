@@ -6645,6 +6645,57 @@ async function syncFromCloud() {
         }
       }
     } catch(e) { console.log('Sync bubblePool from cloud failed:', e.message); }
+
+    // ===== 同步签文历史（signs）— 和粉碎/泡泡完全相同架构 =====
+    try {
+      const signsCol = cloudDb.collection('signs');
+      let allCloudSigns = [];
+      let signsOffset = 0;
+      while (true) {
+        const signsResult = await signsCol.where({ _username: currentUsername }).skip(signsOffset).limit(100).get();
+        if (!signsResult.data || signsResult.data.length === 0) break;
+        allCloudSigns = allCloudSigns.concat(signsResult.data);
+        if (signsResult.data.length < 100) break;
+        signsOffset += 100;
+      }
+
+      if (allCloudSigns.length > 0) {
+        const localSigns = await dbSignGetAll(); // 已含 _owner 过滤
+        const localSignKeys = new Set(localSigns.map(s => s.date + s.time + s.num));
+
+        const newSigns = allCloudSigns.filter(item =>
+          !localSignKeys.has(item.date + item.time + item.num)
+        );
+        if (newSigns.length > 0 || localSigns.length === 0) {
+          // 用全量替换：云端是权威，批量写入 IndexedDB
+          await new Promise((resolve, reject) => {
+            if (!db || !db.objectStoreNames.contains('signs')) { resolve(); return; }
+            const tx = db.transaction('signs', 'readwrite');
+            const store = tx.objectStore('signs');
+            allCloudSigns.forEach(item => {
+              const id = currentUsername + '_' + item.date + item.time + item.num;
+              store.put({
+                id,
+                _owner: currentUsername,
+                num: item.num,
+                level: item.level,
+                ancient: item.ancient || '',
+                poem: item.poem || '',
+                date: item.date,
+                time: item.time
+              });
+            });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+          });
+          console.log(`Synced ${allCloudSigns.length} signs from cloud → IndexedDB`);
+        }
+        // 同步更新 localStorage 缓存
+        const allSigns = await dbSignGetAll();
+        localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(allSigns));
+        updateSignCount().catch(()=>{});
+      }
+    } catch(e) { console.log('Sync signs from cloud failed:', e.message); }
     
   } catch(e) {
     console.log('Sync from cloud failed:', e.message);
@@ -6725,6 +6776,28 @@ async function syncLocalToCloud() {
         }
       }
     } catch(e) { console.log('Sync bubblePool to cloud failed:', e.message); }
+
+    // ===== 同步签文到云端（本地有而云端没有的推上去）=====
+    try {
+      const localSigns = await dbSignGetAll();
+      if (localSigns.length > 0) {
+        const signsCol = cloudDb.collection('signs');
+        let cloudSignKeys = new Set();
+        let signsOffset = 0;
+        while (true) {
+          const cloudSigns = await signsCol.where({ _username: currentUsername }).skip(signsOffset).limit(100).field({ date: true, time: true, num: true }).get();
+          if (!cloudSigns.data || cloudSigns.data.length === 0) break;
+          cloudSigns.data.forEach(d => cloudSignKeys.add(d.date + d.time + d.num));
+          if (cloudSigns.data.length < 100) break;
+          signsOffset += 100;
+        }
+        for (const s of localSigns) {
+          if (!cloudSignKeys.has(s.date + s.time + s.num)) {
+            await signsCol.add({ ...s, _username: currentUsername });
+          }
+        }
+      }
+    } catch(e) { console.log('Sync signs to cloud failed:', e.message); }
     
   } catch(e) {
     console.log('Sync to cloud failed:', e.message);
@@ -7186,32 +7259,24 @@ async function showSignHistory() {
   const list = document.getElementById('sign-history-list');
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在加载签文记录…</div>';
 
-  // ★ 第一步：优先从 IndexedDB 读（清 localStorage 也不丢）
+  // 直接从 IndexedDB 读（initCloudSync 已经把云端数据同步进来了）
   let records = await dbSignGetAll();
 
-  // 同时在后台尝试从云端同步（不阻塞展示）
   if (records.length > 0) {
-    // 先展示本地数据
     renderSignHistoryList(records, list);
-    // 后台尝试云端更新（不 await）
+    // 后台静默更新（不阻塞显示）
     if (cloudReady && cloudDb) {
       fetchSignsFromCloud().then(cloud => {
-        if (cloud && cloud.length > 0) mergeAndStoreSignRecords(cloud, list);
+        if (cloud && cloud.length > 0) mergeAndStoreSignRecords(cloud, list).catch(()=>{});
       }).catch(()=>{});
-    } else {
-      initCloudSync().catch(()=>{});
     }
     return;
   }
 
-  // 本地 IndexedDB 为空（全新设备/清除所有数据），从云端拉
+  // IndexedDB 为空 = 真正的全新登录，等待 initCloudSync 完成
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在从云端恢复签文…</div>';
-  
-  // 主动触发云端连接（不管有没有在运行）
-  initCloudSync().catch(()=>{});
-  
-  // 以 100ms 间隔等待 cloudReady，最多等 20 秒
-  // 注意：不能只等 isSyncing，因为 initCloudSync 可能已经在跑了
+
+  // 等 cloudReady（initCloudSync 正在后台跑，它完成后 cloudReady=true）
   let waited = 0;
   while ((!cloudReady || !cloudDb) && waited < 200) {
     await new Promise(r => setTimeout(r, 100));
@@ -7219,24 +7284,18 @@ async function showSignHistory() {
   }
 
   if (cloudReady && cloudDb) {
+    // initCloudSync 已经把数据写进 IndexedDB 了，重新读一遍
+    records = await dbSignGetAll();
+    if (records.length > 0) {
+      renderSignHistoryList(records, list);
+      return;
+    }
+    // 如果 initCloudSync 还没同步完签文，直接拉一次
     const cloud = await fetchSignsFromCloud();
     if (cloud && cloud.length > 0) {
       await mergeAndStoreSignRecords(cloud, list);
       return;
     }
-  }
-
-  // localStorage 降级
-  records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-  if (records.length > 0) {
-    // 同步到 IndexedDB
-    for (const r of records) {
-      if (!r.id) r.id = currentUsername + '_' + r.date + r.time + r.num;
-      if (!r._owner) r._owner = currentUsername;
-      await dbSignPut(r).catch(()=>{});
-    }
-    renderSignHistoryList(records, list);
-    return;
   }
 
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
