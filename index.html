@@ -6958,6 +6958,7 @@ function startShake() {
       img.onerror = () => showSignResult();
       img.src = 'signs/' + currentSign.num + '.gif?v=' + Date.now();
       
+      // 写入 IndexedDB + 云端（fire-and-forget，不阻塞签图显示）
       saveSignRecord();
     }, 800);
   }
