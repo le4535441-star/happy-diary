@@ -3154,7 +3154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const DB_NAME = 'HappyDiaryDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;  // 升级：新增 signs store
 const STORE_NAME = 'entries';
 
 // IndexedDB 封装（比localStorage更可靠持久）
@@ -3173,6 +3173,9 @@ function openDB() {
       }
       if (!database.objectStoreNames.contains('bubblePool')) {
         database.createObjectStore('bubblePool', { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains('signs')) {
+        database.createObjectStore('signs', { keyPath: 'id' });
       }
     };
     request.onsuccess = (e) => {
@@ -3815,7 +3818,7 @@ async function showSplashThenApp() {
     try {
       await initCloudSync(); // 内部已含 syncSignsFromCloud，签文历史也会恢复
       await loadEntries();
-      updateSignCount(); // 恢复后立即刷新签文计数
+      updateSignCount().catch(()=>{}); // 恢复后立即刷新签文计数
       const afterSyncEntries = getEntries();
       if (afterSyncEntries && afterSyncEntries.length > 0) {
         document.getElementById('sync-status-text').textContent = `找回了 ${afterSyncEntries.length} 个快乐 🎉`;
@@ -3854,7 +3857,7 @@ async function initCloudSyncAndRefresh() {
   const afterCount = getEntries().length;
   
   // 同步完成后刷新签文计数（以防 splash 显示期间签文还没到）
-  updateSignCount();
+  updateSignCount().catch(()=>{});
   
   // 如果云端有新数据同步下来了，静默刷新广场（不强制跳转 currentIndex）
   if (afterCount !== beforeCount) {
@@ -6875,7 +6878,7 @@ function backToTemple() {
   btn.disabled = false;
   document.getElementById('temple-tip').innerHTML = '专心一致，秉除杂念<br>先双手合十默念"救苦救难观音菩萨"三遍<br>然后默念姓名、出生年月日、居住地<br>再请求指点的问题';
   
-  updateSignCount();
+  updateSignCount().catch(()=>{});
 }
 
 // 摇签音效
@@ -7029,9 +7032,36 @@ function stopShakeSound() {
   }); // ensureAudioRunning end
 }
 
-// 签文存储：localStorage缓存 + 同步到云端
+// 签文存储：IndexedDB（持久化，清缓存不丢失）+ 云端双写
+async function dbSignPut(record) {
+  if (!db) return;
+  return new Promise((resolve) => {
+    const tx = db.transaction('signs', 'readwrite');
+    tx.objectStore('signs').put(record);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+async function dbSignGetAll() {
+  if (!db) return [];
+  return new Promise((resolve) => {
+    const tx = db.transaction('signs', 'readonly');
+    const req = tx.objectStore('signs').getAll();
+    req.onsuccess = () => {
+      const all = (req.result || []).filter(r => !r._owner || r._owner === currentUsername);
+      all.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      resolve(all);
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+// 签文存储：IndexedDB（主存储） + localStorage缓存 + 云端
 function saveSignRecord() {
   const newRecord = {
+    id: currentUsername + '_' + Date.now(),  // IndexedDB keyPath
+    _owner: currentUsername,
     num: currentSign.num,
     level: currentSign.level,
     ancient: currentSign.ancient,
@@ -7039,12 +7069,14 @@ function saveSignRecord() {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5)
   };
-  // 1. 写本地缓存
+  // 1. 写 IndexedDB（持久化，清缓存也不丢）
+  dbSignPut(newRecord).catch(() => {});
+  // 2. 写 localStorage 缓存（快速读取用）
   const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
   records.unshift(newRecord);
   localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(records.slice(0, 100)));
-  updateSignCount();
-  // 2. 写云端（立即写，不等待）
+  updateSignCount().catch(()=>{});
+  // 3. 写云端（立即写，不等待）
   if (cloudReady && cloudDb) {
     cloudDb.collection('signs').add({ ...newRecord, _username: currentUsername }).catch(() => {});
   } else {
@@ -7055,13 +7087,16 @@ function saveSignRecord() {
   }
 }
 
-function updateSignCount() {
-  const records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+async function updateSignCount() {
+  // 优先从 IndexedDB 读（持久化）
+  let records = await dbSignGetAll();
+  if (records.length === 0) {
+    // 降级到 localStorage
+    records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  }
   const el = document.getElementById('sign-count');
   if (el) el.textContent = records.length;
-}
-
-// 推送待写的签文到云端
+}// 推送待写的签文到云端
 async function flushPendingSigns() {
   if (!cloudReady || !cloudDb) return;
   const key = 'hd_signs_pending_' + currentUsername;
@@ -7111,7 +7146,7 @@ async function syncSignsFromCloud() {
     .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
     .slice(0, 100);
   localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
-  updateSignCount();
+  updateSignCount().catch(()=>{});
   console.log(`syncSignsFromCloud: ${merged.length} records`);
 }
 
@@ -7122,41 +7157,82 @@ async function showSignHistory() {
   const list = document.getElementById('sign-history-list');
   list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在加载签文记录…</div>';
 
-  // 确保云端连接
+  // ★ 第一步：优先从 IndexedDB 读（清 localStorage 也不丢）
+  let records = await dbSignGetAll();
+
+  // 同时在后台尝试从云端同步（不阻塞展示）
+  if (records.length > 0) {
+    // 先展示本地数据
+    renderSignHistoryList(records, list);
+    // 后台尝试云端更新（不 await）
+    if (cloudReady && cloudDb) {
+      fetchSignsFromCloud().then(cloud => {
+        if (cloud && cloud.length > 0) mergeAndStoreSignRecords(cloud, list);
+      }).catch(()=>{});
+    } else {
+      initCloudSync().catch(()=>{});
+    }
+    return;
+  }
+
+  // 本地 IndexedDB 为空（全新设备/清除所有数据），从云端拉
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">📿 正在从云端恢复签文…</div>';
   if (!cloudReady) initCloudSync().catch(()=>{});
 
-  // 以 100ms 间隔轮询 cloudReady，最多等 15 秒（确保不因 isSyncing 锁拖慢）
   let waited = 0;
   while ((!cloudReady || !cloudDb) && waited < 150) {
     await new Promise(r => setTimeout(r, 100));
     waited++;
   }
 
-  let records = null;
   if (cloudReady && cloudDb) {
-    records = await fetchSignsFromCloud();
-    if (records && records.length > 0) {
-      const local = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
-      const cloudKeys = new Set(records.map(r => r.date + r.time + r.num));
-      const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
-      const merged = [...records, ...onlyLocal]
-        .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time))
-        .slice(0, 100);
-      localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
-      updateSignCount();
-      records = merged;
+    const cloud = await fetchSignsFromCloud();
+    if (cloud && cloud.length > 0) {
+      await mergeAndStoreSignRecords(cloud, list);
+      return;
     }
   }
 
-  if (!records || records.length === 0) {
-    records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  // localStorage 降级
+  records = JSON.parse(localStorage.getItem('hd_signs_' + currentUsername) || '[]');
+  if (records.length > 0) {
+    // 同步到 IndexedDB
+    for (const r of records) {
+      if (!r.id) r.id = currentUsername + '_' + r.date + r.time + r.num;
+      if (!r._owner) r._owner = currentUsername;
+      await dbSignPut(r).catch(()=>{});
+    }
+    renderSignHistoryList(records, list);
+    return;
   }
 
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
+}
+
+async function mergeAndStoreSignRecords(cloud, list) {
+  const local = await dbSignGetAll();
+  const cloudKeys = new Set(cloud.map(r => r.date + r.time + r.num));
+  const onlyLocal = local.filter(r => !cloudKeys.has(r.date + r.time + r.num));
+  const merged = [...cloud.map(r => ({
+    id: currentUsername + '_' + r.date + r.time + r.num,
+    _owner: currentUsername,
+    ...r
+  })), ...onlyLocal]
+    .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time))
+    .slice(0, 100);
+  // 写入 IndexedDB
+  for (const r of merged) await dbSignPut(r).catch(()=>{});
+  // 同步 localStorage 缓存
+  localStorage.setItem('hd_signs_' + currentUsername, JSON.stringify(merged));
+  updateSignCount().catch(()=>{});
+  renderSignHistoryList(merged, list);
+}
+
+function renderSignHistoryList(records, list) {
   if (!records || records.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-light);">还没有摇过签</div>';
     return;
   }
-
   list.innerHTML = records.map((r) => `
     <div class="sign-history-item" onclick="openSignFromHistory(${r.num})" style="cursor:pointer;">
       <div class="sh-top">
@@ -7242,28 +7318,8 @@ function switchTab(tab) {
   }
   if (tab === 'shred') { updateShredCountTab(); }
   if (tab === 'luck') {
-    updateSignCount();
+    updateSignCount().catch(()=>{});
     backToTemple();
-    // ★ 每次切换到观音页，主动从云端拉签文（确保清缓存后也能看到）
-    if (cloudReady && cloudDb) {
-      syncSignsFromCloud().then(() => updateSignCount());
-    } else {
-      // 云端未就绪时，等待最多5秒再尝试一次
-      const trySync = async () => {
-        await new Promise(r => setTimeout(r, 2000));
-        if (cloudReady && cloudDb) {
-          await syncSignsFromCloud();
-          updateSignCount();
-        } else {
-          await new Promise(r => setTimeout(r, 3000));
-          if (cloudReady && cloudDb) {
-            await syncSignsFromCloud();
-            updateSignCount();
-          }
-        }
-      };
-      trySync().catch(() => {});
-    }
   }
   if (tab === 'me') { loadMyProfile(); }
 }
@@ -8145,7 +8201,7 @@ async function confirmClearData() {
     await loadEntries();
     renderPlaza();
     updatePoolCount();
-    updateSignCount();
+    updateSignCount().catch(()=>{});
     
     // 恢复按钮文字
     if (btn) btn.textContent = '一键清除历史数据';
