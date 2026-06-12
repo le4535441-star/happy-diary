@@ -2443,6 +2443,18 @@ body {
   </div>
 </div>
 
+<!-- 音效设置弹窗 -->
+<div id="sound-settings-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);" onclick="if(event.target===this)hideSoundSettings()">
+  <div style="background:var(--paper);border-radius:24px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="font-family:'ZCOOL XiaoWei',serif;font-size:18px;text-align:center;margin-bottom:20px;color:var(--ink);">🔔 音效设置</h3>
+    <div id="sound-settings-list" style="display:flex;flex-direction:column;gap:0;"></div>
+    <div style="display:flex;gap:12px;margin-top:24px;">
+      <button onclick="hideSoundSettings()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--divider);background:transparent;color:var(--ink-light);font-size:15px;cursor:pointer;">取消</button>
+      <button onclick="saveSoundSettings()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--gold);color:var(--ink);font-size:15px;font-weight:700;cursor:pointer;">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 主题选择弹窗 -->
 <div id="theme-picker-overlay" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);">
   <div style="background:var(--paper);border-radius:24px;padding:32px 24px;width:100%;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
@@ -2818,6 +2830,10 @@ body {
           <span class="my-menu-icon">🎨</span>
           <span class="my-menu-text">主题切换</span>
         </div>
+        <div class="my-menu-item" onclick="showSoundSettings()">
+          <span class="my-menu-icon">🔔</span>
+          <span class="my-menu-text">音效设置</span>
+        </div>
         <div class="my-menu-item" onclick="showChangePwdModal()">
           <span class="my-menu-icon">🔒</span>
           <span class="my-menu-text">修改密码</span>
@@ -2919,12 +2935,20 @@ body {
       </div>
     </div>
     <div class="quote-picker">
-      <div class="quote-picker-label">📜 选择配文（左右滑动）</div>
+      <div class="quote-picker-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📜 选择配文（左右滑动）</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-light);cursor:pointer;font-weight:400;">
+          <input type="checkbox" id="no-quote-check" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="toggleNoQuote(this.checked)">
+          <span>不要配文</span>
+        </label>
+      </div>
+      <div id="quote-picker-body">
       <div class="quote-picker-scroll" id="quote-picker-scroll"></div>
       <div class="quote-picker-nav">
         <span class="quote-nav-btn" onclick="prevQuote()">‹</span>
         <span class="quote-nav-idx" id="quote-nav-idx">1/30</span>
         <span class="quote-nav-btn" onclick="nextQuote()">›</span>
+      </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -3701,6 +3725,7 @@ async function showSplashThenApp() {
   // 先初始化数据库
   await openDB();
   await loadEntries();
+  loadSoundSettings(); // ★ 登录后立即加载音效设置（按用户名隔离）
   
   const entries = getEntries();
   const localHasData = entries && entries.length > 0;
@@ -4501,10 +4526,12 @@ document.addEventListener('touchend', e => {
     if (dx < 0 && currentIndex < entries.length - 1) {
       // 左滑 → 下一页
       currentIndex++;
+      if (isSoundEnabled('swipe')) playSwipeSound();
       renderPage();
     } else if (dx > 0 && currentIndex > 0) {
       // 右滑 → 上一页
       currentIndex--;
+      if (isSoundEnabled('swipe')) playSwipeSound();
       renderPage();
     }
   }
@@ -4681,6 +4708,7 @@ document.addEventListener('pointerdown', unlockAudio, { passive: true });
 
 // 闪屏风铃音效：风吹过，先轻后响再渐弱，约4秒，自然律动
 async function playWindChimeSound() {
+  if (!isSoundEnabled('windChime')) return;
   try {
     const ctx = await ensureAudioRunning();
     if (!ctx) return;
@@ -4766,7 +4794,37 @@ async function playWindChimeSound() {
 }
 
 // 快乐音效：清脆的叮咚上升音
+// 翻页滑动音效（轻柔的刷卡声）
+async function playSwipeSound() {
+  try {
+    const ctx = await ensureAudioRunning();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const bufferSize = Math.ceil(ctx.sampleRate * 0.1);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) * 0.3;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    filter.Q.value = 0.8;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.1);
+  } catch(e) {}
+}
+
 async function playHappySound() {
+  if (!isSoundEnabled('saveEntry')) return;
   try {
     const ctx = await ensureAudioRunning();
     const now = ctx.currentTime;
@@ -4804,6 +4862,7 @@ async function playHappySound() {
 
 // 粉碎音效：从高到低的噪音碎裂感（加长版）
 async function playShredSound() {
+  if (!isSoundEnabled('shred')) return;
   try {
     const ctx = await ensureAudioRunning();
     const now = ctx.currentTime;
@@ -4886,7 +4945,14 @@ function nextQuote() {
   renderQuotePicker();
 }
 
+function toggleNoQuote(checked) {
+  document.getElementById('quote-picker-body').style.display = checked ? 'none' : 'block';
+}
+
 function getSelectedQuote() {
+  // 如果勾选了"不要配文"，返回 null
+  const noQuote = document.getElementById('no-quote-check');
+  if (noQuote && noQuote.checked) return null;
   return shuffledQuotes[currentQuoteIndex];
 }
 
@@ -4904,6 +4970,9 @@ function openModal() {
   shuffledQuotes = shuffleArray(quotes);
   currentQuoteIndex = 0;
   renderQuotePicker();
+  // 重置"不要配文"勾选框
+  const noQuote = document.getElementById('no-quote-check');
+  if (noQuote) { noQuote.checked = false; toggleNoQuote(false); }
   document.getElementById('entry-text').focus();
 }
 
@@ -5796,6 +5865,7 @@ function removeTouchHandlers(el) {
 
 // 哈哈机音效
 function playClawSound(type) {
+  if (!isSoundEnabled('clawCatch')) return;
   ensureAudioRunning().then(ctx => {
   try {
     const now = ctx.currentTime;
@@ -6799,6 +6869,7 @@ let shakeOsc = null;
 let shakeInterval = null;
 
 function playShakeSound() {
+  if (!isSoundEnabled('signShake')) return;
   ensureAudioRunning().then(ctx => {
   try {
     // 有节奏的竹签碰撞声（每300ms一次敲击）
@@ -7564,6 +7635,75 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // ========== 主题切换 ==========
+// ========== 音效设置 ==========
+const SOUND_OPTIONS = [
+  { key: 'windChime',   label: '🎐 开屏风铃',     desc: '进入 App 时的风铃声' },
+  { key: 'saveEntry',   label: '✨ 记录保存音',    desc: '保存好事时的提示音' },
+  { key: 'swipe',       label: '🃏 翻页滑动音',    desc: '翻阅记录时的翻页声' },
+  { key: 'shred',       label: '💥 粉碎机音效',    desc: '随Ta去粉碎时的声音' },
+  { key: 'clawCatch',   label: '🫧 接泡泡音效',    desc: '接到泡泡时的声音' },
+  { key: 'signShake',   label: '🎋 摇签音效',      desc: '问观音摇签时的声音' },
+];
+
+let soundSettings = {}; // { windChime: true, saveEntry: true, ... }
+
+function getSoundSettingsKey() {
+  return 'hd_sound_' + (currentUsername || 'default');
+}
+
+function loadSoundSettings() {
+  try {
+    const saved = localStorage.getItem(getSoundSettingsKey());
+    if (saved) {
+      soundSettings = JSON.parse(saved);
+    } else {
+      // 默认全开
+      SOUND_OPTIONS.forEach(o => soundSettings[o.key] = true);
+    }
+  } catch(e) {
+    SOUND_OPTIONS.forEach(o => soundSettings[o.key] = true);
+  }
+}
+
+function isSoundEnabled(key) {
+  if (!soundSettings || soundSettings[key] === undefined) return true;
+  return soundSettings[key];
+}
+
+function showSoundSettings() {
+  loadSoundSettings();
+  const list = document.getElementById('sound-settings-list');
+  list.innerHTML = SOUND_OPTIONS.map(o => `
+    <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--divider);cursor:pointer;gap:12px;" for="snd_${o.key}">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--ink);">${o.label}</div>
+        <div style="font-size:12px;color:var(--ink-light);margin-top:2px;">${o.desc}</div>
+      </div>
+      <input type="checkbox" id="snd_${o.key}" ${soundSettings[o.key] !== false ? 'checked' : ''}
+        style="width:20px;height:20px;accent-color:var(--gold);cursor:pointer;flex-shrink:0;">
+    </label>
+  `).join('');
+  document.getElementById('sound-settings-overlay').style.display = 'flex';
+}
+
+function hideSoundSettings() {
+  document.getElementById('sound-settings-overlay').style.display = 'none';
+}
+
+function saveSoundSettings() {
+  SOUND_OPTIONS.forEach(o => {
+    soundSettings[o.key] = document.getElementById('snd_' + o.key).checked;
+  });
+  localStorage.setItem(getSoundSettingsKey(), JSON.stringify(soundSettings));
+  hideSoundSettings();
+  // 显示保存成功提示
+  const toast = document.createElement('div');
+  toast.textContent = '✅ 音效设置已保存';
+  toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2c2016;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:99999;opacity:1;transition:opacity 0.5s';
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 2000);
+}
+
 function showThemePicker() {
   document.getElementById('theme-picker-overlay').style.display = 'flex';
   // 高亮当前主题
