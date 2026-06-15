@@ -56,13 +56,24 @@ exports.main = async (event) => {
   const timeNote = earliest && latest && earliest.time !== latest.time
     ? `（最早 ${earliest.time}，最晚 ${latest.time} 还有动静）` : '';
 
-  const prompt = `你是一个读过朋友日记的老友，你看完之后想给他发一条消息。你的风格：真实、有趣、带点温柔的调侃，像在聊天，不像在写作。不超过60字。
+  const prompt = `任务：读完朋友日记后，说一句最有意思的观察。
 
-朋友这周写下了这些：
+规则：
+- 只说一个点，不总结全部
+- 不超过30字
+- 不用"你"字，不用"这周"开头
+- 不鸡汤，不赞美，带一点好奇或调侃
+
+示例风格（看这种感觉）：
+"把拖了三天的事做完后，第一反应是去喝咖啡，不是睡觉。"
+"妈妈来的那天写得最多。"
+"最晚一条记在23点，写的是满足。"
+
+朋友的日记片段：
 ${samplesStr}
-${tagDesc ? '常提到：' + tagDesc : ''}${timeNote}
+${tagDesc ? '（常提到：' + tagDesc + '）' : ''}${timeNote}
 
-基于这些真实内容，写一条像发给朋友的消息。要引用或化用他写的具体内容，不要泛泛而谈，不要总结，不要鸡汤。直接输出正文。`;
+现在，说出你注意到的那一句。直接输出，不加任何前缀。`;
 
   try {
     const poem = await hunyuanChat(API_KEY, prompt);
