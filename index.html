@@ -4813,27 +4813,50 @@ async function playWindChimeSound() {
     // 主音阶（五声音阶，更悦耳）
     const freqs = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50, 1174.66];
 
-    // ===== 风声（贯穿始终，先小→大→小）=====
-    const windDur = TOTAL;
-    const windBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * windDur), ctx.sampleRate);
-    const wd = windBuf.getChannelData(0);
-    // 低通滤过的白噪声模拟风声
-    let prev = 0;
-    for (let i = 0; i < wd.length; i++) {
-      const white = (Math.random() * 2 - 1);
-      prev = prev * 0.97 + white * 0.03; // 低通平滑
-      wd[i] = prev;
+    // ===== 背景音（风声/雨声交替）=====
+    if (!window._chimeBgToggle) window._chimeBgToggle = 0;
+    const isRain = (window._chimeBgToggle++ % 2 === 1);
+
+    const bgDur = TOTAL;
+    const bgBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * bgDur), ctx.sampleRate);
+    const bd = bgBuf.getChannelData(0);
+
+    if (isRain) {
+      // 雨声：密集的随机脉冲 + 高频白噪声，模拟雨滴落地
+      for (let i = 0; i < bd.length; i++) {
+        // 底层细雨沙沙
+        bd[i] = (Math.random() * 2 - 1) * 0.15;
+        // 随机大雨滴（约每秒30滴）
+        if (Math.random() < 30 / ctx.sampleRate) {
+          const dropLen = Math.floor(ctx.sampleRate * (0.002 + Math.random() * 0.005));
+          const dropVol = 0.3 + Math.random() * 0.5;
+          for (let j = 0; j < dropLen && (i + j) < bd.length; j++) {
+            bd[i + j] += dropVol * Math.exp(-j / (dropLen * 0.3)) * (Math.random() * 2 - 1);
+          }
+        }
+      }
+    } else {
+      // 风声：低通滤过的白噪声
+      let prev = 0;
+      for (let i = 0; i < bd.length; i++) {
+        const white = (Math.random() * 2 - 1);
+        prev = prev * 0.97 + white * 0.03;
+        bd[i] = prev;
+      }
     }
+
     const wSrc = ctx.createBufferSource();
-    wSrc.buffer = windBuf;
+    wSrc.buffer = bgBuf;
     const wGain = ctx.createGain();
+    // 雨声整体音量比风声稍小
+    const volScale = isRain ? 0.7 : 1.0;
     wGain.gain.setValueAtTime(0,      t0);
-    wGain.gain.linearRampToValueAtTime(0.12, t0 + 0.4);  // 风渐起
-    wGain.gain.linearRampToValueAtTime(0.35, t0 + 2.0);  // 风最强
-    wGain.gain.linearRampToValueAtTime(0.28, t0 + 4.5);  // 维持
-    wGain.gain.linearRampToValueAtTime(0.35, t0 + 6.0);  // 第二次起风
-    wGain.gain.linearRampToValueAtTime(0.15, t0 + 7.5);
-    wGain.gain.linearRampToValueAtTime(0,    t0 + TOTAL); // 风渐息
+    wGain.gain.linearRampToValueAtTime(0.12 * volScale, t0 + 0.4);
+    wGain.gain.linearRampToValueAtTime(0.35 * volScale, t0 + 2.0);
+    wGain.gain.linearRampToValueAtTime(0.28 * volScale, t0 + 4.5);
+    wGain.gain.linearRampToValueAtTime(0.35 * volScale, t0 + 6.0);
+    wGain.gain.linearRampToValueAtTime(0.15 * volScale, t0 + 7.5);
+    wGain.gain.linearRampToValueAtTime(0,    t0 + TOTAL);
     wSrc.connect(wGain);
     wGain.connect(ctx.destination);
     wSrc.start(t0);
