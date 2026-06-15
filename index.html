@@ -8093,6 +8093,7 @@ function generateWeeklyReport(weekKey) {
       if (!cloudApp) cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
       const res = await cloudApp.callFunction({
         name: 'generateWeeklyPoem',
+        parse: true,
         data: {
           totalEntries,
           totalDays,
@@ -8110,23 +8111,14 @@ function generateWeeklyReport(weekKey) {
         loadingEl.style.display = 'none';
         textEl.textContent = poem;
         textEl.style.display = 'block';
-      } else if (loadingEl && textEl) {
-        // 云函数返回了但没有内容，显示兜底文字
-        const errInfo = res?.result?.error || '未知';
-        console.warn('generateWeeklyPoem 返回异常:', errInfo);
-        loadingEl.style.display = 'none';
-        textEl.textContent = `这一周，你记下了 ${totalEntries} 件快乐，跨越 ${totalDays} 天，愿下周也充满阳光。`;
-        textEl.style.display = 'block';
+      } else {
+        console.warn('generateWeeklyPoem 返回异常:', JSON.stringify(res?.result));
+        if (loadingEl) loadingEl.style.display = 'none';
       }
     } catch (e) {
       console.warn('generateWeeklyPoem 调用失败:', e.message);
       const loadingEl = document.getElementById('report-poem-loading');
-      const textEl = document.getElementById('report-poem-text');
-      if (loadingEl && textEl) {
-        loadingEl.style.display = 'none';
-        textEl.textContent = `这一周，你记下了 ${totalEntries} 件快乐，跨越 ${totalDays} 天，愿下周也充满阳光。`;
-        textEl.style.display = 'block';
-      }
+      if (loadingEl) loadingEl.style.display = 'none';
     }
   })();
 }
