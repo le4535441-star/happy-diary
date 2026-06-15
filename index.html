@@ -8087,11 +8087,18 @@ function generateWeeklyReport(weekKey) {
   document.getElementById('monthly-report-overlay').style.display = 'flex';
   localStorage.setItem('hd_report_' + currentUsername, weekKey);
 
-  // ── 异步调云函数生成 AI 散文小结 ──
+  // ── 异步调云函数生成 AI 点评 ──
   (async () => {
     const loadingEl = document.getElementById('report-poem-loading');
     const textEl = document.getElementById('report-poem-text');
     try {
+      // 抽取本周最多5条有内容的日记原文作为素材
+      const samples = weekEntries
+        .filter(e => e.text && e.text.trim().length > 3)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 5)
+        .map(e => e.text.trim().slice(0, 60));
+
       const fnApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
       const fnAuth = fnApp.auth({ persistence: 'local' });
       const loginState = await fnAuth.getLoginState().catch(() => null);
@@ -8101,9 +8108,9 @@ function generateWeeklyReport(weekKey) {
       const res = await fnApp.callFunction({
         name: 'generateWeeklyPoem',
         parse: true,
-        data: { totalEntries, totalDays, topWords, topTags,
+        data: { totalEntries, totalDays, topTags, samples,
           earliest: earliest ? { time: earliest.time } : null,
-          latest: latest ? { time: latest.time } : null, weekLabel }
+          latest: latest ? { time: latest.time } : null }
       });
       const poem = res?.result?.poem;
       if (poem && loadingEl && textEl) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'happy-diary-cloud-v162';
+const CACHE_NAME = 'happy-diary-cloud-v164';
 const ASSETS = ['./index.html', './manifest.json', './sign-data.js', './welcome.mp4'];
 
 self.addEventListener('install', e => {

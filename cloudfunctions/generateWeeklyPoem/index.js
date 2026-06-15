@@ -46,29 +46,23 @@ exports.main = async (event) => {
     return { success: false, error: 'missing HUNYUAN_API_KEY env' };
   }
 
-  const { totalEntries, totalDays, topWords, topTags, earliest, latest } = event;
+  const { samples, topTags, earliest, latest } = event;
 
-  const wordStr = topWords && topWords.length > 0 ? topWords.join('、') : '';
-  const tagStr = topTags && topTags.length > 0
-    ? topTags.map(([t, c]) => `${t}(${c}次)`).join('、')
+  const samplesStr = samples && samples.length > 0
+    ? samples.map((s, i) => `· ${s}`).join('\n')
     : '';
-  const timeStr = earliest && latest && earliest.time !== latest.time
-    ? `最早在 ${earliest.time} 捕捉到快乐，最晚到 ${latest.time} 还在记录`
-    : '';
-
-  const avgPerDay = totalDays > 0 ? (totalEntries / totalDays).toFixed(1) : 0;
-  const timeNote = earliest && latest && earliest.time !== latest.time
-    ? `最早 ${earliest.time} 就有动静，最晚 ${latest.time} 还没消停。` : '';
-  // 把标签描述得更自然：只列出名字和次数，不用"标签"这个词
   const tagDesc = topTags && topTags.length > 0
-    ? '这周最念念不忘的几件事：' + topTags.map(([t, c]) => `"${t}"出现了${c}次`).join('，') + '。'
-    : '';
+    ? topTags.map(([t]) => t).join('、') : '';
+  const timeNote = earliest && latest && earliest.time !== latest.time
+    ? `（最早 ${earliest.time}，最晚 ${latest.time} 还有动静）` : '';
 
-  const prompt = `你是一个看透生活、略带幽默的旁观者，风格像《奇葩说》里那种一针见血的观察。不超过45字。
+  const prompt = `你是一个读过朋友日记的老友，你看完之后想给他发一条消息。你的风格：真实、有趣、带点温柔的调侃，像在聊天，不像在写作。不超过60字。
 
-情况：这周攒了 ${totalEntries} 条小事，${totalDays} 天有动静，平均 ${avgPerDay} 条/天。${tagDesc}${wordStr ? '反复提到：' + wordStr + '。' : ''}${timeNote}
+朋友这周写下了这些：
+${samplesStr}
+${tagDesc ? '常提到：' + tagDesc : ''}${timeNote}
 
-写一句有趣的点评，必须包含至少一个具体的词（数字、时间、或上面的某个词）。禁止用"快乐""幸福""日常""记录"，禁止鸡汤，禁止赞美。直接输出点评，不加任何前缀。`;
+基于这些真实内容，写一条像发给朋友的消息。要引用或化用他写的具体内容，不要泛泛而谈，不要总结，不要鸡汤。直接输出正文。`;
 
   try {
     const poem = await hunyuanChat(API_KEY, prompt);
