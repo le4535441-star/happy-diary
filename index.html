@@ -263,7 +263,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;  /* 内容多时从上往下排，不再强制居中 */
+  justify-content: center;  /* 默认居中，内容溢出时由 JS 切换为 flex-start */
   padding: 20px 0;
   gap: 12px;
 }
@@ -4570,6 +4570,20 @@ function renderPage() {
   
   // 加载天气
   loadWeatherForPage(entry.date);
+
+  // 渲染后检测内容是否溢出，溢出则顶部对齐，否则居中
+  requestAnimationFrame(() => {
+    const pageContent = container.querySelector('.page-content');
+    const pageBody = container.querySelector('.page-body');
+    if (pageContent && pageBody) {
+      // scrollHeight > clientHeight 表示内容超出可视区域
+      if (pageContent.scrollHeight > pageContent.clientHeight + 4) {
+        pageBody.style.justifyContent = 'flex-start';
+      } else {
+        pageBody.style.justifyContent = 'center';
+      }
+    }
+  });
 }
 
 async function loadWeatherForPage(dateStr) {
