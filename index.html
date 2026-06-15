@@ -4813,59 +4813,57 @@ async function playWindChimeSound() {
     // 主音阶（五声音阶，更悦耳）
     const freqs = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50, 1174.66];
 
-    // ===== 背景音（风声/雨声交替）=====
-    if (!window._chimeBgToggle) window._chimeBgToggle = 0;
-    const isRain = (window._chimeBgToggle++ % 2 === 1);
-
+    // ===== 风声（贯穿始终）=====
     const bgDur = TOTAL;
     const bgBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * bgDur), ctx.sampleRate);
     const bd = bgBuf.getChannelData(0);
-
-    if (isRain) {
-      // 雨滴滴答声：用正弦波短脉冲模拟水滴落下的"叮"声
-      // 底层静音，只有一颗颗清脆的水滴
-      const dropTimes = [];
-      let t = 0.3;
-      while (t < bgDur - 0.5) {
-        dropTimes.push(t);
-        t += 0.15 + Math.random() * 0.35; // 每 0.15~0.5 秒一颗水滴
-      }
-      dropTimes.forEach(dt => {
-        const startSample = Math.floor(dt * ctx.sampleRate);
-        // 水滴频率：高音清脆，800-2000Hz随机
-        const freq = 800 + Math.random() * 1200;
-        const dropSamples = Math.floor(ctx.sampleRate * (0.03 + Math.random() * 0.04)); // 30-70ms
-        const vol = 0.15 + Math.random() * 0.25;
-        for (let j = 0; j < dropSamples && (startSample + j) < bd.length; j++) {
-          const env = Math.exp(-j / (dropSamples * 0.15)); // 快速衰减
-          bd[startSample + j] += vol * env * Math.sin(2 * Math.PI * freq * j / ctx.sampleRate);
-        }
-      });
-    } else {
-      // 风声：低通滤过的白噪声
-      let prev = 0;
-      for (let i = 0; i < bd.length; i++) {
-        const white = (Math.random() * 2 - 1);
-        prev = prev * 0.97 + white * 0.03;
-        bd[i] = prev;
-      }
+    let prev = 0;
+    for (let i = 0; i < bd.length; i++) {
+      const white = (Math.random() * 2 - 1);
+      prev = prev * 0.97 + white * 0.03;
+      bd[i] = prev;
     }
-
     const wSrc = ctx.createBufferSource();
     wSrc.buffer = bgBuf;
     const wGain = ctx.createGain();
-    // 雨声整体音量比风声稍小
-    const volScale = isRain ? 0.7 : 1.0;
     wGain.gain.setValueAtTime(0,      t0);
-    wGain.gain.linearRampToValueAtTime(0.12 * volScale, t0 + 0.4);
-    wGain.gain.linearRampToValueAtTime(0.35 * volScale, t0 + 2.0);
-    wGain.gain.linearRampToValueAtTime(0.28 * volScale, t0 + 4.5);
-    wGain.gain.linearRampToValueAtTime(0.35 * volScale, t0 + 6.0);
-    wGain.gain.linearRampToValueAtTime(0.15 * volScale, t0 + 7.5);
+    wGain.gain.linearRampToValueAtTime(0.12, t0 + 0.4);
+    wGain.gain.linearRampToValueAtTime(0.35, t0 + 2.0);
+    wGain.gain.linearRampToValueAtTime(0.28, t0 + 4.5);
+    wGain.gain.linearRampToValueAtTime(0.35, t0 + 6.0);
+    wGain.gain.linearRampToValueAtTime(0.15, t0 + 7.5);
     wGain.gain.linearRampToValueAtTime(0,    t0 + TOTAL);
     wSrc.connect(wGain);
     wGain.connect(ctx.destination);
     wSrc.start(t0);
+
+    // ===== 远处鸟叫（2-3声，随机时间点）=====
+    const birdCount = 2 + Math.floor(Math.random() * 2); // 2或3声
+    for (let b = 0; b < birdCount; b++) {
+      const birdTime = 1.5 + Math.random() * 5.5; // 在1.5~7秒之间
+      const birdFreqBase = 1800 + Math.random() * 1200; // 1800-3000Hz，鸟鸣高频
+      const chirpCount = 2 + Math.floor(Math.random() * 3); // 每声鸟叫2-4个短音节
+      for (let c = 0; c < chirpCount; c++) {
+        const chirpStart = birdTime + c * (0.08 + Math.random() * 0.06);
+        const chirpDur = 0.04 + Math.random() * 0.06; // 40-100ms
+        const chirpFreq = birdFreqBase * (1 + (Math.random() - 0.5) * 0.3); // 频率微变
+        const chirpVol = 0.04 + Math.random() * 0.04; // 音量很小，远处的感觉
+        const osc = ctx.createOscillator();
+        const gn = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(chirpFreq, t0 + chirpStart);
+        // 频率滑动，模拟鸟叫的上扬
+        osc.frequency.linearRampToValueAtTime(chirpFreq * (1.1 + Math.random() * 0.2), t0 + chirpStart + chirpDur * 0.6);
+        osc.frequency.linearRampToValueAtTime(chirpFreq * 0.9, t0 + chirpStart + chirpDur);
+        gn.gain.setValueAtTime(0, t0 + chirpStart);
+        gn.gain.linearRampToValueAtTime(chirpVol, t0 + chirpStart + 0.005);
+        gn.gain.exponentialRampToValueAtTime(0.001, t0 + chirpStart + chirpDur);
+        osc.connect(gn);
+        gn.connect(ctx.destination);
+        osc.start(t0 + chirpStart);
+        osc.stop(t0 + chirpStart + chirpDur + 0.01);
+      }
+    }
 
     // ===== 铃声：分三波（轻→中→轻），每波3~4个音 =====
     // 波浪整体包络：从 quietStart 到 loudPeak 再回到 quietEnd
