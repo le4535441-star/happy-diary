@@ -4828,11 +4828,11 @@ async function playWindChimeSound() {
     wSrc.buffer = windBuf;
     const wGain = ctx.createGain();
     wGain.gain.setValueAtTime(0,      t0);
-    wGain.gain.linearRampToValueAtTime(0.05, t0 + 0.4);  // 风渐起
-    wGain.gain.linearRampToValueAtTime(0.16, t0 + 2.0);  // 风最强
-    wGain.gain.linearRampToValueAtTime(0.12, t0 + 4.5);  // 维持
-    wGain.gain.linearRampToValueAtTime(0.16, t0 + 6.0);  // 第二次起风
-    wGain.gain.linearRampToValueAtTime(0.06, t0 + 7.5);
+    wGain.gain.linearRampToValueAtTime(0.12, t0 + 0.4);  // 风渐起
+    wGain.gain.linearRampToValueAtTime(0.35, t0 + 2.0);  // 风最强
+    wGain.gain.linearRampToValueAtTime(0.28, t0 + 4.5);  // 维持
+    wGain.gain.linearRampToValueAtTime(0.35, t0 + 6.0);  // 第二次起风
+    wGain.gain.linearRampToValueAtTime(0.15, t0 + 7.5);
     wGain.gain.linearRampToValueAtTime(0,    t0 + TOTAL); // 风渐息
     wSrc.connect(wGain);
     wGain.connect(ctx.destination);
