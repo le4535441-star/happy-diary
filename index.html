@@ -8091,39 +8091,36 @@ function generateWeeklyReport(weekKey) {
   (async () => {
     const loadingEl = document.getElementById('report-poem-loading');
     const textEl = document.getElementById('report-poem-text');
+    const showDebug = (msg) => {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (textEl) { textEl.style.display = 'block'; textEl.style.color = '#e57373'; textEl.style.fontSize = '11px'; textEl.textContent = '[DEBUG] ' + msg; }
+    };
     try {
-      // 云函数在 happy-diary-d5g1qkh1ha6f3d4bd 环境，先匿名登录再调用
       const fnApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
       const fnAuth = fnApp.auth({ persistence: 'local' });
-      const loginState = await fnAuth.getLoginState().catch(() => null);
+      const loginState = await fnAuth.getLoginState().catch((e) => { showDebug('getLoginState失败:' + e.message); return null; });
       if (!loginState) {
-        await fnAuth.anonymousAuthProvider().signIn().catch(() => {});
+        await fnAuth.anonymousAuthProvider().signIn().catch((e) => showDebug('匿名登录失败:' + e.message));
       }
       const res = await fnApp.callFunction({
         name: 'generateWeeklyPoem',
         parse: true,
-        data: {
-          totalEntries,
-          totalDays,
-          topWords,
-          topTags,
-          earliest: earliest ? { time: earliest.time, text: earliest.text } : null,
-          latest: latest ? { time: latest.time, text: latest.text } : null,
-          weekLabel
-        }
+        data: { totalEntries, totalDays, topWords, topTags,
+          earliest: earliest ? { time: earliest.time } : null,
+          latest: latest ? { time: latest.time } : null, weekLabel }
       });
       const poem = res?.result?.poem;
       if (poem && loadingEl && textEl) {
         loadingEl.style.display = 'none';
+        textEl.style.color = '';
+        textEl.style.fontSize = '';
         textEl.textContent = poem;
         textEl.style.display = 'block';
       } else {
-        console.warn('[poem] 返回无内容:', JSON.stringify(res?.result));
-        if (loadingEl) loadingEl.style.display = 'none';
+        showDebug('返回无poem: ' + JSON.stringify(res?.result));
       }
     } catch (e) {
-      console.warn('[poem] 调用失败:', e.message);
-      if (loadingEl) loadingEl.style.display = 'none';
+      showDebug('catch: ' + e.message);
     }
   })();
 }
