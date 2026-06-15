@@ -7990,12 +7990,11 @@ function generateWeeklyReport(weekKey) {
   const totalDays = new Set(weekEntries.map(e => e.date)).size;
   const totalEntries = weekEntries.length;
 
-  // ── 1. 本周关键词（停用词过滤后词频）──
+  // topWords 仅传给云函数用于生成散文，不在页面显示
   const stopWords = new Set(['的','了','是','我','你','他','她','它','在','和','也','都','就','不','有','人','这','那','很','太','好','真','但','又','还','被','让','把','去','来','到','说','看','想','做','用','会','要','对','以','从','于','与','而','之','其','上','下','里','着','过','吧','啊','哦','哈','嗯','哇','喜欢','今天','一个','一种','一直','自己','没有','可以','感觉','时候','因为','所以','然后','虽然','但是','如果','觉得','事情','东西','一下','还是','已经','什么','这个','那个','之后','开始']);
   const wordCount = {};
   weekEntries.forEach(e => {
     if (!e.text) return;
-    // 简单分词：按标点和空格分割，取2-4字词语
     const words = e.text.split(/[\s，。！？、；：""''（）【】\n]+/);
     words.forEach(w => {
       for (let len = 2; len <= 4; len++) {
@@ -8045,16 +8044,6 @@ function generateWeeklyReport(weekKey) {
         <div style="font-size:11px;color:var(--ink-light);">条/天</div>
       </div>
     </div>`;
-
-  // 关键词
-  if (topWords.length > 0) {
-    html += `<div style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">💬 本周你最常提到</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${topWords.map(w => `<span style="background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;">${w}</span>`).join('')}
-      </div>
-    </div>`;
-  }
 
   // 时间特写
   if (earliest && latest && earliest.time !== latest.time) {
@@ -8121,10 +8110,23 @@ function generateWeeklyReport(weekKey) {
         loadingEl.style.display = 'none';
         textEl.textContent = poem;
         textEl.style.display = 'block';
+      } else if (loadingEl && textEl) {
+        // 云函数返回了但没有内容，显示兜底文字
+        const errInfo = res?.result?.error || '未知';
+        console.warn('generateWeeklyPoem 返回异常:', errInfo);
+        loadingEl.style.display = 'none';
+        textEl.textContent = `这一周，你记下了 ${totalEntries} 件快乐，跨越 ${totalDays} 天，愿下周也充满阳光。`;
+        textEl.style.display = 'block';
       }
     } catch (e) {
+      console.warn('generateWeeklyPoem 调用失败:', e.message);
       const loadingEl = document.getElementById('report-poem-loading');
-      if (loadingEl) loadingEl.style.display = 'none';
+      const textEl = document.getElementById('report-poem-text');
+      if (loadingEl && textEl) {
+        loadingEl.style.display = 'none';
+        textEl.textContent = `这一周，你记下了 ${totalEntries} 件快乐，跨越 ${totalDays} 天，愿下周也充满阳光。`;
+        textEl.style.display = 'block';
+      }
     }
   })();
 }
