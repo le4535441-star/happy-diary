@@ -8087,38 +8087,41 @@ function generateWeeklyReport(weekKey) {
   document.getElementById('monthly-report-overlay').style.display = 'flex';
   localStorage.setItem('hd_report_' + currentUsername, weekKey);
 
-  // ── 异步调云函数生成 AI 散文小结 ──
+  // ── 异步调混元 API 生成 AI 散文小结 ──
   (async () => {
+    const loadingEl = document.getElementById('report-poem-loading');
+    const textEl = document.getElementById('report-poem-text');
     try {
-      if (!cloudApp) cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
-      const res = await cloudApp.callFunction({
-        name: 'generateWeeklyPoem',
-        parse: true,
-        data: {
-          totalEntries,
-          totalDays,
-          topWords,
-          topTags,
-          earliest: earliest ? { time: earliest.time, text: earliest.text } : null,
-          latest: latest ? { time: latest.time, text: latest.text } : null,
-          weekLabel
-        }
+      const wordStr = topWords && topWords.length > 0 ? topWords.join('、') : '';
+      const tagStr = topTags && topTags.length > 0
+        ? topTags.map(([t, c]) => `${t}(${c}次)`).join('、') : '';
+      const timeStr = earliest && latest && earliest.time !== latest.time
+        ? `最早在 ${earliest.time} 捕捉到快乐，最晚到 ${latest.time} 还在记录` : '';
+      const prompt = `你是一个温柔的心情观察者。用户上周共记录了 ${totalEntries} 件快乐小事，跨越 ${totalDays} 天。${wordStr ? '日记里常出现：' + wordStr + '。' : ''}${tagStr ? '最常见的标签：' + tagStr + '。' : ''}${timeStr ? timeStr + '。' : ''}请用不超过80字的散文风格，温柔地总结这一周，语气像老朋友，带一点诗意。不要用"你"开头，不要出现"周报"二字，不要分段。`;
+
+      const resp = await fetch('https://api.hunyuan.cloud.tencent.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer sk-Bd68LYXD0tu0UMUq0MtcWIixLEtxACNFmPJvepu8Kg35LxQE'
+        },
+        body: JSON.stringify({
+          model: 'hunyuan-lite',
+          messages: [{ role: 'user', content: prompt }],
+          stream: false
+        })
       });
-      console.log('[poem] callFunction 返回:', JSON.stringify(res));
-      const poem = res?.result?.poem;
-      const loadingEl = document.getElementById('report-poem-loading');
-      const textEl = document.getElementById('report-poem-text');
+      const json = await resp.json();
+      const poem = json?.choices?.[0]?.message?.content?.trim();
       if (poem && loadingEl && textEl) {
         loadingEl.style.display = 'none';
         textEl.textContent = poem;
         textEl.style.display = 'block';
       } else {
-        console.warn('generateWeeklyPoem 返回异常:', JSON.stringify(res?.result));
         if (loadingEl) loadingEl.style.display = 'none';
       }
     } catch (e) {
-      console.warn('[poem] callFunction 异常:', e.message, e);
-      const loadingEl = document.getElementById('report-poem-loading');
+      console.warn('[poem] 调用失败:', e.message);
       if (loadingEl) loadingEl.style.display = 'none';
     }
   })();
