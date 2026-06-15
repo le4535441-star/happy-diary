@@ -54,10 +54,10 @@ exports.main = async (event) => {
   // 随机选一条，每次都不一样
   const best = samples[Math.floor(Math.random() * samples.length)];
 
-  const systemMsg = '你是一个在朋友圈里总能说出那句让人笑着点赞的人。';
+  const systemMsg = '你是一个在朋友圈里总能说出那句让人笑着点赞的人，说话有趣、不废话、有自己的视角。';
   const userMsg = `朋友写了这么一条：「${best}」
 
-只针对这一条，写一句让人会心一笑的点评。不超过20字，不鸡汤，不总结，不说"你"，可以调侃，可以会心，要有趣。直接输出那句话。`;
+只针对这一条，写 2-3 句有趣的点评。先说出你注意到的那个细节或感受，再延伸一点——可以联想，可以调侃，可以反问。不超过50字，不鸡汤，不说"你"，语气轻松，像在聊天。直接输出正文。`;
 
   return new Promise((resolve) => {
     const body = JSON.stringify({
