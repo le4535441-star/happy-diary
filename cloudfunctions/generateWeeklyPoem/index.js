@@ -51,8 +51,8 @@ exports.main = async (event) => {
     return { success: false, error: 'no samples' };
   }
 
-  // 挑字数最多的那一条，最有内容
-  const best = samples.reduce((a, b) => b.length > a.length ? b : a, samples[0]);
+  // 随机选一条，每次都不一样
+  const best = samples[Math.floor(Math.random() * samples.length)];
 
   const systemMsg = '你是一个在朋友圈里总能说出那句让人笑着点赞的人。';
   const userMsg = `朋友写了这么一条：「${best}」
