@@ -7990,28 +7990,7 @@ function generateWeeklyReport(weekKey) {
   const totalDays = new Set(weekEntries.map(e => e.date)).size;
   const totalEntries = weekEntries.length;
 
-  // ── 1. 本周天气图（每天天气 emoji）──
-  const dayMap = {};
-  weekEntries.forEach(e => {
-    if (!dayMap[e.date]) dayMap[e.date] = 0;
-    dayMap[e.date]++;
-  });
-  const weatherRow = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(lastSunEnd);
-    d.setDate(lastSunEnd.getDate() - (6 - i));
-    const key = d.toISOString().split('T')[0];
-    const cnt = dayMap[key] || 0;
-    const dayName = ['日','一','二','三','四','五','六'][d.getDay()];
-    let wx;
-    if (cnt === 0) wx = '☁️';
-    else if (cnt === 1) wx = '🌤️';
-    else if (cnt <= 3) wx = '☀️';
-    else wx = '🌈';
-    weatherRow.push(`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:20px;">${wx}</span><span style="font-size:9px;color:var(--ink-light);">周${dayName}</span></div>`);
-  }
-
-  // ── 2. 本周关键词（停用词过滤后词频）──
+  // ── 1. 本周关键词（停用词过滤后词频）──
   const stopWords = new Set(['的','了','是','我','你','他','她','它','在','和','也','都','就','不','有','人','这','那','很','太','好','真','但','又','还','被','让','把','去','来','到','说','看','想','做','用','会','要','对','以','从','于','与','而','之','其','上','下','里','着','过','吧','啊','哦','哈','嗯','哇','喜欢','今天','一个','一种','一直','自己','没有','可以','感觉','时候','因为','所以','然后','虽然','但是','如果','觉得','事情','东西','一下','还是','已经','什么','这个','那个','之后','开始']);
   const wordCount = {};
   weekEntries.forEach(e => {
@@ -8043,10 +8022,12 @@ function generateWeeklyReport(weekKey) {
 
   // ── 组装 HTML ──
   let html = `
-    <!-- 天气图 -->
-    <div style="background:var(--accent-soft);border-radius:14px;padding:14px 10px 10px;margin-bottom:14px;">
-      <div style="font-size:12px;color:var(--ink-light);text-align:center;margin-bottom:10px;">本周每日天气</div>
-      <div style="display:flex;justify-content:space-around;">${weatherRow.join('')}</div>
+    <!-- AI 散文小结（异步填入） -->
+    <div id="report-poem-block" style="background:var(--accent-soft);border-radius:14px;padding:16px;margin-bottom:14px;min-height:72px;display:flex;align-items:center;justify-content:center;">
+      <div id="report-poem-loading" style="font-size:12px;color:var(--ink-light);text-align:center;">
+        <span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px;">✨</span>正在感受这一周的温度…
+      </div>
+      <div id="report-poem-text" style="display:none;font-size:13px;color:var(--ink);line-height:1.8;text-align:center;font-style:italic;"></div>
     </div>
 
     <!-- 指数 -->
@@ -8116,6 +8097,36 @@ function generateWeeklyReport(weekKey) {
   document.getElementById('monthly-report-content').innerHTML = html;
   document.getElementById('monthly-report-overlay').style.display = 'flex';
   localStorage.setItem('hd_report_' + currentUsername, weekKey);
+
+  // ── 异步调云函数生成 AI 散文小结 ──
+  (async () => {
+    try {
+      if (!cloudApp) cloudApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
+      const res = await cloudApp.callFunction({
+        name: 'generateWeeklyPoem',
+        data: {
+          totalEntries,
+          totalDays,
+          topWords,
+          topTags,
+          earliest: earliest ? { time: earliest.time, text: earliest.text } : null,
+          latest: latest ? { time: latest.time, text: latest.text } : null,
+          weekLabel
+        }
+      });
+      const poem = res?.result?.poem;
+      const loadingEl = document.getElementById('report-poem-loading');
+      const textEl = document.getElementById('report-poem-text');
+      if (poem && loadingEl && textEl) {
+        loadingEl.style.display = 'none';
+        textEl.textContent = poem;
+        textEl.style.display = 'block';
+      }
+    } catch (e) {
+      const loadingEl = document.getElementById('report-poem-loading');
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+  })();
 }
 
 function closeMonthlyReport() {

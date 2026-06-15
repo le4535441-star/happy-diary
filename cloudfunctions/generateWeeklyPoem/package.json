@@ -1,0 +1,7 @@
+{
+  "name": "generateWeeklyPoem",
+  "version": "1.0.0",
+  "description": "调用混元生成周报散文小结",
+  "main": "index.js",
+  "dependencies": {}
+}
