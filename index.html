@@ -2540,7 +2540,14 @@ body {
     <div style="font-size:28px;animation:bellPulse 2s ease-in-out infinite;">🔔</div>
     <span style="font-size:11px;color:#c8a45c;opacity:0.7;letter-spacing:1px;">轻触有惊喜</span>
   </div>
-  <p style="font-size:12px;color:#c8a45c;margin-top:20px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
+  <!-- 周报入口：只在周一有数据时显示 -->
+  <div id="splash-weekly-report" style="display:none;margin-top:20px;">
+    <div onclick="showWeeklyReportFromSplash()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;background:rgba(200,164,92,0.15);border:1px solid rgba(200,164,92,0.4);cursor:pointer;">
+      <span style="font-size:14px;">🌈</span>
+      <span style="font-size:12px;color:#c8a45c;letter-spacing:0.5px;">查看上周快乐报告</span>
+    </div>
+  </div>
+  <p style="font-size:12px;color:#c8a45c;margin-top:16px;opacity:0.7;">✨ 快乐小事 · 每天都有好事花生</p>
 </div>
 
 <!-- 数据同步 loading 屏（与闪屏同风格） -->
@@ -7881,12 +7888,53 @@ function checkMonthlyReport() {
   const weekNum = getISOWeek(today);
   const weekKey = `${today.getFullYear()}-W${weekNum}`;
   const lastReport = localStorage.getItem('hd_report_' + currentUsername);
-  if (lastReport === weekKey) return;
-  
-  // 延迟5秒显示（让用户先看到快乐广场）
+
+  // 检查上周是否有数据
+  const entries = getEntries();
+  const dow = today.getDay() || 7;
+  const lastMonStart = new Date(today);
+  lastMonStart.setDate(today.getDate() - dow - 6);
+  lastMonStart.setHours(0, 0, 0, 0);
+  const lastSunEnd = new Date(today);
+  lastSunEnd.setDate(today.getDate() - dow);
+  lastSunEnd.setHours(23, 59, 59, 999);
+  const hasLastWeekData = entries.some(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d >= lastMonStart && d <= lastSunEnd;
+  });
+
+  if (lastReport === weekKey) {
+    // 本周已经弹过，但在闪屏上提供入口
+    if (hasLastWeekData) {
+      const btn = document.getElementById('splash-weekly-report');
+      if (btn) btn.style.display = 'block';
+    }
+    return;
+  }
+
+  if (!hasLastWeekData) {
+    // 上周无数据，静默跳过（也不显示入口）
+    localStorage.setItem('hd_report_' + currentUsername, weekKey);
+    return;
+  }
+
+  // 闪屏上显示入口
+  const btn = document.getElementById('splash-weekly-report');
+  if (btn) btn.style.display = 'block';
+
+  // 延迟5秒自动弹出
   setTimeout(() => {
     generateWeeklyReport(weekKey);
   }, 5000);
+}
+
+// 从闪屏入口点击查看周报
+function showWeeklyReportFromSplash() {
+  const today = new Date();
+  const weekNum = getISOWeek(today);
+  const weekKey = `${today.getFullYear()}-W${weekNum}`;
+  generateWeeklyReport(weekKey);
 }
 
 function getISOWeek(date) {
