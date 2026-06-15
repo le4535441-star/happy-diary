@@ -1,5 +1,5 @@
-const CACHE_NAME = 'happy-diary-cloud-v169';
-const ASSETS = ['./index.html', './manifest.json', './sign-data.js', './welcome.mp4'];
+const CACHE_NAME = 'happy-diary-cloud-v170';
+const ASSETS = ['./index.html', './manifest.json', './sign-data.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
