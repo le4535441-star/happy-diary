@@ -8091,16 +8091,12 @@ function generateWeeklyReport(weekKey) {
   (async () => {
     const loadingEl = document.getElementById('report-poem-loading');
     const textEl = document.getElementById('report-poem-text');
-    const showDebug = (msg) => {
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (textEl) { textEl.style.display = 'block'; textEl.style.color = '#e57373'; textEl.style.fontSize = '11px'; textEl.textContent = '[DEBUG] ' + msg; }
-    };
     try {
       const fnApp = cloudbase.init({ env: 'happy-diary-d5g1qkh1ha6f3d4bd' });
       const fnAuth = fnApp.auth({ persistence: 'local' });
-      const loginState = await fnAuth.getLoginState().catch((e) => { showDebug('getLoginState失败:' + e.message); return null; });
+      const loginState = await fnAuth.getLoginState().catch(() => null);
       if (!loginState) {
-        await fnAuth.anonymousAuthProvider().signIn().catch((e) => showDebug('匿名登录失败:' + e.message));
+        await fnAuth.anonymousAuthProvider().signIn().catch(() => {});
       }
       const res = await fnApp.callFunction({
         name: 'generateWeeklyPoem',
@@ -8112,15 +8108,13 @@ function generateWeeklyReport(weekKey) {
       const poem = res?.result?.poem;
       if (poem && loadingEl && textEl) {
         loadingEl.style.display = 'none';
-        textEl.style.color = '';
-        textEl.style.fontSize = '';
         textEl.textContent = poem;
         textEl.style.display = 'block';
       } else {
-        showDebug('返回无poem: ' + JSON.stringify(res?.result));
+        if (loadingEl) loadingEl.style.display = 'none';
       }
     } catch (e) {
-      showDebug('catch: ' + e.message);
+      if (loadingEl) loadingEl.style.display = 'none';
     }
   })();
 }
