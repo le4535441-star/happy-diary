@@ -7966,12 +7966,10 @@ function generateWeeklyReport(weekKey) {
   
   // 统计上一周（周一至周日）的数据
   const today = new Date();
-  const dayOfWeek = today.getDay() || 7; // 1-7，周一=1
-  // 上周一
+  const dayOfWeek = today.getDay() || 7;
   const lastMonStart = new Date(today);
   lastMonStart.setDate(today.getDate() - dayOfWeek - 6);
   lastMonStart.setHours(0, 0, 0, 0);
-  // 上周日
   const lastSunEnd = new Date(today);
   lastSunEnd.setDate(today.getDate() - dayOfWeek);
   lastSunEnd.setHours(23, 59, 59, 999);
@@ -7985,65 +7983,138 @@ function generateWeeklyReport(weekKey) {
   const weekLabel = `${lastMonStart.getMonth()+1}月${lastMonStart.getDate()}日 - ${lastSunEnd.getMonth()+1}月${lastSunEnd.getDate()}日`;
 
   if (weekEntries.length === 0) {
-    // 上周没有记录，静默跳过
     localStorage.setItem('hd_report_' + currentUsername, weekKey);
     return;
   }
 
   const totalDays = new Set(weekEntries.map(e => e.date)).size;
   const totalEntries = weekEntries.length;
-  const tags = {};
-  weekEntries.forEach(e => {
-    if (e.tag) tags[e.tag] = (tags[e.tag] || 0) + 1;
-  });
-  const topTags = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  const longest = weekEntries.reduce((a, b) => (a.text || '').length > (b.text || '').length ? a : b);
 
+  // ── 1. 本周天气图（每天天气 emoji）──
+  const dayMap = {};
+  weekEntries.forEach(e => {
+    if (!dayMap[e.date]) dayMap[e.date] = 0;
+    dayMap[e.date]++;
+  });
+  const weatherRow = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(lastSunEnd);
+    d.setDate(lastSunEnd.getDate() - (6 - i));
+    const key = d.toISOString().split('T')[0];
+    const cnt = dayMap[key] || 0;
+    const dayName = ['日','一','二','三','四','五','六'][d.getDay()];
+    let wx;
+    if (cnt === 0) wx = '☁️';
+    else if (cnt === 1) wx = '🌤️';
+    else if (cnt <= 3) wx = '☀️';
+    else wx = '🌈';
+    weatherRow.push(`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:20px;">${wx}</span><span style="font-size:9px;color:var(--ink-light);">周${dayName}</span></div>`);
+  }
+
+  // ── 2. 本周关键词（停用词过滤后词频）──
+  const stopWords = new Set(['的','了','是','我','你','他','她','它','在','和','也','都','就','不','有','人','这','那','很','太','好','真','但','又','还','被','让','把','去','来','到','说','看','想','做','用','会','要','对','以','从','于','与','而','之','其','上','下','里','着','过','吧','啊','哦','哈','嗯','哇','喜欢','今天','一个','一种','一直','自己','没有','可以','感觉','时候','因为','所以','然后','虽然','但是','如果','觉得','事情','东西','一下','还是','已经','什么','这个','那个','之后','开始']);
+  const wordCount = {};
+  weekEntries.forEach(e => {
+    if (!e.text) return;
+    // 简单分词：按标点和空格分割，取2-4字词语
+    const words = e.text.split(/[\s，。！？、；：""''（）【】\n]+/);
+    words.forEach(w => {
+      for (let len = 2; len <= 4; len++) {
+        for (let i = 0; i <= w.length - len; i++) {
+          const seg = w.substr(i, len);
+          if (!stopWords.has(seg) && /[\u4e00-\u9fa5]/.test(seg)) {
+            wordCount[seg] = (wordCount[seg] || 0) + 1;
+          }
+        }
+      }
+    });
+  });
+  const topWords = Object.entries(wordCount).filter(([w,c]) => c >= 2).sort((a,b) => b[1]-a[1]).slice(0, 5).map(([w]) => w);
+
+  // ── 3. 最早 & 最晚记录时间 ──
+  const withTime = weekEntries.filter(e => e.time);
+  const earliest = withTime.length > 0 ? withTime.reduce((a,b) => a.time < b.time ? a : b) : null;
+  const latest = withTime.length > 0 ? withTime.reduce((a,b) => a.time > b.time ? a : b) : null;
+
+  // ── 4. 标签统计 ──
+  const tags = {};
+  weekEntries.forEach(e => { if (e.tag) tags[e.tag] = (tags[e.tag] || 0) + 1; });
+  const topTags = Object.entries(tags).sort((a,b) => b[1]-a[1]).slice(0, 3);
+
+  // ── 组装 HTML ──
   let html = `
-    <div style="background:var(--accent-soft);border-radius:14px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:32px;text-align:center;margin-bottom:8px;">🌟</div>
-      <div style="font-size:16px;color:var(--ink);font-weight:700;text-align:center;">上周快乐指数</div>
-      <div style="display:flex;justify-content:space-around;margin-top:12px;">
-        <div style="text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--accent);">${totalEntries}</div>
-          <div style="font-size:11px;color:var(--ink-light);">条快乐</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--accent);">${totalDays}</div>
-          <div style="font-size:11px;color:var(--ink-light);">天记录</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--accent);">${(totalEntries / Math.max(totalDays,1)).toFixed(1)}</div>
-          <div style="font-size:11px;color:var(--ink-light);">条/天</div>
-        </div>
+    <!-- 天气图 -->
+    <div style="background:var(--accent-soft);border-radius:14px;padding:14px 10px 10px;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--ink-light);text-align:center;margin-bottom:10px;">本周每日天气</div>
+      <div style="display:flex;justify-content:space-around;">${weatherRow.join('')}</div>
+    </div>
+
+    <!-- 指数 -->
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:1;text-align:center;background:var(--warm-bg);border-radius:12px;padding:12px 4px;">
+        <div style="font-size:26px;font-weight:800;color:var(--accent);">${totalEntries}</div>
+        <div style="font-size:11px;color:var(--ink-light);">条快乐</div>
+      </div>
+      <div style="flex:1;text-align:center;background:var(--warm-bg);border-radius:12px;padding:12px 4px;">
+        <div style="font-size:26px;font-weight:800;color:var(--accent);">${totalDays}</div>
+        <div style="font-size:11px;color:var(--ink-light);">天记录</div>
+      </div>
+      <div style="flex:1;text-align:center;background:var(--warm-bg);border-radius:12px;padding:12px 4px;">
+        <div style="font-size:26px;font-weight:800;color:var(--accent);">${(totalEntries/Math.max(totalDays,1)).toFixed(1)}</div>
+        <div style="font-size:11px;color:var(--ink-light);">条/天</div>
       </div>
     </div>`;
 
+  // 关键词
+  if (topWords.length > 0) {
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">💬 本周你最常提到</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${topWords.map(w => `<span style="background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;">${w}</span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // 时间特写
+  if (earliest && latest && earliest.time !== latest.time) {
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">⏰ 快乐的时刻</div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;background:var(--warm-bg);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;">🌅</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${earliest.time}</div>
+          <div style="font-size:10px;color:var(--ink-light);margin-top:2px;">最早一条</div>
+        </div>
+        <div style="flex:1;background:var(--warm-bg);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;">🌙</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${latest.time}</div>
+          <div style="font-size:10px;color:var(--ink-light);margin-top:2px;">最晚一条</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 标签
   if (topTags.length > 0) {
-    html += `<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">🏷️ 快乐来源 TOP${topTags.length}</div>`;
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">🏷️ 快乐来源 TOP${topTags.length}</div>`;
     topTags.forEach(([tag, count], i) => {
-      html += `<div style="font-size:12px;color:var(--ink-light);margin-bottom:4px;">${i+1}. ${tag}（${count}次）</div>`;
+      const w = Math.round((count / totalEntries) * 100);
+      html += `<div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-light);margin-bottom:3px;"><span>${tag}</span><span>${count}次</span></div>
+        <div style="background:rgba(0,0,0,0.06);border-radius:4px;height:5px;overflow:hidden;">
+          <div style="background:var(--accent);height:100%;width:${w}%;border-radius:4px;transition:width 0.8s ease;"></div>
+        </div>
+      </div>`;
     });
     html += `</div>`;
   }
 
-  html += `
-    <div style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;">📝 最走心的一条</div>
-      <div style="font-size:12px;color:var(--ink-light);line-height:1.6;background:var(--warm-bg);padding:12px;border-radius:10px;">
-        "${longest.text.substring(0, 60)}${longest.text.length > 60 ? '...' : ''}"
-        <div style="font-size:11px;color:var(--accent);margin-top:4px;">${longest.date}</div>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--ink-light);text-align:center;line-height:1.6;">
-      ✨ 新的一周，继续收集快乐吧！
-    </div>`;
+  html += `<div style="font-size:12px;color:var(--ink-light);text-align:center;line-height:1.6;margin-top:4px;">✨ 新的一周，继续收集快乐吧！</div>`;
 
   document.getElementById('report-month-label').textContent = weekLabel + ' 快乐小结';
   document.getElementById('monthly-report-content').innerHTML = html;
   document.getElementById('monthly-report-overlay').style.display = 'flex';
-  
-  // 标记本周已读（阅读即消费，关闭后不再出现）
   localStorage.setItem('hd_report_' + currentUsername, weekKey);
 }
 
