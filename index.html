@@ -181,7 +181,7 @@ body {
   box-shadow: var(--shadow), 0 1px 3px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden;  /* 卡片本身不滚动，内容区 page-content 滚动 */
   transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s;
   will-change: transform, opacity;
 }
@@ -218,6 +218,9 @@ body {
   flex-direction: column;
   height: 100%;
   padding: 28px 24px 20px;
+  /* 内容超出时允许滚动 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 顶部: 日期+天气 */
@@ -260,7 +263,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;  /* 内容多时从上往下排，不再强制居中 */
   padding: 20px 0;
   gap: 12px;
 }
