@@ -46,39 +46,53 @@ exports.main = async (event) => {
     return { success: false, error: 'missing HUNYUAN_API_KEY env' };
   }
 
-  const { samples, topTags, earliest, latest } = event;
-
-  const samplesStr = samples && samples.length > 0
-    ? samples.map((s, i) => `· ${s}`).join('\n')
-    : '';
-  const tagDesc = topTags && topTags.length > 0
-    ? topTags.map(([t]) => t).join('、') : '';
-  const timeNote = earliest && latest && earliest.time !== latest.time
-    ? `（最早 ${earliest.time}，最晚 ${latest.time} 还有动静）` : '';
-
-  const prompt = `任务：读完朋友日记后，说一句最有意思的观察。
-
-规则：
-- 只说一个点，不总结全部
-- 不超过30字
-- 不用"你"字，不用"这周"开头
-- 不鸡汤，不赞美，带一点好奇或调侃
-
-示例风格（看这种感觉）：
-"把拖了三天的事做完后，第一反应是去喝咖啡，不是睡觉。"
-"妈妈来的那天写得最多。"
-"最晚一条记在23点，写的是满足。"
-
-朋友的日记片段：
-${samplesStr}
-${tagDesc ? '（常提到：' + tagDesc + '）' : ''}${timeNote}
-
-现在，说出你注意到的那一句。直接输出，不加任何前缀。`;
-
-  try {
-    const poem = await hunyuanChat(API_KEY, prompt);
-    return { success: true, poem };
-  } catch (e) {
-    return { success: false, error: e.message };
+  const { samples } = event;
+  if (!samples || samples.length === 0) {
+    return { success: false, error: 'no samples' };
   }
+
+  // 挑字数最多的那一条，最有内容
+  const best = samples.reduce((a, b) => b.length > a.length ? b : a, samples[0]);
+
+  const systemMsg = '你是一个在朋友圈里总能说出那句让人笑着点赞的人。';
+  const userMsg = `朋友写了这么一条：「${best}」
+
+只针对这一条，写一句让人会心一笑的点评。不超过20字，不鸡汤，不总结，不说"你"，可以调侃，可以会心，要有趣。直接输出那句话。`;
+
+  return new Promise((resolve) => {
+    const body = JSON.stringify({
+      model: 'hunyuan-lite',
+      messages: [
+        { role: 'system', content: systemMsg },
+        { role: 'user', content: userMsg }
+      ],
+      stream: false
+    });
+    const options = {
+      hostname: 'api.hunyuan.cloud.tencent.com',
+      path: '/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + API_KEY,
+        'Content-Length': Buffer.byteLength(body)
+      }
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const poem = parsed.choices?.[0]?.message?.content?.trim() || '';
+          resolve({ success: true, poem });
+        } catch (e) {
+          resolve({ success: false, error: 'parse error' });
+        }
+      });
+    });
+    req.on('error', e => resolve({ success: false, error: e.message }));
+    req.write(body);
+    req.end();
+  });
 };
