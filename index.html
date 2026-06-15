@@ -8022,11 +8022,11 @@ function generateWeeklyReport(weekKey) {
   // ── 组装 HTML ──
   let html = `
     <!-- AI 散文小结（异步填入） -->
-    <div id="report-poem-block" style="background:var(--accent-soft);border-radius:14px;padding:16px;margin-bottom:14px;min-height:72px;display:flex;align-items:center;justify-content:center;">
-      <div id="report-poem-loading" style="font-size:12px;color:var(--ink-light);text-align:center;">
+    <div id="report-poem-block" style="background:var(--accent-soft);border-radius:14px;padding:14px 16px;margin-bottom:14px;min-height:60px;display:flex;align-items:center;justify-content:center;">
+      <div id="report-poem-loading" style="font-size:11px;color:var(--ink-light);text-align:center;">
         <span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px;">✨</span>正在感受这一周的温度…
       </div>
-      <div id="report-poem-text" style="display:none;font-size:13px;color:var(--ink);line-height:1.8;text-align:center;font-style:italic;"></div>
+      <div id="report-poem-text" style="display:none;font-size:12px;color:var(--ink);line-height:1.9;text-align:left;font-style:italic;width:100%;"></div>
     </div>
 
     <!-- 指数 -->

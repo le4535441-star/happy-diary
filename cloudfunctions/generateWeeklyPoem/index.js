@@ -56,7 +56,11 @@ exports.main = async (event) => {
     ? `最早在 ${earliest.time} 捕捉到快乐，最晚到 ${latest.time} 还在记录`
     : '';
 
-  const prompt = `你是一个温柔的心情观察者。用户上周共记录了 ${totalEntries} 件快乐小事，跨越 ${totalDays} 天。${wordStr ? '日记里常出现：' + wordStr + '。' : ''}${tagStr ? '最常见的标签：' + tagStr + '。' : ''}${timeStr ? timeStr + '。' : ''}请用不超过80字的散文风格，温柔地总结这一周，语气像老朋友，带一点诗意。不要用"你"开头，不要出现"周报"二字，不要分段。`;
+  const prompt = `你是一个写小文的人，文风像随手拾起路边一片叶子，轻描淡写，不刻意，不煽情，不总结。
+
+这周有人记下了 ${totalEntries} 件小事，${totalDays} 天都有。${wordStr ? '出现过这些词：' + wordStr + '。' : ''}${tagStr ? '常在意的是：' + tagStr + '。' : ''}${timeStr ? timeStr + '。' : ''}
+
+请以第三人称或无主语的方式，写一段60-80字的闲笔小文。不要总结，不要排比，不要"一周""快乐""幸福"这些词，不要分段，像随手记的一句话那样自然。`;
 
   try {
     const poem = await hunyuanChat(API_KEY, prompt);
