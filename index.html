@@ -4822,19 +4822,25 @@ async function playWindChimeSound() {
     const bd = bgBuf.getChannelData(0);
 
     if (isRain) {
-      // 雨声：密集的随机脉冲 + 高频白噪声，模拟雨滴落地
-      for (let i = 0; i < bd.length; i++) {
-        // 底层细雨沙沙
-        bd[i] = (Math.random() * 2 - 1) * 0.15;
-        // 随机大雨滴（约每秒30滴）
-        if (Math.random() < 30 / ctx.sampleRate) {
-          const dropLen = Math.floor(ctx.sampleRate * (0.002 + Math.random() * 0.005));
-          const dropVol = 0.3 + Math.random() * 0.5;
-          for (let j = 0; j < dropLen && (i + j) < bd.length; j++) {
-            bd[i + j] += dropVol * Math.exp(-j / (dropLen * 0.3)) * (Math.random() * 2 - 1);
-          }
-        }
+      // 雨滴滴答声：用正弦波短脉冲模拟水滴落下的"叮"声
+      // 底层静音，只有一颗颗清脆的水滴
+      const dropTimes = [];
+      let t = 0.3;
+      while (t < bgDur - 0.5) {
+        dropTimes.push(t);
+        t += 0.15 + Math.random() * 0.35; // 每 0.15~0.5 秒一颗水滴
       }
+      dropTimes.forEach(dt => {
+        const startSample = Math.floor(dt * ctx.sampleRate);
+        // 水滴频率：高音清脆，800-2000Hz随机
+        const freq = 800 + Math.random() * 1200;
+        const dropSamples = Math.floor(ctx.sampleRate * (0.03 + Math.random() * 0.04)); // 30-70ms
+        const vol = 0.15 + Math.random() * 0.25;
+        for (let j = 0; j < dropSamples && (startSample + j) < bd.length; j++) {
+          const env = Math.exp(-j / (dropSamples * 0.15)); // 快速衰减
+          bd[startSample + j] += vol * env * Math.sin(2 * Math.PI * freq * j / ctx.sampleRate);
+        }
+      });
     } else {
       // 风声：低通滤过的白噪声
       let prev = 0;
