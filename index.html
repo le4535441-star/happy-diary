@@ -2911,7 +2911,6 @@ body {
         <div class="plaza-actions" style="flex-direction:column;align-items:center;gap:8px;">
           <div class="happy-index" id="happy-index" onclick="openGarden()" style="margin:0;">
             <svg id="happy-sun-svg" width="44" height="44" viewBox="0 0 44 44"></svg>
-            <span style="font-size:10px;color:var(--ink-light);position:absolute;bottom:-10px;white-space:nowrap;">点击看花园</span>
           </div>
           <button class="action-btn action-happy" onclick="openModal()">
             <span class="action-icon">✍️</span>
@@ -8855,68 +8854,110 @@ function renderGarden() {
   const tooltip = document.getElementById('garden-tooltip');
   container.innerHTML = '';
   
-  // 只显示最近200条
   const visible = entries.slice(0, 200);
+  
+  // 按科属分组
+  const groups = {};
+  visible.forEach((entry, i) => {
+    const { key } = getPlantFamily(entry);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ entry, index: i });
+  });
+  
+  // 定义每个科属的种植区域（分地块，像真正的农场）
+  const zones = {
+    fuzzy:  { label: '🐾', x: 5,  y: 5,  w: 42, h: 40 },  // 左上 - 毛茸茸区
+    food:   { label: '🍓', x: 52, y: 5,  w: 43, h: 40 },  // 右上 - 果实区
+    done:   { label: '🌲', x: 5,  y: 50, w: 42, h: 45 },  // 左下 - 木本区
+    joy:    { label: '🌸', x: 52, y: 50, w: 43, h: 25 },  // 右中 - 花朵区
+    nature: { label: '🌈', x: 52, y: 78, w: 43, h: 18 },  // 右下 - 自然区
+    wild:   { label: '🍀', x: 20, y: 88, w: 60, h: 10 }   // 底部一行 - 野花
+  };
   
   let seedCount = 0, sproutCount = 0, bloomCount = 0;
   
-  visible.forEach((entry, i) => {
-    const p = getPlantForEntry(entry, i);
-    if (p.stage === 'seed') seedCount++;
-    else if (p.stage === 'sprout' || p.stage === 'bud') sproutCount++;
-    else bloomCount++;
+  Object.entries(groups).forEach(([key, items]) => {
+    const zone = zones[key] || zones.wild;
     
-    const el = document.createElement('div');
-    el.className = 'garden-plant';
-    el.style.left = p.x + '%';
-    el.style.top = p.y + '%';
-    el.style.animationDelay = (i * 30) + 'ms';
-    el.style.zIndex = Math.floor(p.y);
+    // 在区域内规则排列（网格式种植）
+    const cols = Math.ceil(Math.sqrt(items.length * 1.5));
+    const rows = Math.ceil(items.length / cols);
+    const cellW = zone.w / (cols + 0.5);
+    const cellH = zone.h / (rows + 0.5);
     
-    const emojiEl = document.createElement('div');
-    emojiEl.className = 'plant-emoji' + (p.isGolden ? ' golden' : '');
-    emojiEl.style.fontSize = p.size + 'px';
-    
-    if (p.stage === 'seed') {
-      emojiEl.textContent = '🌱';
-      emojiEl.style.opacity = '0.75';
-    } else if (p.stage === 'sprout') {
-      emojiEl.textContent = '🌿';
-    } else {
-      emojiEl.textContent = p.plant;
-    }
-    
-    if (p.hasFruit) {
-      emojiEl.textContent += '✨';
-    }
-    
-    const stemEl = document.createElement('div');
-    stemEl.className = 'plant-stem';
-    stemEl.style.height = p.stemH + 'px';
-    
-    el.appendChild(emojiEl);
-    el.appendChild(stemEl);
-    
-    // 点击显示记录内容
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const rect = el.getBoundingClientRect();
-      tooltip.innerHTML = `
-        <div>${p.entry.emoji || '✨'} ${p.entry.text || ''}</div>
-        <div class="tt-date">${formatGardenDate(p.entry.date || p.entry.id)}</div>
-        ${p.entry.tag ? '<div class="tt-tag">' + p.entry.tag + '</div>' : ''}
-        ${p.isGolden ? '<div style="color:#FFD700;font-size:11px;margin-top:4px;">✨ 稀有金色变异！</div>' : ''}
-      `;
-      tooltip.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
-      tooltip.style.top = Math.max(10, rect.top - 90) + 'px';
-      tooltip.classList.add('show');
-      setTimeout(() => tooltip.classList.remove('show'), 3000);
+    items.forEach((item, idx) => {
+      const p = getPlantForEntry(item.entry, item.index);
+      if (p.stage === 'seed') seedCount++;
+      else if (p.stage === 'sprout' || p.stage === 'bud') sproutCount++;
+      else bloomCount++;
+      
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      // 规则网格 + 微小随机偏移（像真实农田的微偏）
+      const jitterX = ((p.hash % 5) - 2) * 0.8;
+      const jitterY = ((p.hash % 7) - 3) * 0.6;
+      const posX = zone.x + cellW * 0.5 + col * cellW + jitterX;
+      const posY = zone.y + cellH * 0.5 + row * cellH + jitterY;
+      
+      const el = document.createElement('div');
+      el.className = 'garden-plant';
+      el.style.left = posX + '%';
+      el.style.top = posY + '%';
+      el.style.animationDelay = (idx * 40) + 'ms';
+      el.style.zIndex = Math.floor(posY) + 10;
+      
+      const emojiEl = document.createElement('div');
+      emojiEl.className = 'plant-emoji' + (p.isGolden ? ' golden' : '');
+      emojiEl.style.fontSize = p.size + 'px';
+      
+      if (p.stage === 'seed') {
+        emojiEl.textContent = '🌱';
+        emojiEl.style.opacity = '0.75';
+      } else if (p.stage === 'sprout') {
+        emojiEl.textContent = '🌿';
+      } else {
+        emojiEl.textContent = p.plant;
+      }
+      
+      const stemEl = document.createElement('div');
+      stemEl.className = 'plant-stem';
+      stemEl.style.height = p.stemH + 'px';
+      
+      el.appendChild(emojiEl);
+      el.appendChild(stemEl);
+      
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = el.getBoundingClientRect();
+        tooltip.innerHTML = `
+          <div>${p.entry.emoji || '✨'} ${p.entry.text || ''}</div>
+          <div class="tt-date">${formatGardenDate(p.entry.date || p.entry.id)}</div>
+          ${p.entry.tag ? '<div class="tt-tag">' + p.entry.tag + '</div>' : ''}
+          ${p.isGolden ? '<div style="color:#FFD700;font-size:11px;margin-top:4px;">✨ 稀有金色变异！</div>' : ''}
+        `;
+        tooltip.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+        tooltip.style.top = Math.max(10, rect.top - 90) + 'px';
+        tooltip.classList.add('show');
+        setTimeout(() => tooltip.classList.remove('show'), 3000);
+      });
+      
+      container.appendChild(el);
     });
     
-    container.appendChild(el);
+    // 在每个区域边缘添加装饰性大树/藤蔓
+    if (key !== 'wild' && items.length > 0) {
+      const deco = document.createElement('div');
+      deco.className = 'garden-plant';
+      deco.style.left = (zone.x + zone.w - 2) + '%';
+      deco.style.top = (zone.y - 1) + '%';
+      deco.style.zIndex = '5';
+      deco.style.opacity = '0.5';
+      deco.style.pointerEvents = 'none';
+      deco.innerHTML = '<div class="plant-emoji" style="font-size:20px;">🌳</div>';
+      container.appendChild(deco);
+    }
   });
   
-  // 更新统计
   document.getElementById('garden-stats-text').textContent = 
     `🌱${seedCount} 🌿${sproutCount} 🌸${bloomCount} · 共${visible.length}棵`;
 }
