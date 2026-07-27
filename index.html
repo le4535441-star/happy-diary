@@ -448,7 +448,7 @@ body {
   margin-top: 16px;
 }
 
-.image-upload label {
+.image-upload .upload-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -460,9 +460,10 @@ body {
   font-size: 14px;
   cursor: pointer;
   transition: border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.image-upload label:active { border-color: var(--accent); }
+.image-upload .upload-trigger:active { border-color: var(--accent); }
 
 .image-upload input { display: none; }
 
@@ -2794,7 +2795,8 @@ body {
     <!-- 签文展示界面 -->
     <div class="sign-result-page" id="sign-result-page" style="display:none;">
       <div class="sign-image-wrap">
-        <img class="sign-image" id="sign-image" src="" alt="签文">
+        <img class="sign-image" id="sign-image" src="" alt="签文" onerror="this.style.display='none';document.getElementById('sign-fallback').style.display='block';renderSignFallback();">
+        <div id="sign-fallback" style="display:none;width:100%;background:linear-gradient(180deg,#f5e6d0,#e8d5bc);border:3px solid #b8860b;border-radius:8px;padding:28px 20px;text-align:center;"></div>
       </div>
       <button class="interpret-btn" onclick="showInterpret()">📖 详细解签</button>
       <button class="reshake-btn" onclick="backToTemple()">🔄 重新摇签</button>
@@ -2938,10 +2940,10 @@ body {
     <textarea id="entry-text" placeholder="写下让你开心的小事..." maxlength="200"></textarea>
     <div class="char-count"><span id="char-num">0</span>/200</div>
     <div class="image-upload">
-      <label>
+      <div class="upload-trigger" onclick="triggerImageUpload()">
         <span>📷 添加配图（可选）</span>
-        <input type="file" id="image-input" accept="image/*">
-      </label>
+      </div>
+      <input type="file" id="image-input" accept="image/*" style="display:none;">
       <div class="image-preview" id="image-preview">
         <img id="preview-img" src="">
         <span class="remove-img" onclick="removeImage()">✕ 移除图片</span>
@@ -5172,6 +5174,13 @@ document.getElementById('entry-text').addEventListener('input', e => {
   document.getElementById('char-num').textContent = e.target.value.length;
 });
 
+// 显式触发文件选择（iOS Safari 兼容）
+function triggerImageUpload() {
+  const input = document.getElementById('image-input');
+  input.value = '';
+  input.click();
+}
+
 document.getElementById('image-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -5880,7 +5889,52 @@ function startCatch() {
       const catchZoneBottom = skyBoxH - 55;
 
       bubbleObjs.forEach(obj => {
-        if (obj.caught) return;
+        if (obj.caught) {
+          // 普通泡泡被接住后，等动画结束再重生
+          obj.caughtTimer = (obj.caughtTimer || 0) + 1;
+          if (obj.caughtTimer > 30) {
+            obj.y = -50 - Math.random() * 80;
+            obj.baseX = 10 + Math.random() * 80;
+            obj.x = obj.baseX;
+            obj.frame = 0;
+            obj.caughtTimer = 0;
+            obj.isEmoji = Math.random() < 0.2;
+            if (obj.isEmoji) {
+              obj.el.textContent = luckyEmojis[Math.floor(Math.random() * luckyEmojis.length)];
+              obj.el.style.background = 'rgba(255,215,0,0.35)';
+              obj.el.style.border = '2.5px solid rgba(255,215,0,0.9)';
+              obj.el.style.boxShadow = '0 0 12px rgba(255,215,0,0.7), inset 0 0 8px rgba(255,215,0,0.3)';
+              obj.el.style.display = 'flex';
+              obj.el.style.alignItems = 'center';
+              obj.el.style.justifyContent = 'center';
+              obj.el.style.fontSize = '22px';
+              obj.el.style.width = '46px';
+              obj.el.style.height = '46px';
+              obj.size = 46;
+              obj.color = 'radial-gradient(circle at 30% 30%, #ffd700, #ffb800)';
+              obj.speed = 0.9 + Math.random() * 0.5;
+            } else {
+              obj.el.textContent = '';
+              obj.el.style.border = 'none';
+              obj.el.style.boxShadow = 'inset -3px -3px 6px rgba(0,0,0,0.1), inset 3px 3px 6px rgba(255,255,255,0.4), 0 0 8px rgba(255,255,255,0.2)';
+              obj.el.style.display = 'block';
+              const newSize = 30 + Math.random() * 16;
+              obj.el.style.width = newSize + 'px';
+              obj.el.style.height = newSize + 'px';
+              obj.size = newSize;
+              obj.color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
+              obj.el.style.background = obj.color;
+              obj.speed = 1.2 + Math.random() * 1.2;
+            }
+            obj.el.style.top = obj.y + 'px';
+            obj.el.style.left = obj.x + '%';
+            obj.el.style.transform = '';
+            obj.el.style.opacity = '0.85';
+            obj.el.style.transition = '';
+            obj.caught = false;
+          }
+          return;
+        }
         if (obj.delay > 0) { obj.delay--; return; }
         obj.y += obj.speed;
         obj.frame++;
@@ -5892,6 +5946,7 @@ function startCatch() {
         const runnerLeft = parseFloat(runner.style.left) || 50;
         if (obj.y >= catchZoneTop && obj.y <= catchZoneBottom && Math.abs(obj.x - runnerLeft) < 12) {
           obj.caught = true;
+          obj.caughtTimer = 0;
           obj.el.style.transition = 'transform 0.2s, opacity 0.2s';
           obj.el.style.transform = 'scale(1.5)';
           obj.el.style.opacity = '0';
@@ -7026,10 +7081,27 @@ function showSignResult() {
   const page = document.getElementById('sign-result-page');
   page.style.display = 'flex';
   
-  // 直接用当前签号构建 URL（预加载的 img 对象在外部作用域，此处重新赋值确保显示）
-  document.getElementById('sign-image').src = 'signs/' + currentSign.num + '.gif?v=' + Date.now();
+  // 重置显示状态
+  const imgEl = document.getElementById('sign-image');
+  const fallbackEl = document.getElementById('sign-fallback');
+  imgEl.style.display = 'block';
+  fallbackEl.style.display = 'none';
+  
+  // 直接用当前签号构建 URL
+  imgEl.src = 'signs/' + currentSign.num + '.gif?v=' + Date.now();
   
   playClawSound('grab');
+}
+
+function renderSignFallback() {
+  const el = document.getElementById('sign-fallback');
+  if (!el || !currentSign) return;
+  const fullData = (typeof signFullData !== 'undefined' && signFullData[currentSign.num]) || currentSign;
+  const poem = (fullData.poem || currentSign.poem || '').replace(/\\n/g, '\n');
+  el.innerHTML = '<div style="font-family:ZCOOL XiaoWei,serif;font-size:16px;color:#8b4513;margin-bottom:4px;">第' + currentSign.num + '签</div>' +
+    '<div style="font-size:22px;font-weight:800;color:#c62828;margin-bottom:12px;">' + currentSign.level + '</div>' +
+    '<div style="font-size:13px;color:#6d4c41;margin-bottom:16px;font-style:italic;">典故：' + (currentSign.ancient || '') + '</div>' +
+    '<div style="font-family:ZCOOL XiaoWei,serif;font-size:17px;line-height:2.2;color:#3e2723;white-space:pre-line;">' + poem + '</div>';
 }
 
 function showInterpret() {
