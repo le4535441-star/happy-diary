@@ -8846,7 +8846,7 @@ function renderGarden() {
     groups[key].push({ entry, index: i });
   });
   
-  // 对应田地区域（与 HTML 中的 garden-plot 位置一致）
+  // 田地区域
   const zones = {
     fuzzy:  { x: 13, y: 15, w: 32, h: 29 },
     food:   { x: 53, y: 15, w: 32, h: 29 },
@@ -8861,65 +8861,61 @@ function renderGarden() {
   Object.entries(groups).forEach(([key, items]) => {
     const zone = zones[key] || zones.wild;
     
-    // 整齐的行列排列
-    const cols = Math.min(Math.ceil(Math.sqrt(items.length * 1.3)), 7);
-    const rows = Math.ceil(items.length / cols);
-    const gapX = zone.w / (cols + 1);
-    const gapY = zone.h / (rows + 1);
-    
-    items.forEach((item, idx) => {
+    // 先按植物品种再分组——同品种排一行
+    const byPlant = {};
+    items.forEach((item) => {
       const p = getPlantForEntry(item.entry, item.index);
-      total++;
+      const emoji = (p.stage === 'seed') ? '🌱' : (p.stage === 'sprout') ? '🌿' : p.plant;
+      if (!byPlant[emoji]) byPlant[emoji] = [];
+      byPlant[emoji].push({ ...p, item });
+    });
+    
+    // 每种植物占一行，整齐排列
+    const plantTypes = Object.entries(byPlant);
+    const rowH = zone.h / (plantTypes.length + 1);
+    
+    plantTypes.forEach(([emoji, plants], rowIdx) => {
+      const rowY = zone.y + rowH * (rowIdx + 0.8);
+      const colW = zone.w / (plants.length + 1);
       
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      const posX = zone.x + gapX * (col + 1) + ((p.hash % 3) - 1) * 0.5;
-      const posY = zone.y + gapY * (row + 1) + ((p.hash % 3) - 1) * 0.4;
-      
-      const el = document.createElement('div');
-      el.className = 'garden-plant';
-      el.style.left = posX + '%';
-      el.style.top = posY + '%';
-      el.style.animationDelay = (idx * 30) + 'ms';
-      el.style.zIndex = Math.floor(posY) + 10;
-      
-      const emojiEl = document.createElement('div');
-      emojiEl.className = 'plant-emoji' + (p.isGolden ? ' golden' : '');
-      
-      // 根据生长阶段显示不同
-      if (p.stage === 'seed') {
-        emojiEl.textContent = '🌱';
-        emojiEl.style.fontSize = '16px';
-        emojiEl.style.opacity = '0.8';
-      } else if (p.stage === 'sprout') {
-        emojiEl.textContent = '🌿';
-        emojiEl.style.fontSize = '18px';
-      } else if (p.stage === 'bud') {
-        emojiEl.textContent = p.plant;
-        emojiEl.style.fontSize = '20px';
-        emojiEl.style.opacity = '0.85';
-      } else {
-        emojiEl.textContent = p.plant;
-        emojiEl.style.fontSize = (22 + (p.hash % 4)) + 'px';
-      }
-      
-      el.appendChild(emojiEl);
-      
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const rect = el.getBoundingClientRect();
-        tooltip.innerHTML = `
-          <div style="font-size:14px;">${p.entry.emoji || '✨'} ${(p.entry.text || '').slice(0, 50)}</div>
-          <div class="tt-date">${formatGardenDate(p.entry.date || p.entry.id)}</div>
-          ${p.entry.tag ? '<div class="tt-tag">' + p.entry.tag + '</div>' : ''}
-        `;
-        tooltip.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
-        tooltip.style.top = Math.max(60, rect.top - 80) + 'px';
-        tooltip.classList.add('show');
-        setTimeout(() => tooltip.classList.remove('show'), 2500);
+      plants.forEach((p, colIdx) => {
+        total++;
+        const posX = zone.x + colW * (colIdx + 1);
+        const posY = rowY;
+        
+        const el = document.createElement('div');
+        el.className = 'garden-plant';
+        el.style.left = posX + '%';
+        el.style.top = posY + '%';
+        el.style.animationDelay = (total * 20) + 'ms';
+        el.style.zIndex = Math.floor(posY) + 10;
+        
+        const emojiEl = document.createElement('div');
+        emojiEl.className = 'plant-emoji' + (p.isGolden ? ' golden' : '');
+        // 用❤️替换🤍
+        let displayEmoji = emoji === '🤍' ? '❤️' : emoji;
+        emojiEl.textContent = displayEmoji;
+        emojiEl.style.fontSize = (p.stage === 'bloom' ? '22px' : p.stage === 'bud' ? '20px' : '17px');
+        if (p.stage === 'seed') emojiEl.style.opacity = '0.75';
+        
+        el.appendChild(emojiEl);
+        
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rect = el.getBoundingClientRect();
+          tooltip.innerHTML = `
+            <div style="font-size:14px;">${p.entry.emoji || '✨'} ${(p.entry.text || '').slice(0, 50)}</div>
+            <div class="tt-date">${formatGardenDate(p.entry.date || p.entry.id)}</div>
+            ${p.entry.tag ? '<div class="tt-tag">' + p.entry.tag + '</div>' : ''}
+          `;
+          tooltip.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
+          tooltip.style.top = Math.max(60, rect.top - 80) + 'px';
+          tooltip.classList.add('show');
+          setTimeout(() => tooltip.classList.remove('show'), 2500);
+        });
+        
+        container.appendChild(el);
       });
-      
-      container.appendChild(el);
     });
   });
   
@@ -8958,19 +8954,45 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 快乐花园 overlay -->
 <div id="garden-overlay">
   <div class="garden-scene" id="garden-scene">
-    <!-- 四周大树 -->
-    <div class="garden-tree" style="top:8%;left:2%;">🌳</div>
-    <div class="garden-tree" style="top:15%;left:0%;font-size:28px;">🌲</div>
-    <div class="garden-tree" style="top:30%;left:1%;font-size:30px;">🌳</div>
-    <div class="garden-tree" style="top:55%;left:0%;font-size:32px;">🌲</div>
-    <div class="garden-tree" style="top:75%;left:2%;font-size:28px;">🌳</div>
-    <div class="garden-tree" style="top:8%;right:2%;">🌳</div>
-    <div class="garden-tree" style="top:20%;right:0%;font-size:30px;">🌲</div>
-    <div class="garden-tree" style="top:45%;right:1%;font-size:34px;">🌳</div>
-    <div class="garden-tree" style="top:70%;right:2%;font-size:28px;">🌲</div>
-    <div class="garden-tree" style="top:90%;right:3%;font-size:26px;">🌳</div>
-    <div class="garden-tree" style="bottom:3%;left:10%;font-size:28px;">🌲</div>
-    <div class="garden-tree" style="bottom:2%;right:12%;font-size:26px;">🌳</div>
+    <!-- 左侧树丛 -->
+    <div class="garden-tree" style="top:4%;left:-1%;font-size:34px;">🌳</div>
+    <div class="garden-tree" style="top:10%;left:1%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="top:17%;left:-1%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:24%;left:0%;font-size:26px;">🌿</div>
+    <div class="garden-tree" style="top:30%;left:-1%;font-size:34px;">🌲</div>
+    <div class="garden-tree" style="top:37%;left:1%;font-size:28px;">🌳</div>
+    <div class="garden-tree" style="top:44%;left:-1%;font-size:30px;">🌲</div>
+    <div class="garden-tree" style="top:51%;left:0%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:58%;left:1%;font-size:26px;">🌿</div>
+    <div class="garden-tree" style="top:64%;left:-1%;font-size:34px;">🌲</div>
+    <div class="garden-tree" style="top:71%;left:0%;font-size:30px;">🌳</div>
+    <div class="garden-tree" style="top:78%;left:1%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="top:85%;left:-1%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:92%;left:0%;font-size:28px;">🌲</div>
+    <!-- 右侧树丛 -->
+    <div class="garden-tree" style="top:4%;right:-1%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:11%;right:1%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="top:18%;right:-1%;font-size:34px;">🌳</div>
+    <div class="garden-tree" style="top:25%;right:0%;font-size:26px;">🌿</div>
+    <div class="garden-tree" style="top:32%;right:1%;font-size:30px;">🌲</div>
+    <div class="garden-tree" style="top:39%;right:-1%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:46%;right:0%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="top:53%;right:1%;font-size:34px;">🌳</div>
+    <div class="garden-tree" style="top:60%;right:-1%;font-size:26px;">🌿</div>
+    <div class="garden-tree" style="top:67%;right:0%;font-size:30px;">🌲</div>
+    <div class="garden-tree" style="top:74%;right:1%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="top:81%;right:-1%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="top:88%;right:0%;font-size:30px;">🌳</div>
+    <div class="garden-tree" style="top:95%;right:1%;font-size:26px;">🌲</div>
+    <!-- 底部树丛 -->
+    <div class="garden-tree" style="bottom:1%;left:8%;font-size:30px;">🌲</div>
+    <div class="garden-tree" style="bottom:0%;left:18%;font-size:28px;">🌳</div>
+    <div class="garden-tree" style="bottom:1%;left:30%;font-size:26px;">🌲</div>
+    <div class="garden-tree" style="bottom:0%;left:42%;font-size:30px;">🌳</div>
+    <div class="garden-tree" style="bottom:1%;left:55%;font-size:28px;">🌲</div>
+    <div class="garden-tree" style="bottom:0%;left:67%;font-size:32px;">🌳</div>
+    <div class="garden-tree" style="bottom:1%;left:78%;font-size:26px;">🌲</div>
+    <div class="garden-tree" style="bottom:0%;left:88%;font-size:30px;">🌳</div>
     <!-- 小路 -->
     <div class="garden-path garden-path-v" style="left:48%;top:12%;height:80%;"></div>
     <div class="garden-path garden-path-h" style="top:48%;left:12%;width:76%;"></div>
