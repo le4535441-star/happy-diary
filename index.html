@@ -2341,6 +2341,242 @@ body {
 }
 
 .btn-del { background: #e74c3c; color: white; }
+
+/* ========== 快乐花园 ========== */
+#garden-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#garden-overlay.active { display: flex; }
+
+.garden-sky {
+  flex: 0 0 35%;
+  background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #E0F7FA 70%, #FFFDE7 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.garden-sun {
+  position: absolute;
+  top: 12%;
+  right: 15%;
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, #FFD700 30%, #FFA000 70%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 165, 0, 0.3);
+  animation: gardenSunPulse 3s ease-in-out infinite;
+}
+
+@keyframes gardenSunPulse {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.garden-cloud {
+  position: absolute;
+  font-size: 28px;
+  opacity: 0.7;
+  animation: cloudDrift 25s linear infinite;
+}
+
+.garden-cloud:nth-child(2) { top: 8%; animation-duration: 35s; font-size: 22px; opacity: 0.5; }
+.garden-cloud:nth-child(3) { top: 20%; animation-duration: 20s; animation-delay: -8s; font-size: 32px; opacity: 0.4; }
+
+@keyframes cloudDrift {
+  0% { left: -10%; }
+  100% { left: 110%; }
+}
+
+.garden-butterfly {
+  position: absolute;
+  font-size: 18px;
+  animation: butterflyFloat 8s ease-in-out infinite;
+}
+
+@keyframes butterflyFloat {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(20px, -15px) rotate(5deg); }
+  50% { transform: translate(40px, 5px) rotate(-3deg); }
+  75% { transform: translate(15px, -10px) rotate(4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.garden-ground {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(180deg, #8BC34A 0%, #689F38 15%, #5D4037 60%, #4E342E 100%);
+  overflow: hidden;
+}
+
+.garden-ground::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(139,195,74,0.8), transparent);
+  z-index: 1;
+}
+
+.garden-fence {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 35px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 10px;
+  z-index: 2;
+}
+
+.fence-post {
+  width: 8px;
+  height: 28px;
+  background: linear-gradient(180deg, #8D6E63, #5D4037);
+  border-radius: 2px 2px 0 0;
+  margin: 0 18px;
+  flex-shrink: 0;
+}
+
+.fence-rail {
+  position: absolute;
+  bottom: 12px;
+  left: 5px;
+  right: 5px;
+  height: 4px;
+  background: #8D6E63;
+  border-radius: 2px;
+}
+
+.garden-plants {
+  position: absolute;
+  inset: 15px 10px 40px 10px;
+  overflow: hidden;
+}
+
+.garden-plant {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+  animation: plantGrow 0.5s ease-out forwards;
+}
+
+.garden-plant:active { transform: scale(1.15); }
+
+@keyframes plantGrow {
+  from { transform: scale(0) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.plant-emoji {
+  font-size: 26px;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+
+.plant-emoji.golden {
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.8)) drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+  animation: goldenGlow 2s ease-in-out infinite;
+}
+
+@keyframes goldenGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255,215,0,0.6)) drop-shadow(0 2px 3px rgba(0,0,0,0.2)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255,215,0,1)) drop-shadow(0 2px 3px rgba(0,0,0,0.2)); }
+}
+
+.plant-stem {
+  width: 2px;
+  background: #558B2F;
+  border-radius: 1px;
+  margin-top: -2px;
+}
+
+.garden-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+
+.garden-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.garden-stats {
+  background: rgba(255,255,255,0.85);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #5D4037;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.garden-tooltip {
+  position: fixed;
+  z-index: 900;
+  background: rgba(255,254,249,0.97);
+  border-radius: 14px;
+  padding: 14px 16px;
+  max-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  font-size: 13px;
+  color: #3d3028;
+  line-height: 1.6;
+  display: none;
+  pointer-events: none;
+}
+
+.garden-tooltip.show { display: block; pointer-events: auto; }
+
+.garden-tooltip .tt-date {
+  font-size: 11px;
+  color: #7a6b5d;
+  margin-top: 6px;
+}
+
+.garden-tooltip .tt-tag {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.garden-path {
+  position: absolute;
+  bottom: 35px;
+  left: 20%;
+  right: 20%;
+  height: 30px;
+  background: linear-gradient(90deg, transparent 0%, rgba(188,170,130,0.4) 30%, rgba(188,170,130,0.5) 50%, rgba(188,170,130,0.4) 70%, transparent 100%);
+  border-radius: 50%;
+  z-index: 0;
+}
 </style>
 </head>
 <body>
@@ -2673,8 +2909,9 @@ body {
           <!-- 太阳居中显示在记录好事按钮上方 -->
         </div>
         <div class="plaza-actions" style="flex-direction:column;align-items:center;gap:8px;">
-          <div class="happy-index" id="happy-index" onclick="showHappyIndexTip()" style="margin:0;">
+          <div class="happy-index" id="happy-index" onclick="openGarden()" style="margin:0;">
             <svg id="happy-sun-svg" width="44" height="44" viewBox="0 0 44 44"></svg>
+            <span style="font-size:10px;color:var(--ink-light);position:absolute;bottom:-10px;white-space:nowrap;">点击看花园</span>
           </div>
           <button class="action-btn action-happy" onclick="openModal()">
             <span class="action-icon">✍️</span>
@@ -8553,6 +8790,192 @@ async function doLogout() {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ========== 快乐花园 ==========
+const GARDEN_PLANT_FAMILIES = {
+  fuzzy: { keywords: ['茸','猫','喵','狗','小可爱','毛','宠'], colors: ['#FFB74D','#FFAB91','#F48FB1'], plants: ['🌾','🤍','🌿','🐾','🪶','🌸','🍂'] },
+  food: { keywords: ['吃','喝','美食','咖啡','奶茶','蛋糕','火锅','好吃','好喝','甜','饭','面','糖'], colors: ['#EF5350','#FF7043','#FFC107'], plants: ['🍓','🍒','🌻','🍎','🍑','🫐','🍇'] },
+  done: { keywords: ['完成','搞定','任务','做完','提交','终于','成功','结束','上线'], colors: ['#66BB6A','#43A047','#2E7D32'], plants: ['🌲','🎋','🌳','🌵','🎍','🪵','🌴'] },
+  joy: { keywords: ['开心','哈哈','笑','快乐','好玩','有趣','太好了','耶','棒'], colors: ['#AB47BC','#7E57C2','#EC407A'], plants: ['🌹','🌷','💐','🌺','🪻','🌼','💮'] },
+  nature: { keywords: ['天气','阳光','风','雨','散步','公园','花','树','海','山'], colors: ['#29B6F6','#26C6DA','#66BB6A'], plants: ['🌈','☘️','🪷','🌱','🌏','🍃','🌾'] }
+};
+const GARDEN_WILDCARD = ['🍀','🌼','🌺','🍄','🪴','🌿','🌱','🪨'];
+
+function getPlantFamily(entry) {
+  const text = ((entry.text || '') + ' ' + (entry.tag || '')).toLowerCase();
+  for (const [key, family] of Object.entries(GARDEN_PLANT_FAMILIES)) {
+    if (family.keywords.some(kw => text.includes(kw))) return { key, family };
+  }
+  return { key: 'wild', family: { plants: GARDEN_WILDCARD, colors: ['#78909C','#8D6E63','#A1887F'] } };
+}
+
+function getPlantForEntry(entry, index) {
+  const { family } = getPlantFamily(entry);
+  const date = new Date(entry.date || entry.id);
+  const month = date.getMonth();
+  // 用 entry id + index 做稳定哈希，保证每次加载位置和品种一致
+  const hash = (entry.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) + index;
+  const seasonOffset = Math.floor(month / 3); // 0春1夏2秋3冬
+  const plantIndex = (hash + seasonOffset) % family.plants.length;
+  const plant = family.plants[plantIndex];
+  
+  // 生长阶段
+  const now = Date.now();
+  const created = new Date(entry.date || entry.id).getTime();
+  const daysPassed = Math.floor((now - created) / 86400000);
+  let stage = 'seed';
+  let stemH = 4;
+  if (daysPassed >= 7) { stage = 'bloom'; stemH = 14 + (hash % 8); }
+  else if (daysPassed >= 3) { stage = 'bud'; stemH = 10 + (hash % 5); }
+  else if (daysPassed >= 1) { stage = 'sprout'; stemH = 6 + (hash % 4); }
+  
+  // 大小变化
+  const sizeBase = stage === 'seed' ? 18 : stage === 'sprout' ? 22 : stage === 'bud' ? 26 : 30;
+  const sizeVar = (hash % 6) - 3;
+  const size = sizeBase + sizeVar;
+  
+  // 位置（稳定哈希）
+  const x = 5 + ((hash * 7 + index * 31) % 85);
+  const y = 8 + ((hash * 13 + index * 17) % 75);
+  
+  // 稀有金色变异 5%
+  const isGolden = (hash % 20) === 0;
+  
+  // 有图片则标记为结果实
+  const hasFruit = !!entry.image;
+  
+  return { plant, stage, stemH, size, x, y, isGolden, hasFruit, entry, hash };
+}
+
+function renderGarden() {
+  const entries = getEntries();
+  if (!entries || entries.length === 0) return;
+  
+  const container = document.getElementById('garden-plants');
+  const tooltip = document.getElementById('garden-tooltip');
+  container.innerHTML = '';
+  
+  // 只显示最近200条
+  const visible = entries.slice(0, 200);
+  
+  let seedCount = 0, sproutCount = 0, bloomCount = 0;
+  
+  visible.forEach((entry, i) => {
+    const p = getPlantForEntry(entry, i);
+    if (p.stage === 'seed') seedCount++;
+    else if (p.stage === 'sprout' || p.stage === 'bud') sproutCount++;
+    else bloomCount++;
+    
+    const el = document.createElement('div');
+    el.className = 'garden-plant';
+    el.style.left = p.x + '%';
+    el.style.top = p.y + '%';
+    el.style.animationDelay = (i * 30) + 'ms';
+    el.style.zIndex = Math.floor(p.y);
+    
+    const emojiEl = document.createElement('div');
+    emojiEl.className = 'plant-emoji' + (p.isGolden ? ' golden' : '');
+    emojiEl.style.fontSize = p.size + 'px';
+    
+    if (p.stage === 'seed') {
+      emojiEl.textContent = '🌱';
+      emojiEl.style.opacity = '0.75';
+    } else if (p.stage === 'sprout') {
+      emojiEl.textContent = '🌿';
+    } else {
+      emojiEl.textContent = p.plant;
+    }
+    
+    if (p.hasFruit) {
+      emojiEl.textContent += '✨';
+    }
+    
+    const stemEl = document.createElement('div');
+    stemEl.className = 'plant-stem';
+    stemEl.style.height = p.stemH + 'px';
+    
+    el.appendChild(emojiEl);
+    el.appendChild(stemEl);
+    
+    // 点击显示记录内容
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rect = el.getBoundingClientRect();
+      tooltip.innerHTML = `
+        <div>${p.entry.emoji || '✨'} ${p.entry.text || ''}</div>
+        <div class="tt-date">${formatGardenDate(p.entry.date || p.entry.id)}</div>
+        ${p.entry.tag ? '<div class="tt-tag">' + p.entry.tag + '</div>' : ''}
+        ${p.isGolden ? '<div style="color:#FFD700;font-size:11px;margin-top:4px;">✨ 稀有金色变异！</div>' : ''}
+      `;
+      tooltip.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+      tooltip.style.top = Math.max(10, rect.top - 90) + 'px';
+      tooltip.classList.add('show');
+      setTimeout(() => tooltip.classList.remove('show'), 3000);
+    });
+    
+    container.appendChild(el);
+  });
+  
+  // 更新统计
+  document.getElementById('garden-stats-text').textContent = 
+    `🌱${seedCount} 🌿${sproutCount} 🌸${bloomCount} · 共${visible.length}棵`;
+}
+
+function formatGardenDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function openGarden() {
+  document.getElementById('garden-overlay').classList.add('active');
+  renderGarden();
+}
+
+function closeGarden() {
+  document.getElementById('garden-overlay').classList.remove('active');
+  document.getElementById('garden-tooltip').classList.remove('show');
+}
+
+// 点击花园空白处关闭 tooltip
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('garden-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (!e.target.closest('.garden-plant')) {
+        document.getElementById('garden-tooltip').classList.remove('show');
+      }
+    });
+  }
+});
 </script>
+
+<!-- 快乐花园 overlay -->
+<div id="garden-overlay">
+  <div class="garden-sky">
+    <div class="garden-sun"></div>
+    <div class="garden-cloud" style="top:12%;left:-5%;">☁️</div>
+    <div class="garden-cloud" style="top:5%;">☁️</div>
+    <div class="garden-cloud" style="top:22%;">☁️</div>
+    <div class="garden-butterfly" style="top:40%;left:25%;">🦋</div>
+    <div class="garden-butterfly" style="top:55%;left:65%;animation-delay:-3s;font-size:14px;">🦋</div>
+  </div>
+  <div class="garden-ground">
+    <div class="garden-path"></div>
+    <div class="garden-plants" id="garden-plants"></div>
+    <div class="garden-fence">
+      <div class="fence-rail"></div>
+      <div class="fence-post"></div><div class="fence-post"></div><div class="fence-post"></div>
+      <div class="fence-post"></div><div class="fence-post"></div><div class="fence-post"></div>
+      <div class="fence-post"></div><div class="fence-post"></div><div class="fence-post"></div>
+      <div class="fence-post"></div><div class="fence-post"></div>
+    </div>
+  </div>
+  <div class="garden-header">
+    <button class="garden-back" onclick="closeGarden()">←</button>
+    <div class="garden-stats" id="garden-stats-text">🌱0 🌿0 🌸0</div>
+  </div>
+  <div class="garden-tooltip" id="garden-tooltip"></div>
+</div>
 </body>
 </html>
