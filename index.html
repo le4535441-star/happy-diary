@@ -2353,17 +2353,46 @@ body {
 
 #garden-overlay.active { display: block; }
 
-.garden-canvas {
+.garden-bg {
   position: absolute;
   inset: 0;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  background: url('garden-bg.jpg') center center / cover no-repeat;
 }
 
-.garden-canvas svg {
-  width: 100%;
-  height: 100%;
-  display: block;
+.garden-bubbles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.garden-bubble {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0.15) 60%, rgba(255,255,255,0.05));
+  border: 1.5px solid rgba(255,255,255,0.4);
+  box-shadow: inset 0 -3px 6px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  animation: bubbleFloat 4s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.garden-bubble:active { transform: scale(1.15); }
+
+.garden-bubble:nth-child(2n) { animation-duration: 4.5s; animation-delay: -1s; }
+.garden-bubble:nth-child(3n) { animation-duration: 3.8s; animation-delay: -2s; }
+.garden-bubble:nth-child(5n) { animation-duration: 5s; animation-delay: -0.5s; }
+.garden-bubble:nth-child(7n) { animation-duration: 3.5s; animation-delay: -1.5s; }
+
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 .garden-header {
@@ -2376,56 +2405,67 @@ body {
   justify-content: space-between;
   align-items: center;
   z-index: 100;
-  background: linear-gradient(180deg, rgba(220,240,210,0.95) 0%, transparent 100%);
 }
 
 .garden-back {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.85);
   border: none;
   font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  backdrop-filter: blur(4px);
 }
 
 .garden-stats {
-  background: rgba(255,255,255,0.9);
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 11px;
+  background: rgba(255,255,255,0.85);
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 12px;
   color: #5D4037;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  backdrop-filter: blur(4px);
 }
 
-.garden-title {
-  font-family: 'ZCOOL XiaoWei', serif;
-  font-size: 16px;
-  color: #33691E;
+.garden-empty {
+  position: absolute;
+  bottom: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  padding: 14px 24px;
+  border-radius: 16px;
+  font-size: 14px;
+  color: #5D4037;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  backdrop-filter: blur(4px);
 }
 
 .garden-tooltip {
   position: fixed;
   z-index: 1000;
   background: rgba(255,254,249,0.97);
-  border-radius: 12px;
-  padding: 12px 14px;
-  max-width: 200px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-  font-size: 13px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  max-width: 240px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  font-size: 14px;
   color: #3d3028;
-  line-height: 1.6;
+  line-height: 1.7;
   display: none;
+  backdrop-filter: blur(6px);
 }
 
 .garden-tooltip.show { display: block; }
-.garden-tooltip .tt-date { font-size: 11px; color: #7a6b5d; margin-top: 4px; }
-.garden-tooltip .tt-tag { font-size: 11px; color: var(--accent); margin-top: 2px; font-weight: 600; }
+.garden-tooltip .tt-date { font-size: 11px; color: #7a6b5d; margin-top: 6px; }
+.garden-tooltip .tt-tag { font-size: 12px; color: var(--accent); margin-top: 3px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -8640,248 +8680,83 @@ if ('serviceWorker' in navigator) {
 }
 
 // ========== 快乐花园 ==========
-const GARDEN_PLANT_FAMILIES = {
-  fuzzy: { keywords: ['茸','猫','喵','狗','小可爱','毛','宠'], colors: ['#FFB74D','#FFAB91','#F48FB1'], plants: ['🌾','🤍','🌿','🐾','🪶','🌸','🍂'] },
-  food: { keywords: ['吃','喝','美食','咖啡','奶茶','蛋糕','火锅','好吃','好喝','甜','饭','面','糖'], colors: ['#EF5350','#FF7043','#FFC107'], plants: ['🍓','🍒','🌻','🍎','🍑','🫐','🍇'] },
-  done: { keywords: ['完成','搞定','任务','做完','提交','终于','成功','结束','上线'], colors: ['#66BB6A','#43A047','#2E7D32'], plants: ['🌲','🎋','🌳','🌵','🎍','🪵','🌴'] },
-  joy: { keywords: ['开心','哈哈','笑','快乐','好玩','有趣','太好了','耶','棒'], colors: ['#AB47BC','#7E57C2','#EC407A'], plants: ['🌹','🌷','💐','🌺','🪻','🌼','💮'] },
-  nature: { keywords: ['天气','阳光','风','雨','散步','公园','花','树','海','山'], colors: ['#29B6F6','#26C6DA','#66BB6A'], plants: ['🌈','☘️','🪷','🌱','🌏','🍃','🌾'] }
-};
-const GARDEN_WILDCARD = ['🍀','🌼','🌺','🍄','🪴','🌿','🌱','🪨'];
 
-function getPlantFamily(entry) {
-  const text = ((entry.text || '') + ' ' + (entry.tag || '')).toLowerCase();
-  for (const [key, family] of Object.entries(GARDEN_PLANT_FAMILIES)) {
-    if (family.keywords.some(kw => text.includes(kw))) return { key, family };
-  }
-  return { key: 'wild', family: { plants: GARDEN_WILDCARD, colors: ['#78909C','#8D6E63','#A1887F'] } };
-}
+// 气泡分布区域（避开天空和房子，主要在田地和草地上）
+// 坐标是屏幕百分比
+const BUBBLE_ZONES = [
+  { xMin: 5,  xMax: 40, yMin: 40, yMax: 60 },  // 左侧田地
+  { xMin: 30, xMax: 70, yMin: 35, yMax: 55 },  // 中间田地
+  { xMin: 55, xMax: 90, yMin: 35, yMax: 55 },  // 右侧田地
+  { xMin: 5,  xMax: 45, yMin: 62, yMax: 80 },  // 左下草地
+  { xMin: 40, xMax: 90, yMin: 60, yMax: 78 },  // 右下草地
+  { xMin: 10, xMax: 85, yMin: 80, yMax: 93 },  // 底部灌木区
+];
 
-function getPlantForEntry(entry, index) {
-  const { family } = getPlantFamily(entry);
-  const date = new Date(entry.date || entry.id);
-  const month = date.getMonth();
-  // 用 entry id + index 做稳定哈希，保证每次加载位置和品种一致
-  const hash = (entry.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) + index;
-  const seasonOffset = Math.floor(month / 3); // 0春1夏2秋3冬
-  const plantIndex = (hash + seasonOffset) % family.plants.length;
-  const plant = family.plants[plantIndex];
-  
-  // 生长阶段
-  const now = Date.now();
-  const created = new Date(entry.date || entry.id).getTime();
-  const daysPassed = Math.floor((now - created) / 86400000);
-  let stage = 'seed';
-  let stemH = 4;
-  if (daysPassed >= 7) { stage = 'bloom'; stemH = 14 + (hash % 8); }
-  else if (daysPassed >= 3) { stage = 'bud'; stemH = 10 + (hash % 5); }
-  else if (daysPassed >= 1) { stage = 'sprout'; stemH = 6 + (hash % 4); }
-  
-  // 大小变化
-  const sizeBase = stage === 'seed' ? 18 : stage === 'sprout' ? 22 : stage === 'bud' ? 26 : 30;
-  const sizeVar = (hash % 6) - 3;
-  const size = sizeBase + sizeVar;
-  
-  // 位置（稳定哈希）
-  const x = 5 + ((hash * 7 + index * 31) % 85);
-  const y = 8 + ((hash * 13 + index * 17) % 75);
-  
-  // 稀有金色变异 5%
-  const isGolden = (hash % 20) === 0;
-  
-  // 有图片则标记为结果实
-  const hasFruit = !!entry.image;
-  
-  return { plant, stage, stemH, size, x, y, isGolden, hasFruit, entry, hash };
-}
-
-// SVG 手绘植物模板
-const SVG_PLANTS = {
-  flower_pink: (s) => `<g transform="scale(${s})"><circle cx="0" cy="-8" r="5" fill="#f8bbd0"/><circle cx="-4" cy="-5" r="4" fill="#f48fb1"/><circle cx="4" cy="-5" r="4" fill="#f48fb1"/><circle cx="-3" cy="-10" r="4" fill="#f48fb1"/><circle cx="3" cy="-10" r="4" fill="#f48fb1"/><circle cx="0" cy="-7" r="2.5" fill="#fff59d"/><line x1="0" y1="0" x2="0" y2="-4" stroke="#66bb6a" stroke-width="1.5"/><path d="M-1,0 Q-4,-1 -3,-3" fill="#81c784" stroke="none"/><path d="M1,0 Q4,-1 3,-3" fill="#81c784" stroke="none"/></g>`,
-  flower_red: (s) => `<g transform="scale(${s})"><path d="M0,-12 C-3,-10 -5,-6 -4,-4 C-2,-5 0,-8 0,-12Z" fill="#ef5350"/><path d="M0,-12 C3,-10 5,-6 4,-4 C2,-5 0,-8 0,-12Z" fill="#e53935"/><path d="M-4,-9 C-6,-7 -6,-3 -3,-2" fill="#ef5350"/><path d="M4,-9 C6,-7 6,-3 3,-2" fill="#e53935"/><circle cx="0" cy="-6" r="2" fill="#ffeb3b"/><line x1="0" y1="0" x2="0" y2="-3" stroke="#558b2f" stroke-width="1.5"/></g>`,
-  tulip: (s) => `<g transform="scale(${s})"><path d="M-3,-12 C-3,-8 -1,-5 0,-4 C1,-5 3,-8 3,-12 C2,-13 -2,-13 -3,-12Z" fill="#ce93d8"/><line x1="0" y1="0" x2="0" y2="-4" stroke="#558b2f" stroke-width="1.8"/><path d="M0,-2 Q-4,0 -3,2" fill="#81c784" stroke="none"/></g>`,
-  sunflower: (s) => `<g transform="scale(${s})"><circle cx="0" cy="-9" r="4" fill="#5d4037"/><path d="M0,-14 L1,-12 L-1,-12Z" fill="#fdd835"/><path d="M4,-12 L3,-10 L2,-11Z" fill="#fdd835"/><path d="M5,-9 L3,-9 L4,-10Z" fill="#fdd835"/><path d="M4,-6 L3,-8 L2,-7Z" fill="#fdd835"/><path d="M0,-4 L1,-6 L-1,-6Z" fill="#fdd835"/><path d="M-4,-6 L-3,-8 L-2,-7Z" fill="#fdd835"/><path d="M-5,-9 L-3,-9 L-4,-10Z" fill="#fdd835"/><path d="M-4,-12 L-3,-10 L-2,-11Z" fill="#fdd835"/><line x1="0" y1="0" x2="0" y2="-5" stroke="#558b2f" stroke-width="2"/></g>`,
-  berry: (s) => `<g transform="scale(${s})"><circle cx="-2" cy="-6" r="3.5" fill="#7b1fa2"/><circle cx="2" cy="-7" r="3" fill="#9c27b0"/><circle cx="0" cy="-4" r="3" fill="#8e24aa"/><line x1="0" y1="0" x2="0" y2="-2" stroke="#558b2f" stroke-width="1.5"/><path d="M-1,-9 L0,-11 L1,-9" fill="#66bb6a" stroke="none"/></g>`,
-  carrot: (s) => `<g transform="scale(${s})"><path d="M0,0 C-1,-2 -2,-8 0,-12 C2,-8 1,-2 0,0Z" fill="#ff8a65"/><path d="M-2,-11 Q-4,-14 -1,-13" fill="#66bb6a"/><path d="M0,-12 Q0,-15 2,-14" fill="#66bb6a"/><path d="M1,-11 Q3,-14 2,-12" fill="#66bb6a"/></g>`,
-  heart: (s) => `<g transform="scale(${s})"><path d="M0,-4 C0,-7 -4,-8 -4,-5 C-4,-2 0,1 0,1 C0,1 4,-2 4,-5 C4,-8 0,-7 0,-4Z" fill="#e53935"/></g>`,
-  paw: (s) => `<g transform="scale(${s})"><ellipse cx="0" cy="-3" rx="4" ry="3" fill="#8d6e63"/><circle cx="-3" cy="-7" r="1.8" fill="#8d6e63"/><circle cx="0" cy="-8" r="1.8" fill="#8d6e63"/><circle cx="3" cy="-7" r="1.8" fill="#8d6e63"/></g>`,
-  sprout: (s) => `<g transform="scale(${s})"><line x1="0" y1="0" x2="0" y2="-8" stroke="#66bb6a" stroke-width="1.5"/><path d="M0,-8 C-2,-10 -5,-9 -4,-7 C-3,-5 0,-6 0,-8Z" fill="#81c784"/><path d="M0,-6 C2,-8 5,-7 4,-5 C3,-3 0,-4 0,-6Z" fill="#a5d6a7"/></g>`,
-  tree_round: (s) => `<g transform="scale(${s})"><rect x="-2" y="-4" width="4" height="8" rx="1" fill="#6d4c41"/><ellipse cx="0" cy="-10" rx="8" ry="9" fill="#4caf50"/><ellipse cx="-4" cy="-8" rx="5" ry="6" fill="#66bb6a"/><ellipse cx="4" cy="-9" rx="5" ry="5" fill="#43a047"/></g>`,
-  tree_pine: (s) => `<g transform="scale(${s})"><rect x="-1.5" y="-2" width="3" height="6" rx="0.5" fill="#5d4037"/><path d="M0,-18 L-5,-8 L-3,-8 L-7,-2 L7,-2 L3,-8 L5,-8Z" fill="#2e7d32"/></g>`,
-  vine: (s) => `<g transform="scale(${s})"><path d="M-3,4 Q-5,0 -3,-3 Q0,-6 3,-3 Q5,0 3,4" fill="none" stroke="#66bb6a" stroke-width="1.5"/><circle cx="-3" cy="-2" r="1.5" fill="#81c784"/><circle cx="2" cy="-4" r="1.5" fill="#a5d6a7"/><circle cx="4" cy="0" r="1.2" fill="#81c784"/></g>`
-};
-
-// 根据品种选择 SVG 模板
-function getSvgForPlant(familyKey, hash, stage) {
-  if (stage === 'seed' || stage === 'sprout') return 'sprout';
-  const map = {
-    fuzzy: ['paw', 'heart', 'flower_pink'],
-    food: ['carrot', 'sunflower', 'berry'],
-    done: ['tree_round', 'tree_pine', 'sunflower'],
-    joy: ['flower_pink', 'flower_red', 'tulip'],
-    nature: ['sprout', 'vine', 'tulip'],
-    wild: ['flower_red', 'berry', 'tulip']
-  };
-  const options = map[familyKey] || map.wild;
-  return options[hash % options.length];
+function getWeekEntries() {
+  const entries = getEntries();
+  const now = new Date();
+  const dayOfWeek = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek + 1);
+  monday.setHours(0, 0, 0, 0);
+  return entries.filter(e => new Date(e.date) >= monday);
 }
 
 function renderGarden() {
-  const entries = getEntries();
-  const canvas = document.getElementById('garden-canvas');
+  const container = document.getElementById('garden-bubbles');
   const tooltip = document.getElementById('garden-tooltip');
-  if (!entries || entries.length === 0) {
-    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#5d4037;font-size:16px;font-family:ZCOOL XiaoWei,serif;">还没有记录，快去记一件快乐的事吧 🌱</div>';
+  container.innerHTML = '';
+  
+  const weekEntries = getWeekEntries();
+  
+  if (weekEntries.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'garden-empty';
+    empty.textContent = '这周还没有快乐记录，快去记一件吧 🌱';
+    container.appendChild(empty);
+    document.getElementById('garden-stats-text').textContent = '本周 0 件快乐';
     return;
   }
   
-  const W = 400, H = 700;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">`;
+  document.getElementById('garden-stats-text').textContent = `本周 ${weekEntries.length} 件快乐`;
   
-  // 背景草地
-  svg += `<rect width="${W}" height="${H}" fill="#d5e8c0"/>`;
-  // 浅色草地纹理
-  for (let i = 0; i < 20; i++) {
-    const gx = Math.random() * W, gy = Math.random() * H;
-    svg += `<ellipse cx="${gx}" cy="${gy}" rx="${8+Math.random()*12}" ry="${4+Math.random()*6}" fill="rgba(165,214,167,0.3)"/>`;
-  }
-  
-  // 四周密实树丛 + 藤蔓
-  // 左侧
-  for (let i = 0; i < 12; i++) {
-    const ty = 20 + i * 56;
-    const treeType = i % 2 === 0 ? 'tree_round' : 'tree_pine';
-    svg += `<g transform="translate(22, ${ty})">${SVG_PLANTS[treeType](1.6)}</g>`;
-    svg += `<g transform="translate(12, ${ty + 28})">${SVG_PLANTS.vine(1.2)}</g>`;
-  }
-  // 右侧
-  for (let i = 0; i < 12; i++) {
-    const ty = 35 + i * 56;
-    const treeType = i % 2 === 0 ? 'tree_pine' : 'tree_round';
-    svg += `<g transform="translate(${W - 22}, ${ty})">${SVG_PLANTS[treeType](1.6)}</g>`;
-    svg += `<g transform="translate(${W - 12}, ${ty + 28})">${SVG_PLANTS.vine(1.2)}</g>`;
-  }
-  // 底部
-  for (let i = 0; i < 8; i++) {
-    const tx = 50 + i * 42;
-    svg += `<g transform="translate(${tx}, ${H - 18})">${SVG_PLANTS[i%2===0?'tree_round':'tree_pine'](1.3)}</g>`;
-  }
-  // 顶部藤蔓
-  for (let i = 0; i < 6; i++) {
-    const tx = 60 + i * 50;
-    svg += `<g transform="translate(${tx}, 15)">${SVG_PLANTS.vine(1.0)}</g>`;
-  }
-  
-  // 十字小路
-  svg += `<rect x="${W/2 - 8}" y="60" width="16" height="${H - 120}" rx="4" fill="rgba(210,180,140,0.4)"/>`;
-  svg += `<rect x="50" y="${H/2 - 8}" width="${W - 100}" height="16" rx="4" fill="rgba(210,180,140,0.4)"/>`;
-  
-  // 白色栅栏（横向）
-  const fenceY = H/2 - 20;
-  for (let fx = 55; fx < W/2 - 14; fx += 14) {
-    svg += `<rect x="${fx}" y="${fenceY}" width="3" height="14" rx="1" fill="#f5f0e8"/>`;
-  }
-  for (let fx = W/2 + 12; fx < W - 50; fx += 14) {
-    svg += `<rect x="${fx}" y="${fenceY}" width="3" height="14" rx="1" fill="#f5f0e8"/>`;
-  }
-  svg += `<rect x="55" y="${fenceY+3}" width="${W/2-70}" height="2.5" rx="1" fill="#f5f0e8"/>`;
-  svg += `<rect x="55" y="${fenceY+9}" width="${W/2-70}" height="2.5" rx="1" fill="#f5f0e8"/>`;
-  svg += `<rect x="${W/2+12}" y="${fenceY+3}" width="${W/2-70}" height="2.5" rx="1" fill="#f5f0e8"/>`;
-  svg += `<rect x="${W/2+12}" y="${fenceY+9}" width="${W/2-70}" height="2.5" rx="1" fill="#f5f0e8"/>`;
-  
-  // 田地区域（4个方块 + 淡土色）
-  const plots = [
-    { x: 50, y: 70, w: W/2 - 60, h: H/2 - 100, label: '茸茸田' },
-    { x: W/2 + 12, y: 70, w: W/2 - 60, h: H/2 - 100, label: '美食园' },
-    { x: 50, y: H/2 + 12, w: W/2 - 60, h: H/2 - 100, label: '成就林' },
-    { x: W/2 + 12, y: H/2 + 12, w: W/2 - 60, h: H/2 - 100, label: '花田' }
-  ];
-  plots.forEach(pl => {
-    svg += `<rect x="${pl.x}" y="${pl.y}" width="${pl.w}" height="${pl.h}" rx="6" fill="rgba(139,119,101,0.08)" stroke="rgba(139,119,101,0.15)" stroke-width="1"/>`;
-    // 耕地条纹
-    for (let ly = pl.y + 12; ly < pl.y + pl.h - 5; ly += 10) {
-      svg += `<line x1="${pl.x+6}" y1="${ly}" x2="${pl.x+pl.w-6}" y2="${ly}" stroke="rgba(93,64,55,0.06)" stroke-width="1"/>`;
-    }
-    svg += `<text x="${pl.x+4}" y="${pl.y-4}" font-size="9" fill="#6d4c41" opacity="0.6" font-family="sans-serif">${pl.label}</text>`;
-  });
-  
-  // 分组种植
-  const visible = entries.slice(0, 200);
-  const groups = {};
-  visible.forEach((entry, i) => {
-    const { key } = getPlantFamily(entry);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push({ entry, index: i });
-  });
-  
-  const zoneMap = { fuzzy: 0, food: 1, done: 2, joy: 3, nature: 3, wild: 3 };
-  let total = 0;
-  const plantPositions = []; // 记录位置供点击用
-  
-  Object.entries(groups).forEach(([key, items]) => {
-    const plotIdx = zoneMap[key] !== undefined ? zoneMap[key] : 3;
-    const pl = plots[plotIdx];
+  // 为每个气泡分配随机位置（在田地/草地区域内）
+  weekEntries.forEach((entry, i) => {
+    const hash = (entry.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) + i;
+    const zone = BUBBLE_ZONES[hash % BUBBLE_ZONES.length];
+    const x = zone.xMin + (hash * 7 + i * 13) % (zone.xMax - zone.xMin);
+    const y = zone.yMin + (hash * 11 + i * 17) % (zone.yMax - zone.yMin);
     
-    // 按品种分行
-    const byType = {};
-    items.forEach(item => {
-      const p = getPlantForEntry(item.entry, item.index);
-      const svgType = getSvgForPlant(key, p.hash, p.stage);
-      if (!byType[svgType]) byType[svgType] = [];
-      byType[svgType].push(p);
-    });
+    const bubble = document.createElement('div');
+    bubble.className = 'garden-bubble';
+    bubble.style.left = x + '%';
+    bubble.style.top = y + '%';
+    bubble.textContent = entry.emoji || '✨';
     
-    const types = Object.entries(byType);
-    const rowGap = (pl.h - 20) / (types.length + 0.5);
-    
-    types.forEach(([svgType, plants], rowIdx) => {
-      const rowY = pl.y + 16 + rowGap * (rowIdx + 0.5);
-      const colGap = (pl.w - 16) / (plants.length + 0.5);
-      
-      plants.forEach((p, colIdx) => {
-        total++;
-        const px = pl.x + 10 + colGap * (colIdx + 0.5);
-        const py = rowY;
-        const scale = p.stage === 'bloom' ? 1.0 : p.stage === 'bud' ? 0.85 : 0.65;
-        
-        svg += `<g transform="translate(${px},${py})" class="gp" data-idx="${plantPositions.length}" style="cursor:pointer;">`;
-        svg += SVG_PLANTS[svgType](scale);
-        svg += `</g>`;
-        
-        plantPositions.push({ x: px, y: py, entry: p.entry });
-      });
-    });
-  });
-  
-  svg += `</svg>`;
-  canvas.innerHTML = svg;
-  
-  // 绑定点击事件
-  canvas.querySelectorAll('.gp').forEach(el => {
-    el.addEventListener('click', (e) => {
+    bubble.addEventListener('click', (e) => {
       e.stopPropagation();
-      const idx = parseInt(el.dataset.idx);
-      const info = plantPositions[idx];
-      if (!info) return;
-      const rect = el.getBoundingClientRect();
+      const rect = bubble.getBoundingClientRect();
       tooltip.innerHTML = `
-        <div style="font-size:14px;">${info.entry.emoji || '✨'} ${(info.entry.text || '').slice(0, 50)}</div>
-        <div class="tt-date">${formatGardenDate(info.entry.date || info.entry.id)}</div>
-        ${info.entry.tag ? '<div class="tt-tag">' + info.entry.tag + '</div>' : ''}
+        <div>${entry.emoji || '✨'} ${entry.text || ''}</div>
+        <div class="tt-date">${formatGardenDate(entry.date || entry.id)}</div>
+        ${entry.tag ? '<div class="tt-tag">' + entry.tag + '</div>' : ''}
       `;
-      tooltip.style.left = Math.min(rect.left + rect.width/2, window.innerWidth - 220) + 'px';
-      tooltip.style.top = Math.max(60, rect.top - 70) + 'px';
+      // 定位在气泡上方或下方
+      const tipY = rect.top > 150 ? rect.top - 80 : rect.bottom + 10;
+      tooltip.style.left = Math.min(Math.max(10, rect.left - 60), window.innerWidth - 260) + 'px';
+      tooltip.style.top = tipY + 'px';
       tooltip.classList.add('show');
-      setTimeout(() => tooltip.classList.remove('show'), 2500);
     });
+    
+    container.appendChild(bubble);
   });
   
-  // 关闭 tooltip
-  canvas.addEventListener('click', (e) => {
-    if (!e.target.closest('.gp')) tooltip.classList.remove('show');
+  // 点击空白关闭 tooltip
+  container.addEventListener('click', (e) => {
+    if (!e.target.closest('.garden-bubble')) {
+      tooltip.classList.remove('show');
+    }
   });
-  
-  document.getElementById('garden-stats-text').textContent = `共${total}棵`;
 }
 
 function formatGardenDate(dateStr) {
@@ -8899,27 +8774,15 @@ function closeGarden() {
   document.getElementById('garden-overlay').classList.remove('active');
   document.getElementById('garden-tooltip').classList.remove('show');
 }
-
-// 点击花园空白处关闭 tooltip
-document.addEventListener('DOMContentLoaded', () => {
-  const overlay = document.getElementById('garden-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', (e) => {
-      if (!e.target.closest('.garden-plant')) {
-        document.getElementById('garden-tooltip').classList.remove('show');
-      }
-    });
-  }
-});
 </script>
 
 <!-- 快乐花园 overlay -->
 <div id="garden-overlay">
-  <div class="garden-canvas" id="garden-canvas"></div>
+  <div class="garden-bg"></div>
+  <div class="garden-bubbles" id="garden-bubbles"></div>
   <div class="garden-header">
     <button class="garden-back" onclick="closeGarden()">←</button>
-    <div class="garden-title">🌿 快乐花园</div>
-    <div class="garden-stats" id="garden-stats-text">共0棵</div>
+    <div class="garden-stats" id="garden-stats-text">本周 0 件快乐</div>
   </div>
   <div class="garden-tooltip" id="garden-tooltip"></div>
 </div>
